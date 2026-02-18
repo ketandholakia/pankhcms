@@ -1,0 +1,40 @@
+#!/usr/bin/env php
+<?php
+// Usage: php runway backup:create|backup:restore [file]
+
+require_once __DIR__ . '/../vendor/autoload.php';
+use App\Core\BackupManager;
+
+$dbConfig = require __DIR__ . '/../config/database.php';
+$manager = new BackupManager($dbConfig);
+
+$cmd = $argv[1] ?? null;
+if ($cmd === 'backup:create') {
+    $type = $argv[2] ?? 'full';
+    $notes = $argv[3] ?? '';
+    if ($type === 'database') {
+        $file = $manager->createDatabaseBackup($notes);
+    } else {
+        $file = $manager->createFullBackup($notes);
+    }
+    echo "Backup created: $file\n";
+    exit(0);
+} elseif ($cmd === 'backup:restore') {
+    $file = $argv[2] ?? null;
+    if (!$file || !file_exists($file)) {
+        echo "Backup file not found.\n";
+        exit(1);
+    }
+    try {
+        $manager->restoreBackup($file);
+        echo "Restore completed successfully.\n";
+        exit(0);
+    } catch (Exception $e) {
+        echo "Restore failed: " . $e->getMessage() . "\n";
+        exit(2);
+    }
+} else {
+    echo "Usage: php runway backup:create [full|database] [notes]\n";
+    echo "       php runway backup:restore <file.zip>\n";
+    exit(1);
+}

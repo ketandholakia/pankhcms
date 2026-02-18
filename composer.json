@@ -1,0 +1,25 @@
+{
+  "name": "admin/pankhcms",
+  "description": "Light CMS",
+  "authors": [
+    {
+      "name": "Ketan Dholakia",
+      "email": "ketanmci@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.2.0",
+    "flightphp/core": "^3.0",
+    "jenssegers/blade": "^2.0",
+    "illuminate/database": "^11.0",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/"
+    },
+    "files": [
+      "app/Helpers/functions.php"
+    ]
+  }
+}

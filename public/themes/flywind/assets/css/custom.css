@@ -1,0 +1,14 @@
+/* Theme-specific tweaks */
+
+.hero {
+  background: linear-gradient(135deg,#2563eb,#10b981);
+  color:#fff;
+}
+
+.menu a {
+  font-weight: 600;
+}
+
+.site-header strong {
+  font-size: 1.2rem;
+}

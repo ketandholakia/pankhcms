@@ -1,0 +1,324 @@
+/* =========================================================
+   FlyWind Default Theme — custom.css
+  Designed for PankhCMS
+   ========================================================= */
+
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+/* Sticky glass header */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+
+  border-bottom: 1px solid var(--border);
+}
+
+/* Nav layout */
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+/* Logo */
+
+.site-logo {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+
+/* =========================================================
+   MAIN NAVIGATION
+   ========================================================= */
+
+.main-nav ul {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.main-nav li {
+  position: relative;
+}
+
+/* Menu links */
+
+.main-nav a {
+  display: inline-flex;
+  align-items: center;
+
+  height: 64px;
+  padding: 0 0.7rem;
+
+  font-weight: 500;
+  color: var(--text);
+
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+
+.main-nav a:hover {
+  background: var(--bg-soft);
+  color: #000;
+}
+
+/* Active item */
+
+.main-nav .active > a,
+.main-nav a[aria-current="page"] {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+
+/* =========================================================
+   DROPDOWN MENU
+   ========================================================= */
+
+.main-nav ul ul {
+  position: absolute;
+  top: 100%;
+  left: 0;
+
+  display: none;
+  flex-direction: column;
+
+  min-width: 220px;
+
+  background: #fff;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+
+  padding: 0.5rem 0;
+
+  box-shadow: 0 14px 30px rgba(0,0,0,0.15);
+}
+
+.main-nav ul ul a {
+  height: auto;
+  padding: 0.55rem 1rem;
+}
+
+.main-nav li:hover > ul {
+  display: flex;
+}
+
+/* Multi-level */
+
+.main-nav ul ul ul {
+  top: 0;
+  left: 100%;
+}
+
+
+/* =========================================================
+   MOBILE NAVIGATION
+   ========================================================= */
+
+#nav-toggle {
+  display: none;
+  font-size: 1.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+
+  #nav-toggle {
+    display: block;
+  }
+
+  .main-nav {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+
+    display: none;
+  }
+
+  .main-nav.open {
+    display: block;
+  }
+
+  .main-nav ul {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 0.4rem;
+  }
+
+  .main-nav a {
+    height: auto;
+    width: 100%;
+    padding: 0.7rem 0;
+  }
+
+  /* Dropdown inside mobile */
+
+  .main-nav ul ul {
+    position: static;
+    border: none;
+    box-shadow: none;
+    padding-left: 1rem;
+    display: none;
+  }
+
+  .main-nav li.open > ul {
+    display: block;
+  }
+}
+
+
+/* =========================================================
+   BREADCRUMBS
+   ========================================================= */
+
+.breadcrumb {
+  margin: 1rem auto;
+  font-size: 0.9rem;
+}
+
+.breadcrumb a {
+  color: var(--primary);
+}
+
+.breadcrumb .is-active span {
+  color: var(--muted);
+}
+
+.breadcrumb-separator {
+  margin: 0 0.5rem;
+  color: var(--muted);
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero {
+  background: linear-gradient(
+    135deg,
+    var(--primary),
+    #4f46e5
+  );
+  color: white;
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 2.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.hero p {
+  color: rgba(255,255,255,0.85);
+}
+
+
+/* =========================================================
+   CONTENT CARD
+   ========================================================= */
+
+main section {
+  background: var(--bg);
+  padding: 1.5rem;
+
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.sidebar {
+  background: var(--bg);
+  padding: 1.2rem;
+
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.site-footer {
+  background: var(--bg-soft);
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+
+/* =========================================================
+   DARK MODE
+   ========================================================= */
+
+@media (prefers-color-scheme: dark) {
+
+  .site-header {
+    background: rgba(15,23,42,0.95);
+  }
+
+  .site-logo,
+  .main-nav a,
+  #nav-toggle {
+    color: #e5e7eb;
+  }
+
+  .main-nav a:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+  }
+
+  .main-nav a[aria-current="page"],
+  .main-nav .active > a {
+    color: #93c5fd;
+  }
+
+  .main-nav ul ul {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .sidebar,
+  main section {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .site-footer {
+    background: #020617;
+  }
+
+}

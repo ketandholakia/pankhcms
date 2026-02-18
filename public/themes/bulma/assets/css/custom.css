@@ -1,0 +1,21 @@
+.navbar-start ul {
+  display: flex;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar-start a {
+  color: #363636;
+  text-decoration: none;
+  padding: 0.5rem 0.25rem;
+}
+
+.navbar-start a:hover {
+  color: #485fc7;
+}
+
+.hero .subtitle {
+  opacity: 0.9;
+}

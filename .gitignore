@@ -1,0 +1,101 @@
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Environment Files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Composer
+# =========================
+vendor/
+composer.lock
+
+# (Remove composer.lock ignore if building an app, not a library)
+
+# =========================
+# Node / Frontend
+# =========================
+node_modules/
+dist/
+build/
+public/build/
+public/hot
+
+# =========================
+# Cache & Temp
+# =========================
+cache/
+tmp/
+temp/
+*.cache
+
+# =========================
+# Laravel-style (if applicable)
+# =========================
+bootstrap/cache/*
+storage/*.key
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/*
+!storage/app/public/
+
+# =========================
+# Uploads / User Content
+# =========================
+uploads/
+public/uploads/
+media/
+files/
+
+# =========================
+# Database
+# =========================
+*.sqlite
+*.db
+
+# =========================
+# Testing
+# =========================
+.phpunit.result.cache
+
+# =========================
+# Misc
+# =========================
+*.bak
+*.swp
+*.tmp
+*.old
+
+# =========================
+# Devilbox / Docker (optional)
+# =========================
+docker-data/
+.docker/
