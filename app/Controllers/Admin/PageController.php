@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Page;
 use App\Models\Tag;
 use App\Models\Template;
+use App\Models\ContentType;
 use Exception;
 
 class PageController
@@ -42,9 +43,18 @@ class PageController
 
     public function index(): void
     {
-        $pages = Page::with(['categories', 'tags'])->get();
+        $types = ContentType::orderBy('name')->get();
 
-        $this->renderView('admin.pages.index', compact('pages'));
+        $selectedType = $_GET['type'] ?? 'all';
+
+        $query = Page::with(['categories', 'tags']);
+        if (!empty($selectedType) && $selectedType !== 'all') {
+            $query = $query->type($selectedType);
+        }
+
+        $pages = $query->get();
+
+        $this->renderView('admin.pages.index', compact('pages', 'types', 'selectedType'));
     }
 
     public function create(): void
@@ -151,6 +161,7 @@ class PageController
             'templates'  => Template::all(),
             'categories' => Category::orderBy('name')->get(),
             'tags'       => Tag::orderBy('name')->get(),
+            'types'      => ContentType::orderBy('name')->get(),
         ];
     }
 

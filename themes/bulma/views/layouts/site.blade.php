@@ -202,35 +202,13 @@
     </style>
 </head>
 <body>
-    <nav class="navbar is-light" role="navigation" aria-label="main navigation">
-        <div class="container">
-            <div class="navbar-brand">
-                <a class="navbar-item has-text-weight-bold" href="/">PankhCMS Bulma</a>
-            </div>
-            <div class="navbar-menu is-active">
-                <div class="navbar-start">
-                </div>
-                <div class="navbar-end">
-                    {!! render_menu('header') !!}
-                    <form action="/search" method="GET" class="navbar-item" style="gap:8px;display:flex;">
-                        <input type="text" name="q" placeholder="Search..." class="input" required>
-                        <button class="button is-dark" type="submit">Search</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
+    
 
     <main>
         @yield('content')
     </main>
 
-    <footer class="footer py-5">
-        <div class="content has-text-centered">
-            <p>Powered by PankhCMS Theme System</p>
-        </div>
-    </footer>
-
+   
     <script>
         document.addEventListener('click', function (event) {
             const toggle = event.target.closest('.theme-menu-toggle');

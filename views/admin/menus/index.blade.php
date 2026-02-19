@@ -9,7 +9,7 @@
     <!-- Create Menu -->
     <div class="mb-6 bg-white p-4 rounded shadow border border-gray-200">
         <h2 class="text-lg font-bold mb-2">Create Menu</h2>
-        <form id="menu-create-form" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <form id="menu-create-form" class="grid grid-cols-1 md:grid-cols-2 gap-2" data-endpoint="/admin/menus" action="/admin/menus" method="POST">
             <div>
                 <label class="block mb-1 font-semibold">Menu Name</label>
                 <input class="w-full border px-3 py-2 rounded" type="text" name="name" required>
@@ -47,7 +47,7 @@
         <!-- Add Menu Item Form -->
         <div class="mb-6 bg-white p-4 rounded shadow border border-gray-200">
             <h2 class="text-lg font-bold mb-2">Add Menu Item</h2>
-            <form id="add-menu-item-form">
+            <form id="add-menu-item-form" data-endpoint="/admin/menu-items" action="/admin/menu-items" method="POST">
                 <input type="hidden" name="menu_id" value="{{ $selectedMenu->id }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="mb-2">
@@ -103,7 +103,7 @@
             <div class="bg-white p-6 rounded shadow-lg w-full max-w-md relative">
                 <button onclick="closeMenuEditModal()" class="absolute top-2 right-2 text-gray-500 text-2xl" type="button">&times;</button>
                 <h2 class="text-xl font-bold mb-4">Edit Menu</h2>
-                <form id="menu-edit-form">
+                <form id="menu-edit-form" data-endpoint="/admin/menus/{{ $selectedMenu->id }}/update" action="/admin/menus/{{ $selectedMenu->id }}/update" method="POST">
                     <input type="hidden" name="id" value="{{ $selectedMenu->id }}">
                     <div class="mb-4">
                         <label class="block mb-1 font-semibold">Menu Name</label>
@@ -123,7 +123,7 @@
             <div class="bg-white p-6 rounded shadow-lg w-full max-w-md relative">
                 <button onclick="closeMenuItemEditModal()" class="absolute top-2 right-2 text-gray-500 text-2xl" type="button">&times;</button>
                 <h2 class="text-xl font-bold mb-4">Edit Menu Item</h2>
-                <form id="menu-item-edit-form" method="POST">
+                <form id="menu-item-edit-form" method="POST" action="#" data-endpoint="/admin/menu-items/{{ isset($item) ? $item->id : '' }}/update">
                     <input type="hidden" name="id" id="edit-item-id">
                     <input type="hidden" name="menu_id" value="{{ $selectedMenu->id }}">
                     <div class="mb-2">
@@ -201,6 +201,15 @@
             }
         }
         var modal = document.getElementById('menu-item-edit-modal');
+        // Set the form endpoint and action dynamically for the edit modal
+        try {
+            var editForm = document.getElementById('menu-item-edit-form');
+            if (editForm && item.id) {
+                var endpoint = '/admin/menu-items/' + item.id + '/update';
+                editForm.dataset.endpoint = endpoint;
+                editForm.action = endpoint;
+            }
+        } catch (e) {}
         if (modal) modal.classList.remove('hidden');
     }
     window.closeMenuItemEditModal = function() {
@@ -231,10 +240,17 @@
             e.preventDefault();
             var data = new FormData(form);
             var url = '';
-            if (form.id === 'menu-create-form') url = '/admin/menus';
-            else if (form.id === 'menu-edit-form') url = '/admin/menus/' + data.get('id') + '/update';
-            else if (form.id === 'add-menu-item-form') url = '/admin/menu-items';
-            else if (form.id === 'menu-item-edit-form') url = '/admin/menu-items/' + data.get('id') + '/update';
+            // Prefer explicit form.action, then data-endpoint, then fallbacks
+            if (form.action && form.action !== '#' && form.action !== '') {
+                url = form.action;
+            } else if (form.dataset && form.dataset.endpoint) {
+                url = form.dataset.endpoint;
+            } else {
+                if (form.id === 'menu-create-form') url = '/admin/menus';
+                else if (form.id === 'menu-edit-form') url = '/admin/menus/' + data.get('id') + '/update';
+                else if (form.id === 'add-menu-item-form') url = '/admin/menu-items';
+                else if (form.id === 'menu-item-edit-form') url = '/admin/menu-items/' + data.get('id') + '/update';
+            }
             
             fetch(url, { method: 'POST', body: data }).then(function(res) {
                 if (res.ok) {
