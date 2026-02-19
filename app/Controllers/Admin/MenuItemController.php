@@ -11,14 +11,13 @@ class MenuItemController
      * The only fields ever written to the menu_items table.
      */
     private const FILLABLE = [
-        'menu_id', 'parent_id', 'page_id', 'url', 'label', 'target', 'sort_order',
+        'menu_id', 'parent_id', 'page_id', 'url', 'title', 'sort_order',
     ];
 
     private const RULES = [
         'menu_id' => ['required' => true],
-        'label'   => ['required' => true, 'max' => 150],
+        'title'   => ['required' => true, 'max' => 150],
         'url'     => ['required' => false, 'max' => 2048],
-        'target'  => ['required' => false, 'allowed' => ['_self', '_blank']],
     ];
 
     // -------------------------------------------------------------------------
@@ -28,6 +27,7 @@ class MenuItemController
     public function store(): void
     {
         $input = $this->getValidatedInput();
+        
 
         if (isset($input['errors'])) {
             $this->jsonResponse(['errors' => $input['errors']], 422);
@@ -41,13 +41,23 @@ class MenuItemController
                 ->where('parent_id', $input['parent_id'] ?? null)
                 ->max('sort_order');
 
+            
+
             $item = MenuItem::create(array_merge($input, [
                 'page_id'    => $pageId,
                 'url'        => $url,
                 'sort_order' => is_null($maxOrder) ? 0 : $maxOrder + 1,
             ]));
 
-            $this->jsonResponse(['success' => true, 'id' => $item->id], 201);
+            // If AJAX, return JSON; otherwise redirect back to menus view
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+                || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+            if ($isAjax) {
+                $this->jsonResponse(['success' => true, 'id' => $item->id], 201);
+            } else {
+                \Flight::redirect('/admin/menus?menu_id=' . ($item->menu_id ?? $input['menu_id']) . '&saved=1');
+            }
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to create menu item.'], 500);
         }
@@ -71,7 +81,14 @@ class MenuItemController
                 'url'     => $url,
             ]));
 
-            $this->jsonResponse(['success' => true]);
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+                || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+            if ($isAjax) {
+                $this->jsonResponse(['success' => true]);
+            } else {
+                \Flight::redirect('/admin/menus?menu_id=' . ($item->menu_id ?? $input['menu_id']) . '&saved=1');
+            }
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to update menu item.'], 500);
         }

@@ -12,12 +12,13 @@ class MenuController
     /**
      * The only fields ever written to the menus table.
      */
-    private const FILLABLE = ['name', 'slug', 'description'];
+    private const FILLABLE = ['name', 'slug', 'description', 'location'];
 
     private const RULES = [
         'name' => ['required' => true,  'max' => 100],
         'slug' => ['required' => false, 'max' => 100],
         'description' => ['required' => false, 'max' => 500],
+        'location' => ['required' => false, 'max' => 100],
     ];
 
     // -------------------------------------------------------------------------
@@ -53,6 +54,7 @@ class MenuController
     public function store(): void
     {
         $input = $this->getValidatedInput();
+        
 
         if (isset($input['errors'])) {
             $this->jsonResponse(['errors' => $input['errors']], 422);
@@ -61,9 +63,17 @@ class MenuController
 
         try {
             $menu = Menu::create($input);
-            $this->jsonResponse(['success' => true, 'id' => $menu->id], 201);
+            if ($this->isAjax()) {
+                $this->jsonResponse(['success' => true, 'id' => $menu->id], 201);
+            } else {
+                \Flight::redirect('/admin/menus?saved=1');
+            }
         } catch (Exception $e) {
-            $this->jsonResponse(['error' => 'Failed to create menu.'], 500);
+            if ($this->isAjax()) {
+                $this->jsonResponse(['error' => 'Failed to create menu.'], 500);
+            } else {
+                \Flight::redirect('/admin/menus?error=save_failed');
+            }
         }
     }
 
@@ -79,9 +89,17 @@ class MenuController
 
         try {
             $menu->update($input);
-            $this->jsonResponse(['success' => true]);
+            if ($this->isAjax()) {
+                $this->jsonResponse(['success' => true]);
+            } else {
+                \Flight::redirect('/admin/menus?saved=1');
+            }
         } catch (Exception $e) {
-            $this->jsonResponse(['error' => 'Failed to update menu.'], 500);
+            if ($this->isAjax()) {
+                $this->jsonResponse(['error' => 'Failed to update menu.'], 500);
+            } else {
+                \Flight::redirect('/admin/menus?error=save_failed');
+            }
         }
     }
 
@@ -143,7 +161,7 @@ class MenuController
         }
 
         // Null out empty optionals
-        foreach (['description', 'slug'] as $field) {
+        foreach (['description', 'slug', 'location'] as $field) {
             if (isset($data[$field]) && $data[$field] === '') {
                 $data[$field] = null;
             }
@@ -183,6 +201,22 @@ class MenuController
     {
         \Flight::response()->status($status);
         \Flight::json($data);
+    }
+
+    /**
+     * Detect AJAX/JSON requests.
+     */
+    private function isAjax(): bool
+    {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            return true;
+        }
+
+        if (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
