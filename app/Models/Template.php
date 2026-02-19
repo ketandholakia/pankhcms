@@ -6,6 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Template extends Model
 {
-    protected $fillable = ['name','content_json'];
-    public $timestamps = false;
+    protected $table = 'templates';
+    protected $fillable = ['name', 'content', 'description', 'is_active'];
 }

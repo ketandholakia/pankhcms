@@ -20,6 +20,24 @@
             <i data-lucide="file-text"></i>
             Manage Pages
         </h1>
+
+        <div class="flex items-center gap-3">
+            <a href="/admin/pages/create" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm">
+                Create Page
+            </a>
+
+            <form method="GET" action="/admin/pages" class="flex items-center gap-2">
+                <label for="type" class="text-sm font-medium text-gray-700">Type</label>
+                <select id="type" name="type" class="border rounded px-3 py-2 text-sm" onchange="this.form.submit()">
+                    <option value="all" {{ ($selectedType ?? 'all') === 'all' ? 'selected' : '' }}>All</option>
+                    @foreach($types as $type)
+                        <option value="{{ $type->slug }}" {{ ($selectedType ?? 'all') === $type->slug ? 'selected' : '' }}>
+                            {{ $type->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
+        </div>
     </div>
 
     <div class="bg-white shadow-md rounded">
@@ -31,6 +49,9 @@
                     </th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Slug
+                    </th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Type
                     </th>
                     <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Categories
@@ -53,6 +74,9 @@
                             <p class="text-gray-900 whitespace-no-wrap">{{ $page->slug }}</p>
                         </td>
                         <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                            <p class="text-gray-900 whitespace-no-wrap">{{ $page->contentType->name ?? ucfirst($page->type ?? 'page') }}</p>
+                        </td>
+                        <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                             <p class="text-gray-900 whitespace-no-wrap">
                                 {{ $page->categories->pluck('name')->implode(', ') }}
                             </p>
@@ -71,7 +95,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center text-gray-500">No pages found.</td>
+                        <td colspan="6" class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center text-gray-500">No pages found.</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -2,100 +2,246 @@
 
 namespace App\Controllers\Admin;
 
-use App\Models\Page;
 use App\Models\Category;
+use App\Models\Page;
 use App\Models\Tag;
 use App\Models\Template;
+use Exception;
 
 class PageController
 {
-    public static function index()
+    /**
+     * The only fields ever written to the pages table.
+     * Everything else in $_POST is silently ignored.
+     */
+    private const FILLABLE = [
+        'title', 'slug', 'content_json',
+        'meta_title', 'meta_description', 'meta_keywords',
+        'og_title', 'og_description', 'og_image',
+        'canonical_url', 'robots', 'twitter_card',
+    ];
+
+    /**
+     * Fields that must be present and non-empty on create.
+     */
+    private const REQUIRED = ['title'];
+
+    /**
+     * Fields whose empty string should be stored as NULL.
+     * (i.e. optional SEO fields — avoids storing "" in the DB)
+     */
+    private const NULLABLE = [
+        'meta_title', 'meta_description', 'meta_keywords',
+        'og_title', 'og_description', 'og_image',
+        'canonical_url', 'robots', 'twitter_card',
+    ];
+
+    // -------------------------------------------------------------------------
+    // Public Actions
+    // -------------------------------------------------------------------------
+
+    public function index(): void
     {
         $pages = Page::with(['categories', 'tags'])->get();
 
-        echo \Flight::get("blade")->render(
-            "admin.pages.index",
-            compact("pages"),
-        );
+        $this->renderView('admin.pages.index', compact('pages'));
     }
 
-    public static function create()
+    public function create(): void
     {
-        $templates = Template::all();
-        $categories = Category::orderBy('name')->get();
-        $tags = Tag::orderBy('name')->get();
-        echo \Flight::get("blade")->render("admin.pages.create", compact('templates', 'categories', 'tags'));
+        $this->renderView('admin.pages.create', $this->formData());
     }
 
-    public static function store()
+    public function store(): void
     {
-        $input = $_POST;
+        $input = $this->getValidatedInput();
 
-        $slug = $_POST["slug"]
-            ? unique_slug($_POST["slug"])
-            : unique_slug($_POST["title"]);
+        if (isset($input['errors'])) {
+            // Re-render create form with validation errors and old input
+            $this->renderView('admin.pages.create', array_merge(
+                $this->formData(),
+                ['errors' => $input['errors'], 'old' => $this->rawInput()],
+            ));
+            return;
+        }
 
-        $page = Page::create([
-            "title" => $_POST["title"],
-            "slug" => $slug,
-            'content_json' => $input['content_json'] ?? null,
-            'meta_title' => ($input['meta_title'] ?? '') ?: null,
-            'meta_description' => ($input['meta_description'] ?? '') ?: null,
-            'meta_keywords' => ($input['meta_keywords'] ?? '') ?: null,
-            'og_title' => ($input['og_title'] ?? '') ?: null,
-            'og_description' => ($input['og_description'] ?? '') ?: null,
-            'og_image' => ($input['og_image'] ?? '') ?: null,
-            'canonical_url' => ($input['canonical_url'] ?? '') ?: null,
-            'robots' => ($input['robots'] ?? '') ?: null,
-            'twitter_card' => ($input['twitter_card'] ?? '') ?: null,
-        ]);
+        try {
+            $input['slug'] = unique_slug(
+                $input['slug'] ?: $input['title']
+            );
 
-        $categoryIds = isset($_POST['category_ids']) ? (array) $_POST['category_ids'] : [];
-        $tagIds = isset($_POST['tag_ids']) ? (array) $_POST['tag_ids'] : [];
+            $page = Page::create($input);
+            $this->syncRelations($page);
+
+            \Flight::redirect('/admin/pages?saved=1');
+        } catch (Exception $e) {
+            $this->renderView('admin.pages.create', array_merge(
+                $this->formData(),
+                ['errors' => ['An unexpected error occurred. Please try again.'], 'old' => $this->rawInput()],
+            ));
+        }
+    }
+
+    public function edit(int $id): void
+    {
+        $page = $this->findOrAbort($id);
+
+        $this->renderView('admin.pages.edit', array_merge(
+            $this->formData(),
+            compact('page'),
+        ));
+    }
+
+    public function update(int $id): void
+    {
+        $page  = $this->findOrAbort($id);
+        $input = $this->getValidatedInput(isUpdate: true);
+
+        if (isset($input['errors'])) {
+            $this->renderView('admin.pages.edit', array_merge(
+                $this->formData(),
+                ['errors' => $input['errors'], 'old' => $this->rawInput(), 'page' => $page],
+            ));
+            return;
+        }
+
+        try {
+            $input['slug'] = unique_slug(
+                $input['slug'] ?: $input['title'],
+                $id
+            );
+
+            $page->update($input);
+            $this->syncRelations($page);
+
+            \Flight::redirect('/admin/pages?saved=1');
+        } catch (Exception $e) {
+            $this->renderView('admin.pages.edit', array_merge(
+                $this->formData(),
+                ['errors' => ['An unexpected error occurred. Please try again.'], 'old' => $this->rawInput(), 'page' => $page],
+            ));
+        }
+    }
+
+    public function destroy(int $id): void
+    {
+        $page = $this->findOrAbort($id);
+
+        try {
+            $page->categories()->detach();
+            $page->tags()->detach();
+            $page->delete();
+
+            \Flight::redirect('/admin/pages?deleted=1');
+        } catch (Exception $e) {
+            \Flight::redirect('/admin/pages?error=delete_failed');
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Private Helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Shared data needed by both create and edit forms.
+     */
+    private function formData(): array
+    {
+        return [
+            'templates'  => Template::all(),
+            'categories' => Category::orderBy('name')->get(),
+            'tags'       => Tag::orderBy('name')->get(),
+        ];
+    }
+
+    /**
+     * Sync category and tag pivot relations from POST data.
+     * IDs are cast to integers to prevent type-juggling attacks.
+     */
+    private function syncRelations(Page $page): void
+    {
+        $categoryIds = array_map('intval', (array) ($_POST['category_ids'] ?? []));
+        $tagIds      = array_map('intval', (array) ($_POST['tag_ids']      ?? []));
+
         $page->categories()->sync($categoryIds);
         $page->tags()->sync($tagIds);
-
-        \Flight::redirect("/admin/pages?saved=1");
     }
 
-    public static function edit($id)
+    /**
+     * Read raw POST, whitelist fields, sanitize, apply nullables, and validate.
+     *
+     * @param bool $isUpdate When true, required fields are not enforced (PATCH semantics).
+     * @return array Clean data, or ['errors' => string[]] on failure.
+     */
+    private function getValidatedInput(bool $isUpdate = false): array
     {
-        $page = Page::findOrFail($id);
-        $templates = Template::all();
-        $categories = Category::orderBy('name')->get();
-        $tags = Tag::orderBy('name')->get();
-        echo \Flight::get("blade")->render("admin.pages.edit", compact("page", "templates", "categories", "tags"));
+        $raw = $this->rawInput();
+
+        // 1. Whitelist
+        $data = array_intersect_key($raw, array_flip(self::FILLABLE));
+
+        // 2. Trim all strings
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                $data[$key] = trim($value);
+            }
+        }
+
+        // 3. Null out empty optional fields (avoids storing "" in the DB)
+        foreach (self::NULLABLE as $field) {
+            if (isset($data[$field]) && $data[$field] === '') {
+                $data[$field] = null;
+            }
+        }
+
+        // 4. Validate required fields
+        $errors = [];
+
+        if (!$isUpdate) {
+            foreach (self::REQUIRED as $field) {
+                if (empty($data[$field])) {
+                    $errors[] = "'{$field}' is required.";
+                }
+            }
+        }
+
+        // 5. Validate slug format if provided
+        if (!empty($data['slug']) && !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $data['slug'])) {
+            $errors[] = "'slug' may only contain lowercase letters, numbers, and hyphens.";
+        }
+
+        return $errors ? ['errors' => $errors] : $data;
     }
 
-    public static function update($id)
+    /**
+     * Raw POST input via Flight (avoids direct $_POST access in business logic).
+     */
+    private function rawInput(): array
     {
-        $page = Page::findOrFail($id);
-        $input = $_POST;
+        return (array) \Flight::request()->data->getData();
+    }
 
-        $slug = $_POST["slug"]
-            ? unique_slug($_POST["slug"], $id)
-            : unique_slug($_POST["title"], $id);
+    /**
+     * Find a page by ID or respond with 404 and halt execution.
+     */
+    private function findOrAbort(int $id): Page
+    {
+        $page = Page::find($id);
 
-        $page->update([
-            "title" => $_POST["title"],
-            "slug" => $slug,
-            'content_json' => $input['content_json'] ?? null,
-            'meta_title' => ($input['meta_title'] ?? '') ?: null,
-            'meta_description' => ($input['meta_description'] ?? '') ?: null,
-            'meta_keywords' => ($input['meta_keywords'] ?? '') ?: null,
-            'og_title' => ($input['og_title'] ?? '') ?: null,
-            'og_description' => ($input['og_description'] ?? '') ?: null,
-            'og_image' => ($input['og_image'] ?? '') ?: null,
-            'canonical_url' => ($input['canonical_url'] ?? '') ?: null,
-            'robots' => ($input['robots'] ?? '') ?: null,
-            'twitter_card' => ($input['twitter_card'] ?? '') ?: null,
-        ]);
+        if (!$page) {
+            \Flight::response()->status(404);
+            $this->renderView('admin.errors.404', ['message' => 'Page not found.']);
+            exit;
+        }
 
-        $categoryIds = isset($_POST['category_ids']) ? (array) $_POST['category_ids'] : [];
-        $tagIds = isset($_POST['tag_ids']) ? (array) $_POST['tag_ids'] : [];
-        $page->categories()->sync($categoryIds);
-        $page->tags()->sync($tagIds);
+        return $page;
+    }
 
-        \Flight::redirect("/admin/pages?saved=1");
+    /**
+     * Render a Blade view.
+     */
+    private function renderView(string $view, array $data = []): void
+    {
+        echo \Flight::get('blade')->render($view, $data);
     }
 }

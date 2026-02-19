@@ -61,6 +61,11 @@ class Page extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    public function contentType()
+    {
+        return $this->belongsTo(ContentType::class, 'type', 'slug');
+    }
+
     // =============================
     // Scopes (VERY USEFUL)
     // =============================

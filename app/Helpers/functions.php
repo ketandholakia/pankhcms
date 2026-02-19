@@ -112,3 +112,10 @@ if (!function_exists('setting')) {
         return $settings[$key] ?? $default;
     }
 }
+
+if (!function_exists('theme_asset')) {
+    function theme_asset(string $file): string
+    {
+        return \App\Core\Theme::asset($file);
+    }
+}

@@ -10,20 +10,31 @@ if (file_exists(__DIR__ . '/lock') || file_exists($root . '/.env')) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $installDemo = isset($_POST['install_demo']) && $_POST['install_demo'] === '1';
 
-    $env = "
-APP_URL={$_POST['app_url']}
-DB_DRIVER=sqlite
-DB_DATABASE=database/database.sqlite
-ACTIVE_THEME=default
-";
+    $driver = $_POST['db_driver'] ?? 'sqlite';
+    $env = "\nAPP_URL={$_POST['app_url']}\nDB_DRIVER={$driver}\nDB_CONNECTION={$driver}\nACTIVE_THEME=default\n";
+
+    if ($driver === 'mysql') {
+        $dbHost = trim($_POST['db_host'] ?? '127.0.0.1');
+        $dbPort = trim($_POST['db_port'] ?? '3306');
+
+        if ($dbHost === 'localhost') {
+            $dbHost = '127.0.0.1';
+        }
+
+        $env .= "DB_HOST={$dbHost}\nDB_PORT={$dbPort}\nDB_DATABASE={$_POST['db_database']}\nDB_USERNAME={$_POST['db_username']}\nDB_PASSWORD={$_POST['db_password']}\n";
+    } else {
+        $absoluteSqlite = $root . '/database/database.sqlite';
+        $env .= "DB_DATABASE={$absoluteSqlite}\n";
+    }
 
     file_put_contents($root . '/.env', trim($env));
 
-    if (!file_exists($root . '/database')) {
-        mkdir($root . '/database', 0777, true);
+    if ($driver === 'sqlite') {
+        if (!file_exists($root . '/database')) {
+            mkdir($root . '/database', 0777, true);
+        }
+        touch($root . '/database/database.sqlite');
     }
-
-    touch($root . '/database/database.sqlite');
 
     require $root . '/vendor/autoload.php';
 
@@ -32,7 +43,10 @@ ACTIVE_THEME=default
 
     require $root . '/app/database.php';
 
-    \Illuminate\Database\Capsule\Manager::connection()->statement('PRAGMA foreign_keys = ON');
+    // SQLite only: PRAGMA foreign_keys = ON
+    if ($driver === 'sqlite') {
+        \Illuminate\Database\Capsule\Manager::connection()->statement('PRAGMA foreign_keys = ON');
+    }
 
     $schema = \Illuminate\Database\Capsule\Manager::schema();
 
@@ -126,6 +140,146 @@ ACTIVE_THEME=default
         });
     }
 
+    // ---------- Menu Items ----------
+    if (!$schema->hasTable('menu_items')) {
+        $schema->create('menu_items', function ($t) {
+            $t->increments('id');
+            $t->unsignedInteger('menu_id')->nullable();
+            $t->unsignedInteger('parent_id')->nullable();
+            $t->string('title')->nullable();
+            $t->string('url')->nullable();
+            $t->unsignedInteger('page_id')->nullable();
+            $t->integer('sort_order')->default(0);
+
+            $t->foreign('menu_id')->references('id')->on('menus')->onDelete('cascade');
+            $t->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
+        });
+    }
+
+    // ---------- Page Categories Pivot ----------
+    if (!$schema->hasTable('page_categories')) {
+        $schema->create('page_categories', function ($t) {
+            $t->unsignedInteger('page_id');
+            $t->unsignedInteger('category_id');
+            $t->primary(['page_id', 'category_id']);
+
+            $t->foreign('page_id')->references('id')->on('pages')->onDelete('cascade');
+            $t->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
+        });
+    }
+
+    // ---------- Page Tags Pivot ----------
+    if (!$schema->hasTable('page_tags')) {
+        $schema->create('page_tags', function ($t) {
+            $t->unsignedInteger('page_id');
+            $t->unsignedInteger('tag_id');
+            $t->primary(['page_id', 'tag_id']);
+
+            $t->foreign('page_id')->references('id')->on('pages')->onDelete('cascade');
+            $t->foreign('tag_id')->references('id')->on('tags')->onDelete('cascade');
+        });
+    }
+
+    // ---------- Templates ----------
+    if (!$schema->hasTable('templates')) {
+        $schema->create('templates', function ($t) {
+            $t->increments('id');
+            $t->string('name')->nullable();
+            $t->text('content_json')->nullable();
+            $t->timestamp('created_at')->useCurrent();
+        });
+    }
+
+    // ---------- Roles ----------
+    if (!$schema->hasTable('roles')) {
+        $schema->create('roles', function ($t) {
+            $t->increments('id');
+            $t->string('name');
+        });
+    }
+
+    // ---------- Permissions ----------
+    if (!$schema->hasTable('permissions')) {
+        $schema->create('permissions', function ($t) {
+            $t->increments('id');
+            $t->string('name');
+        });
+    }
+
+    // ---------- Role Permissions Pivot ----------
+    if (!$schema->hasTable('role_permissions')) {
+        $schema->create('role_permissions', function ($t) {
+            $t->unsignedInteger('role_id');
+            $t->unsignedInteger('permission_id');
+
+            $t->primary(['role_id', 'permission_id']);
+            $t->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
+            $t->foreign('permission_id')->references('id')->on('permissions')->onDelete('cascade');
+        });
+    }
+
+    // ---------- User Roles Pivot ----------
+    if (!$schema->hasTable('user_roles')) {
+        $schema->create('user_roles', function ($t) {
+            $t->unsignedInteger('user_id');
+            $t->unsignedInteger('role_id');
+
+            $t->primary(['user_id', 'role_id']);
+            $t->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $t->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
+        });
+    }
+
+    // ---------- Settings ----------
+    if (!$schema->hasTable('settings')) {
+        $schema->create('settings', function ($t) {
+            $t->string('key')->primary();
+            $t->text('value')->nullable();
+        });
+    }
+
+    // ---------- Media ----------
+    if (!$schema->hasTable('media')) {
+        $schema->create('media', function ($t) {
+            $t->increments('id');
+            $t->unsignedInteger('page_id')->nullable();
+            $t->string('filename')->nullable();
+            $t->text('path')->nullable();
+            $t->string('mime')->nullable();
+            $t->integer('size')->nullable();
+            $t->dateTime('uploaded_at')->nullable();
+
+            $t->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
+        });
+    }
+
+    // ---------- Redirects ----------
+    if (!$schema->hasTable('redirects')) {
+        $schema->create('redirects', function ($t) {
+            $t->increments('id');
+            $t->text('old_url')->nullable();
+            $t->text('new_url')->nullable();
+            $t->integer('type')->default(301);
+        });
+    }
+
+    // ---------- Logs ----------
+    if (!$schema->hasTable('logs')) {
+        $schema->create('logs', function ($t) {
+            $t->increments('id');
+            $t->unsignedInteger('user_id')->nullable();
+            $t->text('action')->nullable();
+            $t->dateTime('created_at')->nullable();
+
+            $t->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+        });
+    }
+
+    // ---------- Useful Indexes ----------
+    \Illuminate\Database\Capsule\Manager::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_slug ON pages(slug)');
+    \Illuminate\Database\Capsule\Manager::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug)');
+    \Illuminate\Database\Capsule\Manager::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_slug ON tags(slug)');
+
     // ⭐ SEED DEFAULT CONTENT TYPES
     $now = date('Y-m-d H:i:s');
 
@@ -181,6 +335,21 @@ ACTIVE_THEME=default
         ]
     );
 
+    // ---------- Default Settings ----------
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'site_name'], ['value' => 'PankhCMS']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'site_tagline'], ['value' => 'A lightweight CMS']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'active_theme'], ['value' => 'default']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_enabled'], ['value' => '1']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_type'], ['value' => 'auto']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_show_home'], ['value' => '1']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_home_label'], ['value' => 'Home']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_separator'], ['value' => '/']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_schema'], ['value' => '1']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'homepage_id'], ['value' => '']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'posts_per_page'], ['value' => '10']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'timezone'], ['value' => 'UTC']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'logo_path'], ['value' => '']);
+
     file_put_contents(__DIR__ . '/lock', 'installed');
 
     header('Location: /install/complete.php');
@@ -206,6 +375,25 @@ button:hover{background:#0056b3}
 <label>App URL</label>
 <input name="app_url" value="http://<?php echo $_SERVER['HTTP_HOST']; ?>">
 
+<h3>Database Type</h3>
+<select name="db_driver" id="db_driver" onchange="toggleDbFields()">
+  <option value="sqlite" selected>SQLite (default)</option>
+  <option value="mysql">MySQL</option>
+</select>
+
+<div id="mysql-fields" style="display:none;">
+  <label>MySQL Host</label>
+    <input name="db_host" value="127.0.0.1">
+    <label>MySQL Port</label>
+    <input name="db_port" value="3306">
+  <label>MySQL Database</label>
+  <input name="db_database">
+  <label>MySQL Username</label>
+  <input name="db_username">
+  <label>MySQL Password</label>
+  <input type="password" name="db_password">
+</div>
+
 <h3>Admin Account</h3>
 <label>Email</label>
 <input name="admin_email" required>
@@ -220,6 +408,14 @@ Install demo content
 
 <button>Install CMS</button>
 </form>
+<script>
+function toggleDbFields() {
+  var driver = document.getElementById('db_driver').value;
+  document.getElementById('mysql-fields').style.display = (driver === 'mysql') ? '' : 'none';
+}
+document.getElementById('db_driver').addEventListener('change', toggleDbFields);
+window.onload = toggleDbFields;
+</script>
 </div>
 </body>
 </html>

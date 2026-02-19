@@ -18,6 +18,19 @@
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="slug" name="slug" type="text" placeholder="page-slug" value="{{ $page->slug }}">
         </div>
 
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="type">
+            Content Type
+          </label>
+          <select id="type" name="type" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            @foreach ($types as $type)
+              <option value="{{ $type->slug }}" {{ $page->type === $type->slug ? 'selected' : '' }}>
+                {{ $type->name }}
+              </option>
+            @endforeach
+          </select>
+        </div>
+
         <div class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="content">
                 Content

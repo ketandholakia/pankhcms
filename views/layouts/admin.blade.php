@@ -31,6 +31,11 @@
                 <span class="sidebar-label">Pages</span>
             </a>
 
+            <a href="/admin/content-types" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
+                <i data-lucide="shapes"></i>
+                <span class="sidebar-label">Content Types</span>
+            </a>
+
             <a href="/admin/messages" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
                 <i data-lucide="inbox"></i>
                 <span class="sidebar-label">Messages</span>

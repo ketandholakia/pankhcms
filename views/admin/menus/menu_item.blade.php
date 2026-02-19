@@ -8,15 +8,17 @@
                 ({{ $item->url }})
             @endif
         </span>
-        <button onclick="openMenuItemEditModal({
-            id: {{ $item->id }},
-            title: @json($item->title),
-            url: @json($item->url),
-            page_id: @json($item->page_id),
-            parent_id: @json($item->parent_id),
-            sort_order: @json($item->sort_order)
-        })" class="bg-yellow-400 text-white px-2 py-1 rounded text-xs ml-2">Edit</button>
-        <form action="/admin/menu-items/{{ $item->id }}/delete" method="POST" class="inline ml-2 js-menu-item-delete" onsubmit="return confirm('Delete this menu item?');">
+        <button 
+            type="button" 
+            class="bg-yellow-400 text-white px-2 py-1 rounded text-xs ml-2 js-menu-item-edit-btn"
+            data-id="{{ $item->id }}"
+            data-title="{{ $item->title }}"
+            data-url="{{ $item->url }}"
+            data-page-id="{{ $item->page_id }}"
+            data-parent-id="{{ $item->parent_id }}"
+            data-sort-order="{{ $item->sort_order }}"
+        >Edit</button>
+        <form action="/admin/menu-items/{{ $item->id }}/delete" method="POST" class="inline ml-2 js-menu-item-delete">
             <button type="submit" class="bg-red-600 text-white px-2 py-1 rounded text-xs">Delete</button>
         </form>
         <form action="/admin/menu-items/{{ $item->id }}/move" method="POST" class="inline ml-1">
