@@ -269,6 +269,41 @@
             });
         }
     });
+    // Auto-fill URL when a page is selected (Add Menu Item form)
+    document.querySelector('select[name="page_id"]').addEventListener('change', function(e) {
+        var pageId = this.value;
+        var urlInput = this.closest('form').querySelector('input[name="url"]');
+        if (pageId && window.pageSlugs && window.pageSlugs[pageId]) {
+            urlInput.value = '/' + window.pageSlugs[pageId];
+            urlInput.readOnly = true;
+        } else {
+            urlInput.value = '';
+            urlInput.readOnly = false;
+        }
+    });
+
+    // Auto-fill URL when a page is selected (Edit Menu Item modal)
+    var editPageSelect = document.getElementById('edit-item-page_id');
+    if (editPageSelect) {
+        editPageSelect.addEventListener('change', function(e) {
+            var pageId = this.value;
+            var urlInput = document.getElementById('edit-item-url');
+            if (pageId && window.pageSlugs && window.pageSlugs[pageId]) {
+                urlInput.value = '/' + window.pageSlugs[pageId];
+                urlInput.readOnly = true;
+            } else {
+                urlInput.value = '';
+                urlInput.readOnly = false;
+            }
+        });
+    }
+
+    // Provide page slugs to JS
+    window.pageSlugs = {
+        @foreach($pages as $p)
+            {{ $p->id }}: '{{ addslashes($p->slug) }}',
+        @endforeach
+    };
     </script>
 </div>
 @endsection

@@ -20,66 +20,41 @@
             </button>
         </div>
 
+        <?php
+            $sidebarLinks = [
+                ["/admin", "layout-dashboard", "Dashboard"],
+                ["/admin/pages", "file-text", "Pages"],
+                ["/admin/content-types", "shapes", "Content Types"],
+                ["/admin/messages", "inbox", "Messages"],
+                ["/admin/categories", "folder", "Categories"],
+                ["/admin/tags", "tag", "Tags"],
+                ["/admin/templates", "layout", "Templates"],
+                ["/admin/themes", "palette", "Themes"],
+                ["/admin/backups", "database-backup", "Backups"],
+                ["/admin/settings/seo", "search", "SEO Settings", true],
+                ["/admin/settings/breadcrumbs", "chevron-right-square", "Breadcrumbs"],
+                ["/admin/menus", "menu", "Menus"],
+                ["/admin/media", "image", "Media"],
+            ];
+            $currentUrl = $_SERVER['REQUEST_URI'] ?? '';
+        ?>
         <nav class="space-y-1">
-            <a href="/admin" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="layout-dashboard"></i>
-                <span class="sidebar-label">Dashboard</span>
-            </a>
-
-            <a href="/admin/pages" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="file-text"></i>
-                <span class="sidebar-label">Pages</span>
-            </a>
-
-            <a href="/admin/content-types" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="shapes"></i>
-                <span class="sidebar-label">Content Types</span>
-            </a>
-
-            <a href="/admin/messages" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="inbox"></i>
-                <span class="sidebar-label">Messages</span>
-            </a>
-
-            <a href="/admin/categories" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="folder"></i>
-                <span class="sidebar-label">Categories</span>
-            </a>
-
-            <a href="/admin/tags" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="tag"></i>
-                <span class="sidebar-label">Tags</span>
-            </a>
-
-            <a href="/admin/templates" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="layout"></i>
-                <span class="sidebar-label">Templates</span>
-            </a>
-
-            <a href="/admin/themes" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="palette"></i>
-                <span class="sidebar-label">Themes</span>
-            </a>
-
-            <a href="/admin/backups" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="database-backup"></i>
-                <span class="sidebar-label">Backups</span>
-            </a>
-
-            <a href="/admin/settings/seo" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="search"></i>
-                <span class="sidebar-label">SEO Settings</span>
-            </a>
-
-            <a href="/admin/settings/breadcrumbs" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="chevron-right-square"></i>
-                <span class="sidebar-label">Breadcrumbs</span>
-            </a>
-
-            <a href="/admin/menus" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800">
-                <i data-lucide="menu"></i>
-                <span class="sidebar-label">Menus</span>
-            </a>
+            <?php foreach ($sidebarLinks as $link):
+                $href = $link[0];
+                $icon = $link[1];
+                $label = $link[2];
+                $isSeo = $link[3] ?? false;
+                $isActive = strpos($currentUrl, $href) === 0;
+                $activeClass = $isActive ? ' bg-blue-900 text-white font-semibold' : '';
+            ?>
+                <a href="<?= $href ?>" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800<?= $activeClass ?>">
+                    <i data-lucide="<?= $icon ?>"></i>
+                    <span class="sidebar-label"><?= $label ?></span>
+                    <?php if ($isSeo && $isActive): ?>
+                        <i data-lucide="check-circle" class="text-green-400"></i>
+                    <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
         </nav>
     </aside>
 
