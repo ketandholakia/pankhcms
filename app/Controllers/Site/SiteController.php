@@ -34,6 +34,11 @@ class SiteController
     private static function renderPage(Page $page)
     {
         $breadcrumbs = \generateBreadcrumbs($page);
-        echo \Flight::get('blade')->render('page', compact('page', 'breadcrumbs'));
+        $blocks = [];
+        if (!empty($page->content_json)) {
+            $blocks = json_decode($page->content_json, true) ?? [];
+        }
+        $site_name = \setting('site_name', 'PankhCMS');
+        echo \Flight::get('blade')->render('page', compact('page', 'breadcrumbs', 'blocks', 'site_name'));
     }
 }
