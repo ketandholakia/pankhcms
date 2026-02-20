@@ -208,8 +208,10 @@ class MenuItemController
         $url    = !empty($input['url'])     ? $input['url']           : null;
 
         if ($pageId !== null) {
-            $url = null;
-        } else {
+            // If a page is selected, fetch its slug and use as URL
+            $page = \App\Models\Page::find($pageId);
+            $url = $page ? '/' . ltrim($page->slug, '/') : null;
+        } else if ($url) {
             $pageId = null;
         }
 
