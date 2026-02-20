@@ -67,7 +67,8 @@
             let url = '/admin/templates';
             let method = 'POST';
             if (id) {
-                url = `/admin/templates/${id}/update`;
+                // route defined as POST /admin/templates/@id
+                url = `/admin/templates/${id}`;
             }
             const res = await fetch(url, { method, body: data });
             if (res.ok) {

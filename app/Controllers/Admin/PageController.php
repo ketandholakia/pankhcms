@@ -104,6 +104,8 @@ class PageController
 
     public function update(int $id): void
     {
+
+
         $page  = $this->findOrAbort($id);
         $input = $this->getValidatedInput(isUpdate: true);
 

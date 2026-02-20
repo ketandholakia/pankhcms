@@ -47,14 +47,21 @@
                             + Hero Block
                         </button>
                     </div>
-                    <div>
+                    <div class="flex gap-2">
                         <select onchange="loadTemplate(this.value)" class="border p-2 rounded">
                           <option value="">Load Template</option>
                           @foreach($templates as $tpl)
                             <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
                           @endforeach
                         </select>
+                        <select onchange="addTemplate(this.value); this.value='';" class="border p-2 rounded">
+                          <option value="">Add Template</option>
+                          @foreach($templates as $tpl)
+                            <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
+                          @endforeach
+                        </select>
                     </div>
+
                 </div>
                 <input type="hidden" name="content_json" id="content_json">
             </div>
@@ -141,6 +148,27 @@
 @push('scripts')
 <script>
 
+// Add Template: Appends template blocks to current blocks
+async function addTemplate(id) {
+  if (!id) return;
+  try {
+    const res = await fetch('/admin/templates/' + id);
+    const data = await res.json();
+    if (data && data.content_json) {
+      let newBlocks = JSON.parse(data.content_json);
+      // If template is a single object, wrap in array
+      if (!Array.isArray(newBlocks)) newBlocks = [newBlocks];
+      blocks = blocks.concat(newBlocks);
+      render();
+    } else {
+      alert('Template is empty or invalid.');
+    }
+  } catch (error) {
+    console.error('Error adding template:', error);
+    alert('Could not add the template.');
+  }
+}
+
 let blocks = [];
 
 function addBlock(type) {
@@ -160,27 +188,27 @@ function render() {
   container.innerHTML = '';
 
   blocks.forEach((b, i) => {
-
     let blockWrapper = document.createElement('div');
     blockWrapper.className = 'bg-white border border-gray-300 p-4 my-2 rounded shadow-sm';
-
     let innerHTML = `<div class="flex justify-between items-center mb-2">
                         <strong class="text-gray-700">${b.type.toUpperCase()}</strong>
                         <button type="button" onclick="removeBlock(${i})" class="text-red-500 hover:text-red-700 font-bold">Delete</button>
                      </div>`;
-
     if (b.type === 'text') {
       innerHTML += `<textarea class="w-full border p-2 rounded" rows="5" oninput="updateBlock(${i}, 'html', this.value)">${b.html || ''}</textarea>`;
     }
-
     if (b.type === 'hero') {
       innerHTML += `<label class="block font-medium text-sm">Title:</label>
         <input type="text" class="w-full border p-2 rounded" value="${b.title || ''}" oninput="updateBlock(${i}, 'title', this.value)">`;
     }
-
     blockWrapper.innerHTML = innerHTML;
     container.appendChild(blockWrapper);
   });
+  // Always sync content_json hidden input with blocks
+  const contentInput = document.getElementById('content_json');
+  if (contentInput) {
+    contentInput.value = JSON.stringify(blocks);
+  }
 }
 
 function updateBlock(index, key, value) {
