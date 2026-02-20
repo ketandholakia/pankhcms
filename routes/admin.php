@@ -53,8 +53,14 @@ Flight::route('GET /admin/content-types/@id/edit',
     ['App\\Controllers\\Admin\\ContentTypeController', 'edit']
 );
 
+
 Flight::route('POST /admin/content-types/@id',
     ['App\\Controllers\\Admin\\ContentTypeController', 'update']
+);
+
+// Custom fields for content types
+Flight::route('POST /admin/content-types/@id/fields',
+    ['App\\Controllers\\Admin\\ContentTypeController', 'saveFields']
 );
 
 Flight::route('POST /admin/content-types/@id/delete',

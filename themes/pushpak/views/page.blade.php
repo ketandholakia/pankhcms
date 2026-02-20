@@ -2,6 +2,10 @@
 
 @section('content')
     @foreach($blocks as $block)
-        @include('blocks.' . $block['type'], ['block' => $block])
+        @php
+            $type = $block['type'] ?? '';
+            $partial = 'blocks.' . $type;
+        @endphp
+        @includeIf($partial, ['block' => $block])
     @endforeach
 @endsection

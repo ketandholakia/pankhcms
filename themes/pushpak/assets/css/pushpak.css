@@ -2,3 +2,16 @@
 body {
     font-family: 'Inter', Arial, sans-serif;
 }
+
+.footer-links a {
+  color: #ccc;
+  text-decoration: none;
+  display: block;
+  padding: 4px 0;
+  transition: 0.3s;
+}
+
+.footer-links a:hover {
+  color: #fff;
+  padding-left: 6px;
+}

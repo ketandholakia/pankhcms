@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+
 class ContentType extends Model
 {
     protected $fillable = [
@@ -15,4 +16,9 @@ class ContentType extends Model
         'has_tags',
         'is_system',
     ];
+
+    public function fields()
+    {
+        return $this->hasMany(ContentTypeField::class, 'content_type_id');
+    }
 }

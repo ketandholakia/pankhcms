@@ -63,8 +63,8 @@ class ContentTypeController
     public function edit(int $id): void
     {
         $type = $this->findOrAbort($id);
-
-        $this->renderView('admin.content_types.edit', compact('type'));
+        $fields = $type->fields()->orderBy('sort_order')->get();
+        $this->renderView('admin.content_types.edit', compact('type', 'fields'));
     }
 
     public function update(int $id): void
@@ -96,6 +96,45 @@ class ContentTypeController
         }
     }
 
+    public function saveFields(int $id): void
+    {
+        $type = $this->findOrAbort($id);
+        $payload = (array) Flight::request()->data->getData();
+        $fields = $payload['fields'] ?? [];
+        $newField = $payload['new_field'] ?? [];
+
+        foreach ($fields as $fieldId => $data) {
+            $field = $type->fields()->find($fieldId);
+            if (!$field) {
+                continue;
+            }
+
+            if (!empty($data['delete'])) {
+                $field->delete();
+                continue;
+            }
+
+            $field->label = $data['label'] ?? $field->label;
+            $field->name = $data['name'] ?? $field->name;
+            $field->type = $data['type'] ?? $field->type;
+            $field->required = !empty($data['required']) ? 1 : 0;
+            $field->sort_order = isset($data['sort_order']) ? (int) $data['sort_order'] : 0;
+            $field->save();
+        }
+
+        if (!empty($newField['label']) && !empty($newField['name'])) {
+            $type->fields()->create([
+                'label' => trim((string) $newField['label']),
+                'name' => trim((string) $newField['name']),
+                'type' => $newField['type'] ?? 'text',
+                'required' => !empty($newField['required']) ? 1 : 0,
+                'sort_order' => isset($newField['sort_order']) ? (int) $newField['sort_order'] : 0,
+            ]);
+        }
+
+        Flight::redirect("/admin/content-types/{$id}/edit?fields_updated=1");
+    }
+
     public function destroy(int $id): void
     {
         $type = $this->findOrAbort($id);
@@ -124,14 +163,12 @@ class ContentTypeController
         $raw  = $this->rawInput();
         $data = array_intersect_key($raw, array_flip(self::FILLABLE));
 
-        // Trim strings
         foreach ($data as $key => $value) {
             if (is_string($value)) {
                 $data[$key] = trim($value);
             }
         }
 
-        // Validate
         $errors = [];
 
         foreach (self::RULES as $field => $rules) {
@@ -147,16 +184,13 @@ class ContentTypeController
             }
         }
 
-        // Slug format check
         if (!empty($data['slug']) && !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $data['slug'])) {
             $errors[] = "'slug' may only contain lowercase letters, numbers, and hyphens.";
         }
 
-        // Coerce checkboxes to integers (unchecked boxes are absent from POST)
         $data['has_categories'] = isset($raw['has_categories']) ? 1 : 0;
-        $data['has_tags']       = isset($raw['has_tags'])       ? 1 : 0;
+        $data['has_tags'] = isset($raw['has_tags']) ? 1 : 0;
 
-        // Null out empty optionals
         foreach (['description', 'icon'] as $field) {
             if (isset($data[$field]) && $data[$field] === '') {
                 $data[$field] = null;
@@ -166,17 +200,11 @@ class ContentTypeController
         return $errors ? ['errors' => $errors] : $data;
     }
 
-    /**
-     * Return raw POST data via Flight's request object.
-     */
     private function rawInput(): array
     {
         return (array) Flight::request()->data->getData();
     }
 
-    /**
-     * Find a ContentType by ID or respond with 404 and halt.
-     */
     private function findOrAbort(int $id): ContentType
     {
         $type = ContentType::find($id);
@@ -190,11 +218,6 @@ class ContentTypeController
         return $type;
     }
 
-    /**
-     * Halt with 403 if the content type is a protected system record.
-     *
-     * @param string $action Human-readable action name for the error message (e.g. 'edited').
-     */
     private function abortIfSystem(ContentType $type, string $action): void
     {
         if ($type->is_system) {
@@ -206,13 +229,9 @@ class ContentTypeController
         }
     }
 
-    /**
-     * Render a Blade/Flight view.
-     */
     private function renderView(string $view, array $data = []): void
     {
-        // If the view name contains '.blade', use Blade, else use Flight's view engine
-        if (strpos($view, '.blade') !== false || file_exists(dirname(__DIR__, 3) . "/views/" . str_replace('.', '/', $view) . ".blade.php")) {
+        if (strpos($view, '.blade') !== false || file_exists(dirname(__DIR__, 3) . '/views/' . str_replace('.', '/', $view) . '.blade.php')) {
             echo Flight::get('blade')->render($view, $data);
         } else {
             Flight::view()->render($view, $data);

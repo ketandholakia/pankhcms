@@ -58,5 +58,66 @@
             <p class="text-sm text-gray-500">System content types cannot be edited.</p>
         @endif
     </form>
+
+    {{-- Custom Fields Section --}}
+    <div class="mt-10">
+        <h2 class="text-xl font-semibold mb-2">Custom Fields</h2>
+        <form method="POST" action="/admin/content-types/{{ $type->id }}/fields" class="space-y-4">
+            <table class="w-full border text-sm mb-4">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="p-2 border">Label</th>
+                        <th class="p-2 border">Name</th>
+                        <th class="p-2 border">Type</th>
+                        <th class="p-2 border">Required</th>
+                        <th class="p-2 border">Sort</th>
+                        <th class="p-2 border">Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach($fields as $i => $field)
+                    <tr>
+                        <td class="border p-1"><input type="text" name="fields[{{ $field->id }}][label]" value="{{ $field->label }}" class="border rounded px-2 py-1 w-full"></td>
+                        <td class="border p-1"><input type="text" name="fields[{{ $field->id }}][name]" value="{{ $field->name }}" class="border rounded px-2 py-1 w-full"></td>
+                        <td class="border p-1">
+                            <select name="fields[{{ $field->id }}][type]" class="border rounded px-2 py-1 w-full">
+                                <option value="text" {{ $field->type == 'text' ? 'selected' : '' }}>Text</option>
+                                <option value="textarea" {{ $field->type == 'textarea' ? 'selected' : '' }}>Textarea</option>
+                                <option value="select" {{ $field->type == 'select' ? 'selected' : '' }}>Select</option>
+                                <option value="checkbox" {{ $field->type == 'checkbox' ? 'selected' : '' }}>Checkbox</option>
+                                <option value="radio" {{ $field->type == 'radio' ? 'selected' : '' }}>Radio</option>
+                                <option value="number" {{ $field->type == 'number' ? 'selected' : '' }}>Number</option>
+                                <option value="date" {{ $field->type == 'date' ? 'selected' : '' }}>Date</option>
+                            </select>
+                        </td>
+                        <td class="border p-1 text-center"><input type="checkbox" name="fields[{{ $field->id }}][required]" value="1" {{ $field->required ? 'checked' : '' }}></td>
+                        <td class="border p-1"><input type="number" name="fields[{{ $field->id }}][sort_order]" value="{{ $field->sort_order }}" class="border rounded px-2 py-1 w-16"></td>
+                        <td class="border p-1 text-center"><input type="checkbox" name="fields[{{ $field->id }}][delete]"></td>
+                    </tr>
+                @endforeach
+                {{-- New Field Row --}}
+                <tr>
+                    <td class="border p-1"><input type="text" name="new_field[label]" class="border rounded px-2 py-1 w-full" placeholder="Label"></td>
+                    <td class="border p-1"><input type="text" name="new_field[name]" class="border rounded px-2 py-1 w-full" placeholder="name"></td>
+                    <td class="border p-1">
+                        <select name="new_field[type]" class="border rounded px-2 py-1 w-full">
+                            <option value="text">Text</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="select">Select</option>
+                            <option value="checkbox">Checkbox</option>
+                            <option value="radio">Radio</option>
+                            <option value="number">Number</option>
+                            <option value="date">Date</option>
+                        </select>
+                    </td>
+                    <td class="border p-1 text-center"><input type="checkbox" name="new_field[required]" value="1"></td>
+                    <td class="border p-1"><input type="number" name="new_field[sort_order]" class="border rounded px-2 py-1 w-16" value="0"></td>
+                    <td class="border p-1"></td>
+                </tr>
+                </tbody>
+            </table>
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save Fields</button>
+        </form>
+    </div>
 </div>
 @endsection

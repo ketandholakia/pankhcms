@@ -3,7 +3,7 @@
 @section('content')
     <h1 class="text-2xl font-bold mb-4">Edit Page</h1>
 
-    <form action="/admin/pages/{{ $page->id }}/update" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <form id="page-form" action="/admin/pages/{{ $page->id }}/update" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
                 Title
@@ -37,6 +37,7 @@
             </label>
             <div class="p-4 border bg-gray-50 rounded">
                 <h3 class="text-lg font-semibold">Page Builder</h3>
+              <p class="text-sm text-gray-500 mt-1">Drag blocks using the handle to reorder them.</p>
                 <div id="builder" class="mt-4"></div>
                 <div class="mt-4 flex items-center justify-between">
                     <div>
@@ -146,6 +147,7 @@
 @endsection
 
 @push('scripts')
+<script src="/assets/tinymce/tinymce.min.js"></script>
 <script>
 
 // Add Template: Appends template blocks to current blocks
@@ -170,6 +172,79 @@ async function addTemplate(id) {
 }
 
 let blocks = [];
+let draggedBlockIndex = null;
+
+function syncContentJson() {
+  const contentInput = document.getElementById('content_json');
+  if (contentInput) {
+    contentInput.value = JSON.stringify(blocks);
+  }
+}
+
+function initTinyMCEEditors() {
+  if (!window.tinymce) return;
+
+  tinymce.remove('.wysiwyg-text-block');
+
+  document.querySelectorAll('.wysiwyg-text-block').forEach((textarea) => {
+    tinymce.init({
+      target: textarea,
+      menubar: false,
+      branding: false,
+      promotion: false,
+      plugins: 'autoresize link lists table image code',
+      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image table | removeformat code',
+      relative_urls: false,
+      convert_urls: false,
+      automatic_uploads: true,
+      file_picker_types: 'image',
+      images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append('file', blobInfo.blob(), blobInfo.filename());
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/admin/media/upload');
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            progress((e.loaded / e.total) * 100);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject('Image upload failed with HTTP ' + xhr.status);
+            return;
+          }
+
+          try {
+            const json = JSON.parse(xhr.responseText);
+            const location = json?.location || json?.url || json?.media?.url;
+            if (!location) {
+              reject('Invalid upload response');
+              return;
+            }
+            resolve(location);
+          } catch (error) {
+            reject('Invalid upload response');
+          }
+        };
+
+        xhr.onerror = () => reject('Image upload failed');
+        xhr.send(formData);
+      }),
+      setup: function (editor) {
+        editor.on('init change keyup undo redo', function () {
+          const idx = parseInt(editor.getElement().dataset.blockIndex || '-1', 10);
+          if (!Number.isNaN(idx) && blocks[idx]) {
+            blocks[idx].html = editor.getContent();
+            syncContentJson();
+          }
+        });
+      }
+    });
+  });
+}
 
 function addBlock(type) {
 
@@ -190,12 +265,21 @@ function render() {
   blocks.forEach((b, i) => {
     let blockWrapper = document.createElement('div');
     blockWrapper.className = 'bg-white border border-gray-300 p-4 my-2 rounded shadow-sm';
+    blockWrapper.dataset.blockIndex = i;
+    blockWrapper.addEventListener('dragover', onBlockDragOver);
+    blockWrapper.addEventListener('dragenter', onBlockDragEnter);
+    blockWrapper.addEventListener('dragleave', onBlockDragLeave);
+    blockWrapper.addEventListener('drop', onBlockDrop);
+
     let innerHTML = `<div class="flex justify-between items-center mb-2">
-                        <strong class="text-gray-700">${b.type.toUpperCase()}</strong>
+                        <div class="flex items-center gap-2">
+                          <span class="cursor-move text-gray-400" draggable="true" data-drag-index="${i}" title="Drag to reorder">☰</span>
+                          <strong class="text-gray-700">${b.type.toUpperCase()}</strong>
+                        </div>
                         <button type="button" onclick="removeBlock(${i})" class="text-red-500 hover:text-red-700 font-bold">Delete</button>
                      </div>`;
     if (b.type === 'text') {
-      innerHTML += `<textarea class="w-full border p-2 rounded" rows="5" oninput="updateBlock(${i}, 'html', this.value)">${b.html || ''}</textarea>`;
+      innerHTML += `<textarea class="w-full border p-2 rounded wysiwyg-text-block" data-block-index="${i}" rows="8" oninput="updateBlock(${i}, 'html', this.value)">${b.html || ''}</textarea>`;
     }
     if (b.type === 'hero') {
       innerHTML += `<label class="block font-medium text-sm">Title:</label>
@@ -204,16 +288,72 @@ function render() {
     blockWrapper.innerHTML = innerHTML;
     container.appendChild(blockWrapper);
   });
+
+  container.querySelectorAll('[data-drag-index]').forEach((handle) => {
+    handle.addEventListener('dragstart', onBlockDragStart);
+    handle.addEventListener('dragend', onBlockDragEnd);
+  });
+
   // Always sync content_json hidden input with blocks
-  const contentInput = document.getElementById('content_json');
-  if (contentInput) {
-    contentInput.value = JSON.stringify(blocks);
+  syncContentJson();
+  initTinyMCEEditors();
+}
+
+function clearDropHighlights() {
+  document.querySelectorAll('#builder [data-block-index]').forEach((blockEl) => {
+    blockEl.classList.remove('border-blue-400', 'bg-blue-50');
+  });
+}
+
+function onBlockDragStart(event) {
+  draggedBlockIndex = parseInt(event.target.dataset.dragIndex || '-1', 10);
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(draggedBlockIndex));
   }
+}
+
+function onBlockDragEnd() {
+  clearDropHighlights();
+}
+
+function onBlockDragOver(event) {
+  event.preventDefault();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+}
+
+function onBlockDragEnter(event) {
+  event.preventDefault();
+  event.currentTarget.classList.add('border-blue-400', 'bg-blue-50');
+}
+
+function onBlockDragLeave(event) {
+  event.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
+}
+
+function onBlockDrop(event) {
+  event.preventDefault();
+  clearDropHighlights();
+
+  const targetIndex = parseInt(event.currentTarget.dataset.blockIndex || '-1', 10);
+  if (Number.isNaN(draggedBlockIndex) || Number.isNaN(targetIndex) || draggedBlockIndex < 0 || targetIndex < 0 || draggedBlockIndex === targetIndex) {
+    draggedBlockIndex = null;
+    return;
+  }
+
+  const [movedBlock] = blocks.splice(draggedBlockIndex, 1);
+  const insertIndex = draggedBlockIndex < targetIndex ? targetIndex - 1 : targetIndex;
+  blocks.splice(insertIndex, 0, movedBlock);
+  draggedBlockIndex = null;
+  render();
 }
 
 function updateBlock(index, key, value) {
     if (blocks[index]) {
         blocks[index][key] = value;
+        syncContentJson();
     }
 }
 
@@ -223,9 +363,17 @@ function removeBlock(i) {
 }
 
   // Copy HTML to hidden input before submit
-document.querySelector('form').addEventListener('submit', () => {
-  document.getElementById('content_json').value =
-    JSON.stringify(blocks);
+document.getElementById('page-form').addEventListener('submit', () => {
+  if (window.tinymce) {
+    tinymce.triggerSave();
+    document.querySelectorAll('.wysiwyg-text-block').forEach((el) => {
+      const idx = parseInt(el.dataset.blockIndex || '-1', 10);
+      if (!Number.isNaN(idx) && blocks[idx]) {
+        blocks[idx].html = el.value;
+      }
+    });
+  }
+  syncContentJson();
 });
 
 async function loadTemplate(id) {

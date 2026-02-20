@@ -3,7 +3,7 @@
 @section('content')
     <h1 class="text-2xl font-bold mb-4">Create New Page</h1>
 
-    <form action="/admin/pages" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <form id="page-form" action="/admin/pages" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
         <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
                 Title
@@ -133,9 +133,82 @@
 @endsection
 
 @push('scripts')
+<script src="/assets/tinymce/tinymce.min.js"></script>
 <script>
 
 let blocks = [];
+
+function syncContentJson() {
+  const contentInput = document.getElementById('content_json');
+  if (contentInput) {
+    contentInput.value = JSON.stringify(blocks);
+  }
+}
+
+function initTinyMCEEditors() {
+  if (!window.tinymce) return;
+
+  tinymce.remove('.wysiwyg-text-block');
+
+  document.querySelectorAll('.wysiwyg-text-block').forEach((textarea) => {
+    tinymce.init({
+      target: textarea,
+      menubar: false,
+      branding: false,
+      promotion: false,
+      plugins: 'autoresize link lists table image code',
+      toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image table | removeformat code',
+      relative_urls: false,
+      convert_urls: false,
+      automatic_uploads: true,
+      file_picker_types: 'image',
+      images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append('file', blobInfo.blob(), blobInfo.filename());
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/admin/media/upload');
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            progress((e.loaded / e.total) * 100);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject('Image upload failed with HTTP ' + xhr.status);
+            return;
+          }
+
+          try {
+            const json = JSON.parse(xhr.responseText);
+            const location = json?.location || json?.url || json?.media?.url;
+            if (!location) {
+              reject('Invalid upload response');
+              return;
+            }
+            resolve(location);
+          } catch (error) {
+            reject('Invalid upload response');
+          }
+        };
+
+        xhr.onerror = () => reject('Image upload failed');
+        xhr.send(formData);
+      }),
+      setup: function (editor) {
+        editor.on('init change keyup undo redo', function () {
+          const idx = parseInt(editor.getElement().dataset.blockIndex || '-1', 10);
+          if (!Number.isNaN(idx) && blocks[idx]) {
+            blocks[idx].html = editor.getContent();
+            syncContentJson();
+          }
+        });
+      }
+    });
+  });
+}
 
 function addBlock(type) {
 
@@ -164,7 +237,7 @@ function render() {
                      </div>`;
 
     if (b.type === 'text') {
-      innerHTML += `<textarea class="w-full border p-2 rounded" rows="5" oninput="updateBlock(${i}, 'html', this.value)">${b.html || ''}</textarea>`;
+      innerHTML += `<textarea class="w-full border p-2 rounded wysiwyg-text-block" data-block-index="${i}" rows="8" oninput="updateBlock(${i}, 'html', this.value)">${b.html || ''}</textarea>`;
     }
 
     if (b.type === 'hero') {
@@ -175,11 +248,15 @@ function render() {
     blockWrapper.innerHTML = innerHTML;
     container.appendChild(blockWrapper);
   });
+
+    syncContentJson();
+    initTinyMCEEditors();
 }
 
 function updateBlock(index, key, value) {
     if (blocks[index]) {
         blocks[index][key] = value;
+      syncContentJson();
     }
 }
 
@@ -189,9 +266,17 @@ function removeBlock(i) {
 }
 
 // Save JSON before submit
-document.querySelector('form').addEventListener('submit', () => {
-  document.getElementById('content_json').value =
-    JSON.stringify(blocks);
+document.getElementById('page-form').addEventListener('submit', () => {
+  if (window.tinymce) {
+    tinymce.triggerSave();
+    document.querySelectorAll('.wysiwyg-text-block').forEach((el) => {
+      const idx = parseInt(el.dataset.blockIndex || '-1', 10);
+      if (!Number.isNaN(idx) && blocks[idx]) {
+        blocks[idx].html = el.value;
+      }
+    });
+  }
+  syncContentJson();
 });
 
 async function loadTemplate(id) {
