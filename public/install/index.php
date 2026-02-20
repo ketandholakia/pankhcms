@@ -242,14 +242,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$schema->hasTable('media')) {
         $schema->create('media', function ($t) {
             $t->increments('id');
-            $t->unsignedInteger('page_id')->nullable();
-            $t->string('filename')->nullable();
-            $t->text('path')->nullable();
-            $t->string('mime')->nullable();
+            $t->string('filename');
+            $t->string('original_name')->nullable();
+            $t->string('mime_type')->nullable();
             $t->integer('size')->nullable();
-            $t->dateTime('uploaded_at')->nullable();
-
-            $t->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
+            $t->string('url');
+            $t->integer('user_id')->nullable();
+            $t->string('alt')->nullable();
+            $t->string('title')->nullable();
+            $t->text('description')->nullable();
+            $t->timestamps();
         });
     }
 
