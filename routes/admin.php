@@ -140,6 +140,15 @@ Flight::route('POST /admin/upload/image', ['App\Controllers\Admin\UploadControll
 
 
 // =========================
+// Admin - Media
+// =========================
+Flight::route('GET /admin/media', ['App\Controllers\Admin\MediaController', 'index']);
+Flight::route('POST /admin/media/upload', ['App\Controllers\Admin\MediaController', 'upload']);
+Flight::route('POST /admin/media/@id/delete', ['App\Controllers\Admin\MediaController', 'delete']);
+Flight::route('GET /admin/media/picker', ['App\Controllers\Admin\MediaController', 'picker']);
+
+
+// =========================
 // Global Admin Guard (FIXED)
 // =========================
 Flight::before('start', function () {
