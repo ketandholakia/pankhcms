@@ -31,6 +31,7 @@
                 ["/admin/templates", "layout", "Templates"],
                 ["/admin/themes", "palette", "Themes"],
                 ["/admin/backups", "database-backup", "Backups"],
+                ["/admin/settings", "settings", "Settings"],
                 ["/admin/settings/seo", "search", "SEO Settings", true],
                 ["/admin/settings/breadcrumbs", "chevron-right-square", "Breadcrumbs"],
                 ["/admin/menus", "menu", "Menus"],

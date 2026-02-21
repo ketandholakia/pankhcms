@@ -6,6 +6,11 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 class SettingsController
 {
+    public static function index()
+    {
+        echo \Flight::get('blade')->render('admin.settings.index');
+    }
+
     public static function breadcrumbsIndex()
     {
         $defaults = self::getBreadcrumbDefaults();

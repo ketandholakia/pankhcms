@@ -5,10 +5,32 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="mainNav">
+            @php
+                $headerItems = $menu_items ?? menu_tree('header');
+                if (empty($headerItems)) {
+                    $headerItems = menu_tree('navbar');
+                }
+            @endphp
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                @foreach($menu_items ?? [] as $item)
+                @foreach($headerItems as $item)
+                    @php
+                        $title = is_array($item) ? ($item['title'] ?? '') : ($item->title ?? '');
+                        $url = is_array($item) ? ($item['url'] ?? '#') : ($item->url ?? '');
+
+                        if (!$url && !is_array($item) && isset($item->page) && !empty($item->page->slug)) {
+                            $url = '/' . ltrim($item->page->slug, '/');
+                        }
+
+                        if ($url === '/home') {
+                            $url = '/';
+                        }
+
+                        if (!$url) {
+                            $url = '#';
+                        }
+                    @endphp
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ $item['url'] ?? '#' }}">{{ $item['title'] }}</a>
+                        <a class="nav-link" href="{{ $url }}">{{ $title }}</a>
                     </li>
                 @endforeach
             </ul>

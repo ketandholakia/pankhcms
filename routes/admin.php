@@ -1,4 +1,6 @@
 <?php
+// Main Settings page
+Flight::route('GET /admin/settings', ['App\Controllers\Admin\SettingsController', 'index']);
 
 // =========================
 // Admin - Auth (NO middleware)
