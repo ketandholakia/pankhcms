@@ -4,6 +4,33 @@
 	<h1 class="text-2xl font-bold mb-4">Settings</h1>
 
 	<form method="POST" action="/admin/settings/update" enctype="multipart/form-data" class="bg-white border rounded-lg p-4 space-y-4">
+		@if(isset($_GET['status']))
+			@if($_GET['status'] === 'updated')
+				<div class="mb-4 rounded border border-green-300 bg-green-50 text-green-800 px-4 py-2">
+					Settings updated successfully.
+				</div>
+			@elseif($_GET['status'] === 'settings-missing')
+				<div class="mb-4 rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2">
+					Settings table not found. Please create the settings table first.
+				</div>
+			@elseif($_GET['status'] === 'logo-upload-failed')
+				<div class="mb-4 rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2">
+					Failed to upload logo. Please try again.
+				</div>
+			@elseif($_GET['status'] === 'logo-invalid-type')
+				<div class="mb-4 rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2">
+					Invalid logo file type. Allowed types: JPG, JPEG, PNG, GIF, WEBP, SVG.
+				</div>
+			@elseif($_GET['status'] === 'favicon-upload-failed')
+				<div class="mb-4 rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2">
+					Failed to upload favicon. Please try again.
+				</div>
+			@elseif($_GET['status'] === 'favicon-invalid-type')
+				<div class="mb-4 rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2">
+					Invalid favicon file type. Allowed types: ICO, PNG, SVG.
+				</div>
+			@endif
+		@endif
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
 				<label for="site_name" class="block text-sm font-semibold mb-2">Site Name</label>
