@@ -35,6 +35,7 @@
 
   @include('blocks.topbar')
   @include('blocks.header')
+  @include('blocks.slider_bootstrap')
 
   <main>
     @yield('content')
@@ -43,6 +44,8 @@
 
   @include('blocks.footer')
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/themes/greenbs/assets/lib/owlcarousel/owl.carousel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/themes/greenbs/assets/js/main.js"></script>
 

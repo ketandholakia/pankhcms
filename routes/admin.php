@@ -1,4 +1,22 @@
+// =========================
+// Admin - Product Gallery
+// =========================
+Flight::route('GET /admin/product-gallery', ['App\\Controllers\\Admin\\ProductGalleryController', 'index']);
+Flight::route('GET /admin/product-gallery/create', ['App\\Controllers\\Admin\\ProductGalleryController', 'create']);
+Flight::route('POST /admin/product-gallery/store', ['App\\Controllers\\Admin\\ProductGalleryController', 'store']);
+Flight::route('GET /admin/product-gallery/edit/@id', ['App\\Controllers\\Admin\\ProductGalleryController', 'edit']);
+Flight::route('POST /admin/product-gallery/update/@id', ['App\\Controllers\\Admin\\ProductGalleryController', 'update']);
+Flight::route('POST /admin/product-gallery/delete/@id', ['App\\Controllers\\Admin\\ProductGalleryController', 'delete']);
 <?php
+// =========================
+// Admin - Slider Images
+// =========================
+Flight::route('GET /admin/slider', ['App\\Controllers\\Admin\\SliderController', 'index']);
+Flight::route('GET /admin/slider/create', ['App\\Controllers\\Admin\\SliderController', 'create']);
+Flight::route('POST /admin/slider/store', ['App\\Controllers\\Admin\\SliderController', 'store']);
+Flight::route('GET /admin/slider/edit/@id', ['App\\Controllers\\Admin\\SliderController', 'edit']);
+Flight::route('POST /admin/slider/update/@id', ['App\\Controllers\\Admin\\SliderController', 'update']);
+Flight::route('POST /admin/slider/delete/@id', ['App\\Controllers\\Admin\\SliderController', 'delete']);
 // Main Settings page
 Flight::route('GET /admin/settings', ['App\Controllers\Admin\SettingsController', 'index']);
 Flight::route('POST /admin/settings/update', ['App\Controllers\Admin\SettingsController', 'update']);

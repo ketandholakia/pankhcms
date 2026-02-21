@@ -12,8 +12,7 @@
     <aside id="admin-sidebar" class="w-64 bg-gray-900 text-gray-200 p-4 min-h-screen transition-all duration-200">
         <div class="mb-6 flex items-center justify-between">
             <h2 class="text-xl font-bold flex items-center gap-2">
-                <i data-lucide="box"></i>
-                <span class="sidebar-label">CMS</span>
+                <img src="/assets/pankhcms_logo_dark.png" alt="CMS Logo" class="h-20 w-auto sidebar-label" style="max-height:80px;">
             </h2>
 
             <button id="sidebar-toggle" type="button" class="p-2 rounded hover:bg-gray-800" aria-label="Toggle sidebar">
@@ -21,7 +20,7 @@
             </button>
         </div>
 
-        <?php
+        @php
             $sidebarLinks = [
                 ["/admin", "layout-dashboard", "Dashboard"],
                 ["/admin/pages", "file-text", "Pages"],
@@ -29,6 +28,8 @@
                 ["/admin/messages", "inbox", "Messages"],
                 ["/admin/categories", "folder", "Categories"],
                 ["/admin/tags", "tag", "Tags"],
+                ["/admin/slider", "image", "Slider Images"],
+                ["/admin/product-gallery", "grid", "Product Gallery"],
                 ["/admin/templates", "layout", "Templates"],
                 ["/admin/themes", "palette", "Themes"],
                 ["/admin/backups", "database-backup", "Backups"],
@@ -39,24 +40,25 @@
                 ["/admin/media", "image", "Media"],
             ];
             $currentUrl = $_SERVER['REQUEST_URI'] ?? '';
-        ?>
+        @endphp
         <nav class="space-y-1">
-            <?php foreach ($sidebarLinks as $link):
-                $href = $link[0];
-                $icon = $link[1];
-                $label = $link[2];
-                $isSeo = $link[3] ?? false;
-                $isActive = strpos($currentUrl, $href) === 0;
-                $activeClass = $isActive ? ' bg-blue-900 text-white font-semibold' : '';
-            ?>
-                <a href="<?= $href ?>" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800<?= $activeClass ?>">
-                    <i data-lucide="<?= $icon ?>"></i>
-                    <span class="sidebar-label"><?= $label ?></span>
-                    <?php if ($isSeo && $isActive): ?>
+            @foreach ($sidebarLinks as $link)
+                @php
+                    $href = $link[0];
+                    $icon = $link[1];
+                    $label = $link[2];
+                    $isSeo = $link[3] ?? false;
+                    $isActive = strpos($currentUrl, $href) === 0;
+                    $activeClass = $isActive ? ' bg-blue-900 text-white font-semibold' : '';
+                @endphp
+                <a href="{{ $href }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800{{ $activeClass }}">
+                    <i data-lucide="{{ $icon }}"></i>
+                    <span class="sidebar-label">{{ $label }}</span>
+                    @if ($isSeo && $isActive)
                         <i data-lucide="check-circle" class="text-green-400"></i>
-                    <?php endif; ?>
+                    @endif
                 </a>
-            <?php endforeach; ?>
+            @endforeach
         </nav>
     </aside>
 

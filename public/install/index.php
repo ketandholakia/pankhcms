@@ -1,3 +1,15 @@
+        // ---------- Product Galleries ----------
+        if (!$schema->hasTable('product_galleries')) {
+            $schema->create('product_galleries', function ($t) {
+                $t->increments('id');
+                $t->string('title');
+                $t->string('image_path');
+                $t->string('caption')->nullable();
+                $t->integer('sort_order')->default(0);
+                $t->boolean('active')->default(1);
+                $t->timestamps();
+            });
+        }
     // ---------- Content Type Fields ----------
     if (!$schema->hasTable('content_type_fields')) {
         $schema->create('content_type_fields', function ($t) {
@@ -266,6 +278,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $t->string('alt')->nullable();
             $t->string('title')->nullable();
             $t->text('description')->nullable();
+            $t->timestamps();
+        });
+    }
+
+    // ---------- Slider Images ----------
+    if (!$schema->hasTable('slider_images')) {
+        $schema->create('slider_images', function ($t) {
+            $t->increments('id');
+            $t->string('image_path');
+            $t->string('caption')->nullable();
+            $t->string('link')->nullable();
+            $t->integer('sort_order')->default(0);
+            $t->boolean('active')->default(1);
             $t->timestamps();
         });
     }
