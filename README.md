@@ -1,16 +1,17 @@
+
 # PankhCMS
 
 A lightweight Content Management System built on top of the [Flight PHP Framework](https://flightphp.com/).
 
 ## 🚀 About
 
-PankhCMS aims to provide a fast, simple, and extensible platform for managing content. Leveraging the speed and simplicity of FlightPHP, it offers a minimal footprint with maximum flexibility.
+PankhCMS provides a fast, simple, and extensible platform for managing content. It leverages FlightPHP, Eloquent ORM, and Blade templating for a modern PHP experience.
 
 ## 📋 Requirements
 
-- **PHP**: 7.4 or higher
+- **PHP**: 8.2 or higher
 - **Composer**: For dependency management
-- **Web Server**: Apache, Nginx, or PHP's built-in server (Laragon recommended for Windows)
+- **Web Server**: Apache, Nginx, or PHP's built-in server
 
 ## 🛠️ Installation
 
@@ -26,79 +27,86 @@ PankhCMS aims to provide a fast, simple, and extensible platform for managing co
    ```
 
 3. **Configuration**
-   - Copy the example configuration file (if available) or set up your `config.php`.
-   - Ensure your web server points to the project root (or `public/` folder if configured that way).
+   - Copy `.env.example` to `.env` and set your environment variables.
+   - Configure `config/app.php` and `config/database.php` as needed.
+   - Ensure your web server points to the `public/` folder.
 
-### Installer flow (`/install`)
+4. **Database Migration**
+   - Run migration scripts in `database/sqlite-php-scripts/`:
+     ```bash
+     php database/sqlite-php-scripts/create-tables.php
+     php database/sqlite-php-scripts/seed.php
+     ```
 
-- The application front controller (`public/index.php`) now only bootstraps the app.
-- If the app is not configured yet, visiting `/` redirects to `/install`.
-- The setup wizard lives in:
-   - `public/install/index.php`
-   - `public/install/complete.php`
-- The installer creates an `install/lock` file after successful setup.
-- If either `.env` exists or `install/lock` exists, the installer is blocked with HTTP 403.
+5. **Start the development server**
+   ```bash
+   php -S localhost:8000 -t public
+   ```
 
-#### Reinstall (development only)
+## 🔒 Security Features
 
-To run the installer again, remove both:
-
-- `.env`
-- `public/install/lock`
-
-Then open `/install` again.
-
-## 💻 Usage
-
-### Using PHP Built-in Server
-You can quickly start the application using the built-in PHP server:
-
-```bash
-# If index.php is in the root
-php -S localhost:8000
-
-# If index.php is in a public directory
-php -S localhost:8000 -t public
-```
-
-### Using Laragon
-Since this project is set up in a Laragon environment:
-1. Start Laragon.
-2. The app should be automatically accessible at `http://PankhCMS.test` (assuming auto-virtual hosts are enabled).
-
-## 🩺 Troubleshooting
-
-### `/install` returns `403 Installer is locked`
-
-The installer is intentionally blocked when setup is already completed.
-
-- Check whether `.env` exists.
-- Check whether `public/install/lock` exists.
-- For development-only reinstall, remove both files and open `/install` again.
-
-### `Failed opening required .../vendor/autoload.php`
-
-- Run `composer install` in the project root.
-- Ensure your web server document root points to `public/` (or `htdocs/` in that setup).
-- Confirm the front controller uses project root as `dirname(__DIR__)`.
-
-### Logged out but `/admin` still opens
-
-- Make sure `app/Middleware/AdminMiddleware.php` uses `before()` middleware method.
-- Verify logout route is `POST /admin/logout`.
-- Clear browser cookies for the site if an old session remains.
+- **CSRF Protection**: All admin POST routes are protected, including AJAX and uploads.
+- **Session Hardening**: Secure cookie settings, strict mode, and `SameSite=Lax`.
+- **File Upload Hardening**: Server-side MIME sniffing, size limits, safe filenames/extensions.
+- **Login Rate Limiting**: Exponential backoff after 5 failed attempts (IP + username).
+- **Password Policy**: Minimum 10 characters, must include uppercase, lowercase, number, and symbol.
+- **Password Hashing**: All passwords stored with `password_hash()` (BCrypt/Argon2); automatic rehash on login.
 
 ## 📂 Project Structure
 
-* `app/` - Contains application logic (routes, controllers, models).
-* `views/` - HTML templates and views.
-* `vendor/` - Third-party libraries (FlightPHP, etc.).
-* `public/` - Web server entry point (assets, index.php).
+- `app/` - Application logic (controllers, models, helpers)
+- `views/` - Blade templates
+- `public/` - Web server entry point (assets, index.php)
+- `database/` - Migration and seed scripts
+- `storage/` - Cache, logs, uploads
+- `config/` - App and database configuration
+- `vendor/` - Composer dependencies
 
-## 🤝 Contributing
+## 💻 Usage
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- Access the admin panel at `/admin`.
+- Media library supports responsive thumbnails and modal enlarge preview.
+- All uploads are validated and securely stored.
+
+## 🩺 Troubleshooting
+
+- **Installer locked**: Remove `.env` and `public/install/lock` to rerun installer.
+- **Session issues**: Clear cookies and ensure secure settings.
+- **Login issues**: Wait for rate limit to expire or reset password with a strong `ADMIN_PASSWORD`.
+
+## 👩‍💻 Developer & Contributor Instructions
+
+### Local Development
+
+1. Fork and clone the repository.
+2. Run `composer install` to install dependencies.
+3. Configure `.env` and database settings as above.
+4. Run migration scripts to set up the schema.
+5. Start the PHP built-in server or configure Apache/Nginx to serve from `public/`.
+
+### Coding Standards
+
+- Use PSR-4 autoloading for new classes.
+- Use Eloquent ORM for database access.
+- Use Blade for templating.
+- Keep controllers thin; use helpers and models for business logic.
+- Write secure code: validate input, escape output, use prepared statements.
+
+### Security Checklist
+
+- Always use `password_hash()` for storing passwords.
+- Validate file uploads with MIME sniffing and extension mapping.
+- Use CSRF tokens in all forms and AJAX requests.
+- Harden session settings (see `session_init()` in helpers).
+- Use rate limiting for login and sensitive endpoints.
+
+### Contributing
+
+- Fork the repo and create a feature branch.
+- Make your changes and add tests if possible.
+- Run `php -l` and `composer test` (if tests exist) before submitting.
+- Submit a Pull Request with a clear description of your changes.
 
 ## 📄 License
 
-This project is open-sourced software licensed under the MIT license.
+MIT License.
