@@ -8,7 +8,19 @@ class SettingsController
 {
     public static function index()
     {
-        echo \Flight::get('blade')->render('admin.settings.index');
+        // Load all relevant settings
+        $keys = [
+            'site_name', 'site_tagline', 'site_url', 'admin_email', 'logo_path', 'favicon_path',
+            'default_language', 'timezone', 'date_format', 'time_format'
+        ];
+        $settings = \Illuminate\Database\Capsule\Manager::table('settings')
+            ->whereIn('key', $keys)
+            ->pluck('value', 'key')
+            ->toArray();
+        $app_url = $_ENV['APP_URL']
+            ?? $_SERVER['APP_URL']
+            ?? (getenv('APP_URL') ?: 'http://localhost');
+        echo \Flight::get('blade')->render('admin.settings.index', compact('settings', 'app_url'));
     }
 
     public static function breadcrumbsIndex()
