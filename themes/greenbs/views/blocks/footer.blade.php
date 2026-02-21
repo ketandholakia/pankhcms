@@ -67,7 +67,30 @@
     </div>
     <div class="container-fluid bg-dark text-white py-4">
         <div class="container text-center">
-            <p class="mb-0">&copy; <a class="text-secondary fw-bold" href="{{ isset($domain) ? $domain : setting('site_url', '/') }}">{{ setting('site_name', 'Your Site Name') }}</a>. All Rights Reserved. Designed by <a class="text-secondary fw-bold" href="https://htmlcodex.com">HTML Codex</a></p>
+            <p class="mb-0">&copy; <a class="text-secondary fw-bold" href="{{ isset($domain) ? $domain : setting('site_url', '/') }}">{{ setting('site_name', 'Your Site Name') }}</a>. All Rights Reserved.
+            @php
+                $showCredit = setting('show_theme_credit', '1') === '1';
+                $theme = setting('active_theme', 'greenbs');
+                $projectRoot = env('PROJECT_ROOT', '/shared/httpd/pankhCMS');
+                $themeJsonPath = $projectRoot . '/themes/greenbs/theme.json';
+                $themeAuthor = null;
+                $themeAuthorUrl = null;
+                if (file_exists($themeJsonPath)) {
+                    $themeMeta = json_decode(file_get_contents($themeJsonPath), true);
+                    $themeAuthor = $themeMeta['author'] ?? null;
+                    $themeAuthorUrl = $themeMeta['author_url'] ?? null;
+                }
+            @endphp
+            @if($showCredit && $themeAuthor)
+                Theme by <span class="text-secondary fw-bold">
+                    @if($themeAuthorUrl)
+                        <a href="{{ $themeAuthorUrl }}" target="_blank" rel="noopener noreferrer" class="text-secondary fw-bold text-decoration-none">{{ $themeAuthor }}</a>
+                    @else
+                        {{ $themeAuthor }}
+                    @endif
+                </span>
+            @endif
+            </p>
         </div>
     </div>
     <!-- Footer End -->

@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Admin</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
@@ -77,6 +78,7 @@
                     {{ $displayName }}
                 </span>
                 <form method="POST" action="/admin/logout">
+                    {!! csrf_field() !!}
                     <button type="submit" class="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded">
                         <i data-lucide="log-out"></i>
                         Logout
@@ -93,6 +95,64 @@
 @stack('scripts')
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
+    // CSRF helpers for admin UI (forms + fetch + XMLHttpRequest)
+    window.CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window.CSRF_TOKEN) return;
+
+        // Ensure all POST forms include the CSRF token
+        document.querySelectorAll('form').forEach((form) => {
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            if (method !== 'POST') return;
+            if (form.querySelector('input[name="_csrf"]')) return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = '_csrf';
+            input.value = window.CSRF_TOKEN;
+            form.appendChild(input);
+        });
+    });
+
+    // Auto-add CSRF header for same-origin fetch
+    if (window.fetch && window.CSRF_TOKEN) {
+        const _fetch = window.fetch.bind(window);
+        window.fetch = (input, init = {}) => {
+            const method = (init.method || (input && input.method) || 'GET').toString().toUpperCase();
+            if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+                const headers = new Headers(init.headers || (input && input.headers) || undefined);
+                if (!headers.has('X-CSRF-Token')) {
+                    headers.set('X-CSRF-Token', window.CSRF_TOKEN);
+                }
+                init.headers = headers;
+            }
+            return _fetch(input, init);
+        };
+    }
+
+    // Auto-add CSRF header for XMLHttpRequest (TinyMCE uploads, etc.)
+    if (window.XMLHttpRequest && window.CSRF_TOKEN) {
+        const origOpen = XMLHttpRequest.prototype.open;
+        const origSend = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+            this.__csrfMethod = (method || 'GET').toString().toUpperCase();
+            this.__csrfUrl = url;
+            return origOpen.call(this, method, url, async, user, password);
+        };
+
+        XMLHttpRequest.prototype.send = function (body) {
+            try {
+                if (this.__csrfMethod && !['GET', 'HEAD', 'OPTIONS'].includes(this.__csrfMethod)) {
+                    this.setRequestHeader('X-CSRF-Token', window.CSRF_TOKEN);
+                }
+            } catch (e) {
+                // ignore header set failures
+            }
+            return origSend.call(this, body);
+        };
+    }
+
     lucide.createIcons();
 
     const sidebar = document.getElementById('admin-sidebar');

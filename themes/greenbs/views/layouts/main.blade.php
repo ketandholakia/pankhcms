@@ -33,7 +33,7 @@
 <body>
 
 
-
+  @include('blocks.topbar')
   @include('blocks.header')
 
   <main>

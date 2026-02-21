@@ -23,8 +23,11 @@ class Auth
         $user = User::where('email', $email)->first();
 
         if ($user && password_verify($password, $user->password)) {
-            if (session_status() !== PHP_SESSION_ACTIVE) {
-                session_start();
+            session_init();
+
+            if (password_needs_rehash($user->password, PASSWORD_DEFAULT)) {
+                $user->password = password_hash($password, PASSWORD_DEFAULT);
+                $user->save();
             }
 
             session_regenerate_id(true);
@@ -37,9 +40,7 @@ class Auth
 
     public static function logout()
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            session_start();
-        }
+        session_init();
 
         $_SESSION = [];
 
@@ -57,7 +58,7 @@ class Auth
         }
 
         session_destroy();
-        session_start();
+        session_init();
         session_regenerate_id(true);
     }
 }

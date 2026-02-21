@@ -1,43 +1,3 @@
-    public static function update()
-    {
-        if (!\Illuminate\Database\Capsule\Manager::schema()->hasTable('settings')) {
-            \Flight::redirect('/admin/settings?status=settings-missing');
-            return;
-        }
-
-        $data = \Flight::request()->data->getData();
-        $fields = [
-            'site_name', 'site_tagline', 'site_url', 'admin_email',
-            'default_language', 'timezone', 'date_format', 'time_format'
-        ];
-
-        foreach ($fields as $key) {
-            $value = $data[$key] ?? '';
-            \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => $key], ['value' => $value]);
-        }
-
-        // Handle logo upload
-        if (!empty($_FILES['logo_upload']['tmp_name']) && is_uploaded_file($_FILES['logo_upload']['tmp_name'])) {
-            $uploadDir = __DIR__ . '/../../../public/uploads/media/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-            $ext = pathinfo($_FILES['logo_upload']['name'], PATHINFO_EXTENSION);
-            $logoPath = '/uploads/media/logo_' . time() . '.' . $ext;
-            move_uploaded_file($_FILES['logo_upload']['tmp_name'], __DIR__ . '/../../../public' . $logoPath);
-            \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'logo_path'], ['value' => $logoPath]);
-        }
-
-        // Handle favicon upload
-        if (!empty($_FILES['favicon_upload']['tmp_name']) && is_uploaded_file($_FILES['favicon_upload']['tmp_name'])) {
-            $uploadDir = __DIR__ . '/../../../public/uploads/media/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-            $ext = pathinfo($_FILES['favicon_upload']['name'], PATHINFO_EXTENSION);
-            $faviconPath = '/uploads/media/favicon_' . time() . '.' . $ext;
-            move_uploaded_file($_FILES['favicon_upload']['tmp_name'], __DIR__ . '/../../../public' . $faviconPath);
-            \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'favicon_path'], ['value' => $faviconPath]);
-        }
-
-        \Flight::redirect('/admin/settings?status=updated');
-    }
 <?php
 
 namespace App\Controllers\Admin;
@@ -51,7 +11,7 @@ class SettingsController
         // Load all relevant settings
         $keys = [
             'site_name', 'site_tagline', 'site_url', 'admin_email', 'logo_path', 'favicon_path',
-            'default_language', 'timezone', 'date_format', 'time_format'
+            'default_language', 'timezone', 'date_format', 'time_format', 'show_theme_credit'
         ];
         $settings = \Illuminate\Database\Capsule\Manager::table('settings')
             ->whereIn('key', $keys)
@@ -114,57 +74,104 @@ class SettingsController
         // Define the upload directory for settings-related files
         $uploadDir = dirname(__DIR__, 3) . '/public/uploads/settings/';
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
+            mkdir($uploadDir, 0755, true);
         }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
 
         // Handle Logo Upload
         if (isset($files['logo_upload']) && $files['logo_upload']['error'] === UPLOAD_ERR_OK) {
             $logoFile = $files['logo_upload'];
-            $ext = strtolower(pathinfo($logoFile['name'], PATHINFO_EXTENSION));
-            $allowedImageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
-
-            if (in_array($ext, $allowedImageExts)) {
-                $newLogoName = uniqid('logo_') . '.' . $ext;
-                $targetPath = $uploadDir . $newLogoName;
-
-                if (move_uploaded_file($logoFile['tmp_name'], $targetPath)) {
-                    $settingsToUpdate['logo_path'] = '/uploads/settings/' . $newLogoName;
-                    // Optional: Delete old logo file if a new one is successfully uploaded
-                    $oldLogoPath = Capsule::table('settings')->where('key', 'logo_path')->value('value');
-                    if ($oldLogoPath && file_exists(dirname(__DIR__, 3) . '/public' . $oldLogoPath)) {
-                        unlink(dirname(__DIR__, 3) . '/public' . $oldLogoPath);
-                    }
-                } else {
-                    $redirectStatus = 'logo-upload-failed';
-                }
+            if (!isset($logoFile['tmp_name']) || !is_uploaded_file($logoFile['tmp_name'])) {
+                $redirectStatus = 'logo-upload-failed';
             } else {
-                $redirectStatus = 'logo-invalid-type';
+                $maxBytes = 2 * 1024 * 1024; // 2MB
+                if (!empty($logoFile['size']) && (int)$logoFile['size'] > $maxBytes) {
+                    $redirectStatus = 'logo-upload-failed';
+                } else {
+                    $mimeType = (string)($finfo->file($logoFile['tmp_name']) ?: '');
+                    $allowed = [
+                        'image/jpeg' => 'jpg',
+                        'image/png' => 'png',
+                        'image/gif' => 'gif',
+                        'image/webp' => 'webp',
+                    ];
+
+                    if (!isset($allowed[$mimeType])) {
+                        $redirectStatus = 'logo-invalid-type';
+                    } else {
+                        $ext = $allowed[$mimeType];
+                        $newLogoName = 'logo_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                        $targetPath = $uploadDir . $newLogoName;
+
+                        if (move_uploaded_file($logoFile['tmp_name'], $targetPath)) {
+                            $settingsToUpdate['logo_path'] = '/uploads/settings/' . $newLogoName;
+
+                            $oldLogoPath = (string) Capsule::table('settings')->where('key', 'logo_path')->value('value');
+                            if (
+                                $oldLogoPath &&
+                                str_starts_with($oldLogoPath, '/uploads/settings/') &&
+                                !str_contains($oldLogoPath, '..')
+                            ) {
+                                $oldFile = dirname(__DIR__, 3) . '/public' . $oldLogoPath;
+                                if (is_file($oldFile)) {
+                                    unlink($oldFile);
+                                }
+                            }
+                        } else {
+                            $redirectStatus = 'logo-upload-failed';
+                        }
+                    }
+                }
             }
         }
 
         // Handle Favicon Upload
         if (isset($files['favicon_upload']) && $files['favicon_upload']['error'] === UPLOAD_ERR_OK) {
             $faviconFile = $files['favicon_upload'];
-            $ext = strtolower(pathinfo($faviconFile['name'], PATHINFO_EXTENSION));
-            $allowedFaviconExts = ['ico', 'png', 'svg'];
-
-            if (in_array($ext, $allowedFaviconExts)) {
-                $newFaviconName = uniqid('favicon_') . '.' . $ext;
-                $targetPath = $uploadDir . $newFaviconName;
-
-                if (move_uploaded_file($faviconFile['tmp_name'], $targetPath)) {
-                    $settingsToUpdate['favicon_path'] = '/uploads/settings/' . $newFaviconName;
-                    $oldFaviconPath = Capsule::table('settings')->where('key', 'favicon_path')->value('value');
-                    if ($oldFaviconPath && file_exists(dirname(__DIR__, 3) . '/public' . $oldFaviconPath)) {
-                        unlink(dirname(__DIR__, 3) . '/public' . $oldFaviconPath);
-                    }
-                } else {
-                    $redirectStatus = 'favicon-upload-failed';
-                }
+            if (!isset($faviconFile['tmp_name']) || !is_uploaded_file($faviconFile['tmp_name'])) {
+                $redirectStatus = 'favicon-upload-failed';
             } else {
-                $redirectStatus = 'favicon-invalid-type';
+                $maxBytes = 512 * 1024; // 512KB
+                if (!empty($faviconFile['size']) && (int)$faviconFile['size'] > $maxBytes) {
+                    $redirectStatus = 'favicon-upload-failed';
+                } else {
+                    $mimeType = (string)($finfo->file($faviconFile['tmp_name']) ?: '');
+                    $allowed = [
+                        'image/png' => 'png',
+                        'image/x-icon' => 'ico',
+                        'image/vnd.microsoft.icon' => 'ico',
+                    ];
+
+                    if (!isset($allowed[$mimeType])) {
+                        $redirectStatus = 'favicon-invalid-type';
+                    } else {
+                        $ext = $allowed[$mimeType];
+                        $newFaviconName = 'favicon_' . bin2hex(random_bytes(8)) . '.' . $ext;
+                        $targetPath = $uploadDir . $newFaviconName;
+
+                        if (move_uploaded_file($faviconFile['tmp_name'], $targetPath)) {
+                            $settingsToUpdate['favicon_path'] = '/uploads/settings/' . $newFaviconName;
+
+                            $oldFaviconPath = (string) Capsule::table('settings')->where('key', 'favicon_path')->value('value');
+                            if (
+                                $oldFaviconPath &&
+                                str_starts_with($oldFaviconPath, '/uploads/settings/') &&
+                                !str_contains($oldFaviconPath, '..')
+                            ) {
+                                $oldFile = dirname(__DIR__, 3) . '/public' . $oldFaviconPath;
+                                if (is_file($oldFile)) {
+                                    unlink($oldFile);
+                                }
+                            }
+                        } else {
+                            $redirectStatus = 'favicon-upload-failed';
+                        }
+                    }
+                }
             }
         }
+
 
         // Process other form fields. Note: 'site_url' is readonly in the form, so it's not included here.
         $formKeys = ['site_name', 'site_tagline', 'admin_email', 'default_language', 'timezone', 'date_format', 'time_format'];
@@ -173,6 +180,9 @@ class SettingsController
                 $settingsToUpdate[$key] = $data[$key];
             }
         }
+
+        // Handle show_theme_credit checkbox (save as '1' if checked, '0' if not)
+        $settingsToUpdate['show_theme_credit'] = !empty($data['show_theme_credit']) && $data['show_theme_credit'] == '1' ? '1' : '0';
 
         // Update or insert settings in a transaction for atomicity
         Capsule::transaction(function () use ($settingsToUpdate) {

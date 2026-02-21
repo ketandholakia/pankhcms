@@ -366,6 +366,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'posts_per_page'], ['value' => '10']);
     \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'timezone'], ['value' => 'UTC']);
     \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'logo_path'], ['value' => '']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'site_url'], ['value' => '']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'favicon_path'], ['value' => '']);
+    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'show_theme_credit'], ['value' => '1']);
 
     file_put_contents(__DIR__ . '/lock', 'installed');
 

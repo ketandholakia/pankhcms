@@ -9,7 +9,21 @@ use App\Models\User;
 Bootstrap::init();
 
 $adminEmail = $_ENV["ADMIN_EMAIL"] ?? "admin@site.com";
-$adminPassword = $_ENV["ADMIN_PASSWORD"] ?? "admin123";
+$adminPassword = $_ENV["ADMIN_PASSWORD"] ?? "";
+
+if ($adminPassword === '') {
+    echo "❌ ADMIN_PASSWORD is required in your environment.\n";
+    exit(1);
+}
+
+$policyErrors = password_policy_errors($adminPassword);
+if (!empty($policyErrors)) {
+    echo "❌ ADMIN_PASSWORD does not meet the password policy:\n";
+    foreach ($policyErrors as $error) {
+        echo "- {$error}\n";
+    }
+    exit(1);
+}
 
 // Check if admin already exists
 if (User::where("email", $adminEmail)->exists()) {

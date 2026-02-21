@@ -164,6 +164,14 @@ Flight::before('start', function () {
 
     $path = parse_url(Flight::request()->url, PHP_URL_PATH);
 
+    $method = strtoupper((string) (Flight::request()->method ?? 'GET'));
+    $isSafeMethod = in_array($method, ['GET', 'HEAD', 'OPTIONS'], true);
+
+    // CSRF protection for all state-changing admin requests (including /admin/login)
+    if (str_starts_with($path, '/admin') && !$isSafeMethod) {
+        csrf_require();
+    }
+
     if (str_starts_with($path, '/admin')
         && !str_starts_with($path, '/admin/login')) {
 

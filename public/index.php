@@ -13,9 +13,7 @@ require $root . '/vendor/autoload.php';
 require_once $root . '/app/Helpers/functions.php';
 require_once $root . '/app/helpers.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_start();
-}
+session_init();
 
 \App\Core\Bootstrap::init();
 

@@ -33,6 +33,11 @@
 		@endif
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
+				<label for="show_theme_credit" class="block text-sm font-semibold mb-2">Show Theme Designer Credit in Footer</label>
+				<input type="checkbox" id="show_theme_credit" name="show_theme_credit" value="1" {{ !empty($settings['show_theme_credit']) && $settings['show_theme_credit'] == '1' ? 'checked' : '' }}>
+				<span class="ml-2 text-sm text-gray-600">Display theme designer/author in the footer</span>
+			</div>
+			<div>
 				<label for="site_name" class="block text-sm font-semibold mb-2">Site Name</label>
 				<input type="text" class="w-full border rounded px-3 py-2" id="site_name" name="site_name" value="{{ $settings['site_name'] ?? '' }}">
 			</div>

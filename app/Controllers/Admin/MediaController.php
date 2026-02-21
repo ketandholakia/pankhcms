@@ -39,9 +39,40 @@ class MediaController
             return;
         }
         $file = $_FILES['file'];
-        $filename = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $file['name']);
-        $targetDir = __DIR__ . '/../../../public/uploads/media/';
-        if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            $this->jsonResponse(['error' => 'Invalid upload.'], 400);
+            return;
+        }
+
+        $maxBytes = 20 * 1024 * 1024; // 20MB
+        if (!empty($file['size']) && (int)$file['size'] > $maxBytes) {
+            $this->jsonResponse(['error' => 'File too large.'], 413);
+            return;
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = (string)($finfo->file($file['tmp_name']) ?: '');
+
+        $allowed = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+        ];
+
+        if (!isset($allowed[$mimeType])) {
+            $this->jsonResponse(['error' => 'Unsupported file type.'], 400);
+            return;
+        }
+
+        $ext = $allowed[$mimeType];
+        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+
+        $targetDir = dirname(__DIR__, 3) . '/public/uploads/media/';
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
         $targetPath = $targetDir . $filename;
         if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
             $this->jsonResponse(['error' => 'Failed to move uploaded file.'], 500);
@@ -49,9 +80,9 @@ class MediaController
         }
         $media = Media::create([
             'filename' => $filename,
-            'original_name' => $file['name'],
-            'mime_type' => $file['type'],
-            'size' => $file['size'],
+            'original_name' => isset($file['name']) ? substr((string)$file['name'], 0, 255) : null,
+            'mime_type' => $mimeType,
+            'size' => isset($file['size']) ? (int)$file['size'] : null,
             'url' => '/uploads/media/' . $filename,
         ]);
         $this->jsonResponse(['success' => true, 'media' => $media], 201);
