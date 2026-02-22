@@ -29,7 +29,6 @@
                 ["/admin/categories", "folder", "Categories"],
                 ["/admin/tags", "tag", "Tags"],
                 ["/admin/slider", "image", "Slider Images"],
-                ["/admin/product-gallery", "grid", "Product Gallery"],
                 ["/admin/templates", "layout", "Templates"],
                 ["/admin/themes", "palette", "Themes"],
                 ["/admin/backups", "database-backup", "Backups"],

@@ -7,6 +7,7 @@ use App\Models\Category; // Needed for categoryBreadcrumbs
 use App\Models\Menu; // Needed for menuBreadcrumbs
 use App\Models\MenuItem; // Needed for menuBreadcrumbs
 use App\Core\Theme;
+use App\Core\VisitTracker;
 
 class SiteController
 {
@@ -19,10 +20,10 @@ class SiteController
                 return self::renderPage($page);
             }
         }
-        // Fallback if no homepage is set or found
-        // Create a dummy page object for the home route to generate breadcrumbs
-        $page = new Page(['title' => \setting('site_name', 'PankhCMS'), 'slug' => '']);
-        self::renderPage($page);
+        VisitTracker::track(null, '/');
+        // Fallback: render custom home view
+        $site_name = \setting('site_name', 'PankhCMS');
+        echo \Flight::get('blade')->render('site.home', compact('site_name'));
     }
 
     public static function page($slug)
@@ -33,6 +34,12 @@ class SiteController
 
     private static function renderPage(Page $page)
     {
+        $path = '/' . ltrim((string) ($page->slug ?? ''), '/');
+        if ($path === '/') {
+            $path = '/';
+        }
+        VisitTracker::track((int) $page->id, $path);
+
         $breadcrumbs = \generateBreadcrumbs($page);
         $blocks = [];
         if (!empty($page->content_json)) {

@@ -51,15 +51,43 @@
                 </div>
                 <div class="col-lg-4 col-md-6 mt-lg-n5">
                     <div class="d-flex flex-column align-items-center justify-content-center text-center h-100 bg-secondary p-5">
-                        <h4 class="text-white">Newsletter</h4>
-                        <h6 class="text-white">Subscribe Our Newsletter</h6>
-                        <p>Amet justo diam dolor rebum lorem sit stet sea justo kasd</p>
-                        <form action="">
-                            <div class="input-group">
-                                <input type="text" class="form-control border-white p-3" placeholder="Your Email">
-                                <button class="btn btn-primary">Sign Up</button>
+                        <h4 class="text-white mb-4">Our Products</h4>
+                        <div id="footerProductCarousel" class="carousel slide" data-bs-ride="carousel">
+                            <div class="carousel-inner">
+                                <div class="carousel-item active">
+                                    <img src="https://via.placeholder.com/400x300?text=Food+Supplements" class="d-block w-100 rounded shadow" alt="Food Supplements">
+                                    <div class="carousel-caption d-none d-md-block">
+                                        <h5>Food Supplements</h5>
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="https://via.placeholder.com/400x300?text=Herbal+Oil+Drops" class="d-block w-100 rounded shadow" alt="Herbal Oil Drops">
+                                    <div class="carousel-caption d-none d-md-block">
+                                        <h5>Herbal Oil Drops</h5>
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="https://via.placeholder.com/400x300?text=Organic+Vegetables" class="d-block w-100 rounded shadow" alt="Organic Vegetables">
+                                    <div class="carousel-caption d-none d-md-block">
+                                        <h5>Organic Vegetables</h5>
+                                    </div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="https://via.placeholder.com/400x300?text=Herbal+Powders" class="d-block w-100 rounded shadow" alt="Herbal Powders">
+                                    <div class="carousel-caption d-none d-md-block">
+                                        <h5>Herbal Powders</h5>
+                                    </div>
+                                </div>
                             </div>
-                        </form>
+                            <button class="carousel-control-prev" type="button" data-bs-target="#footerProductCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#footerProductCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -12,10 +12,11 @@ $sliderImages = SliderImage::where('active', 1)->orderBy('sort_order')->get();
     }
     #theme-slider img {
         width: 100%;
-        height: 340px;
+        height: 650px !important;
         object-fit: cover;
         border-radius: 1.25rem;
         display: block;
+    }
     }
     #theme-slider .slider-caption {
         position: absolute;

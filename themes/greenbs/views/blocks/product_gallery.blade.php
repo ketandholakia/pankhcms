@@ -1,6 +1,20 @@
 @php
 use App\Models\Page;
-$products = Page::products()->published()->get();
+$products = Page::products()
+    ->published()
+    ->get()
+    ->filter(fn ($product) => $product->isCustomFieldTruthy('show_in_product_gallery'))
+    ->sort(function ($a, $b) {
+        $aOrder = (int) ($a->customField('gallery_order', 999999));
+        $bOrder = (int) ($b->customField('gallery_order', 999999));
+
+        if ($aOrder === $bOrder) {
+            return strcasecmp((string) $a->title, (string) $b->title);
+        }
+
+        return $aOrder <=> $bOrder;
+    })
+    ->values();
 @endphp
 @if($products->count())
 <div class="container py-5">

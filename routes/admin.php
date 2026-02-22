@@ -1,12 +1,3 @@
-// =========================
-// Admin - Product Gallery
-// =========================
-Flight::route('GET /admin/product-gallery', ['App\\Controllers\\Admin\\ProductGalleryController', 'index']);
-Flight::route('GET /admin/product-gallery/create', ['App\\Controllers\\Admin\\ProductGalleryController', 'create']);
-Flight::route('POST /admin/product-gallery/store', ['App\\Controllers\\Admin\\ProductGalleryController', 'store']);
-Flight::route('GET /admin/product-gallery/edit/@id', ['App\\Controllers\\Admin\\ProductGalleryController', 'edit']);
-Flight::route('POST /admin/product-gallery/update/@id', ['App\\Controllers\\Admin\\ProductGalleryController', 'update']);
-Flight::route('POST /admin/product-gallery/delete/@id', ['App\\Controllers\\Admin\\ProductGalleryController', 'delete']);
 <?php
 // =========================
 // Admin - Slider Images

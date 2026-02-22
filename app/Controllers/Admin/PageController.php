@@ -16,6 +16,7 @@ class PageController
      * Everything else in $_POST is silently ignored.
      */
     private const FILLABLE = [
+        'type',
         'title', 'slug', 'content_json',
         'meta_title', 'meta_description', 'meta_keywords',
         'og_title', 'og_description', 'og_image',
@@ -159,11 +160,29 @@ class PageController
      */
     private function formData(): array
     {
+        $types = ContentType::with(['fields' => function ($query) {
+            $query->orderBy('sort_order');
+        }])->orderBy('name')->get();
+
+        $contentTypeFieldsBySlug = [];
+        foreach ($types as $type) {
+            $contentTypeFieldsBySlug[$type->slug] = $type->fields->map(function ($field) {
+                return [
+                    'name' => $field->name,
+                    'label' => $field->label,
+                    'type' => $field->type,
+                    'required' => (bool) $field->required,
+                    'options' => $field->options,
+                ];
+            })->values()->all();
+        }
+
         return [
             'templates'  => Template::all(),
             'categories' => Category::orderBy('name')->get(),
             'tags'       => Tag::orderBy('name')->get(),
-            'types'      => ContentType::orderBy('name')->get(),
+            'types'      => $types,
+            'contentTypeFieldsBySlug' => $contentTypeFieldsBySlug,
         ];
     }
 
@@ -223,7 +242,57 @@ class PageController
             $errors[] = "'slug' may only contain lowercase letters, numbers, and hyphens.";
         }
 
+        if (empty($errors)) {
+            $data['content_json'] = $this->mergeCustomFieldsIntoContentJson(
+                (string) ($data['content_json'] ?? '[]'),
+                (array) ($raw['custom_fields'] ?? [])
+            );
+        }
+
         return $errors ? ['errors' => $errors] : $data;
+    }
+
+    private function mergeCustomFieldsIntoContentJson(string $contentJson, array $customFields): string
+    {
+        $blocks = json_decode($contentJson, true);
+        if (!is_array($blocks)) {
+            $blocks = [];
+        }
+
+        $filtered = [];
+        foreach ($customFields as $key => $value) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $value = implode(',', array_map('strval', $value));
+            }
+
+            $filtered[$key] = is_string($value) ? trim($value) : (string) $value;
+        }
+
+        $metaBlockIndex = null;
+        foreach ($blocks as $index => $block) {
+            if (is_array($block) && (($block['type'] ?? '') === '__custom_fields')) {
+                $metaBlockIndex = $index;
+                break;
+            }
+        }
+
+        if (!empty($filtered)) {
+            $metaBlock = ['type' => '__custom_fields', 'fields' => $filtered];
+            if ($metaBlockIndex === null) {
+                $blocks[] = $metaBlock;
+            } else {
+                $blocks[$metaBlockIndex] = $metaBlock;
+            }
+        } elseif ($metaBlockIndex !== null) {
+            unset($blocks[$metaBlockIndex]);
+            $blocks = array_values($blocks);
+        }
+
+        return json_encode($blocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
     /**

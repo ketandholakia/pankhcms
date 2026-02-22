@@ -85,6 +85,7 @@ class Bootstrap
         $twitterCard = 'summary_large_image';
         $twitterSite = '';
         $seoDefaultKeywords = '';
+        $contactMapEmbedUrl = 'https://maps.google.com/maps?q=New%20York,%20USA&output=embed';
 
         try {
             if (Capsule::schema()->hasTable('settings')) {
@@ -118,6 +119,8 @@ class Bootstrap
                     ?: $twitterSite;
                 $seoDefaultKeywords = Capsule::table('settings')->where('key', 'seo_default_keywords')->value('value')
                     ?: $seoDefaultKeywords;
+                $contactMapEmbedUrl = Capsule::table('settings')->where('key', 'contact_map_embed_url')->value('value')
+                    ?: $contactMapEmbedUrl;
             }
         } catch (\Throwable $e) {
             // Use fallback values when settings table is unavailable.
@@ -141,6 +144,7 @@ class Bootstrap
         $blade->share('twitter_card', $twitterCard);
         $blade->share('twitter_site', $twitterSite);
         $blade->share('seo_default_keywords', $seoDefaultKeywords);
+        $blade->share('contact_map_embed_url', $contactMapEmbedUrl);
         $blade->share('widgets', []);
         $blade->share('hero', []);
 

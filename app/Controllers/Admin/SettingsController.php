@@ -11,7 +11,9 @@ class SettingsController
         // Load all relevant settings
         $keys = [
             'site_name', 'site_tagline', 'site_url', 'admin_email', 'logo_path', 'favicon_path',
-            'default_language', 'timezone', 'date_format', 'time_format', 'show_theme_credit'
+            'default_language', 'timezone', 'date_format', 'time_format', 'show_theme_credit',
+            'maintenance_mode', 'maintenance_message', 'maintenance_allowed_ips',
+            'contact_map_embed_url'
         ];
         $settings = \Illuminate\Database\Capsule\Manager::table('settings')
             ->whereIn('key', $keys)
@@ -183,6 +185,18 @@ class SettingsController
 
         // Handle show_theme_credit checkbox (save as '1' if checked, '0' if not)
         $settingsToUpdate['show_theme_credit'] = !empty($data['show_theme_credit']) && $data['show_theme_credit'] == '1' ? '1' : '0';
+
+        // Maintenance settings
+        $settingsToUpdate['maintenance_mode'] = !empty($data['maintenance_mode']) && $data['maintenance_mode'] == '1' ? '1' : '0';
+        $settingsToUpdate['maintenance_message'] = isset($data['maintenance_message'])
+            ? trim((string) $data['maintenance_message'])
+            : 'We are upgrading our website. Please check back soon.';
+        $settingsToUpdate['maintenance_allowed_ips'] = isset($data['maintenance_allowed_ips'])
+            ? trim((string) $data['maintenance_allowed_ips'])
+            : '';
+        $settingsToUpdate['contact_map_embed_url'] = isset($data['contact_map_embed_url'])
+            ? trim((string) $data['contact_map_embed_url'])
+            : '';
 
         // Update or insert settings in a transaction for atomicity
         Capsule::transaction(function () use ($settingsToUpdate) {

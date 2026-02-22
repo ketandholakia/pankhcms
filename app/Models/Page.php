@@ -94,4 +94,42 @@ class Page extends Model
     {
         return $query->where('type', 'product');
     }
+
+    public function customFields(): array
+    {
+        $blocks = json_decode((string) ($this->content_json ?? '[]'), true);
+        if (!is_array($blocks)) {
+            return [];
+        }
+
+        foreach ($blocks as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+
+            if (($block['type'] ?? '') === '__custom_fields') {
+                $fields = $block['fields'] ?? [];
+                return is_array($fields) ? $fields : [];
+            }
+        }
+
+        return [];
+    }
+
+    public function customField(string $name, $default = null)
+    {
+        $fields = $this->customFields();
+        return array_key_exists($name, $fields) ? $fields[$name] : $default;
+    }
+
+    public function isCustomFieldTruthy(string $name): bool
+    {
+        $value = $this->customField($name, 0);
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+        return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+    }
 }

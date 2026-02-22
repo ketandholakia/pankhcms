@@ -33,6 +33,29 @@
 		@endif
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div>
+				<label for="maintenance_mode" class="block text-sm font-semibold mb-2">Maintenance Mode</label>
+				<input type="checkbox" id="maintenance_mode" name="maintenance_mode" value="1" {{ !empty($settings['maintenance_mode']) && $settings['maintenance_mode'] == '1' ? 'checked' : '' }}>
+				<span class="ml-2 text-sm text-gray-600">Enable maintenance mode for public site</span>
+			</div>
+
+			<div>
+				<label for="maintenance_message" class="block text-sm font-semibold mb-2">Maintenance Message</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="maintenance_message" name="maintenance_message" value="{{ $settings['maintenance_message'] ?? 'We are upgrading our website. Please check back soon.' }}">
+			</div>
+
+			<div>
+				<label for="maintenance_allowed_ips" class="block text-sm font-semibold mb-2">Maintenance Allowlist IPs</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="maintenance_allowed_ips" name="maintenance_allowed_ips" value="{{ $settings['maintenance_allowed_ips'] ?? '' }}" placeholder="127.0.0.1, ::1, 192.168.1.10">
+				<p class="mt-1 text-xs text-gray-600">Comma-separated IPs that can bypass maintenance mode. Localhost IPs are always allowed.</p>
+			</div>
+
+			<div>
+				<label for="contact_map_embed_url" class="block text-sm font-semibold mb-2">Contact Page Map Embed URL</label>
+				<input type="url" class="w-full border rounded px-3 py-2" id="contact_map_embed_url" name="contact_map_embed_url" value="{{ $settings['contact_map_embed_url'] ?? '' }}" placeholder="https://www.google.com/maps/embed?...">
+				<p class="mt-1 text-xs text-gray-600">Paste Google Maps iframe embed URL for the full-width map on contact page.</p>
+			</div>
+
+			<div>
 				<label for="show_theme_credit" class="block text-sm font-semibold mb-2">Show Theme Designer Credit in Footer</label>
 				<input type="checkbox" id="show_theme_credit" name="show_theme_credit" value="1" {{ !empty($settings['show_theme_credit']) && $settings['show_theme_credit'] == '1' ? 'checked' : '' }}>
 				<span class="ml-2 text-sm text-gray-600">Display theme designer/author in the footer</span>

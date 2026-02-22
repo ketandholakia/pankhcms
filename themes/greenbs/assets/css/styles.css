@@ -293,3 +293,8 @@
         margin-top: 90px !important;
     }
 }
+
+#header-carousel img {
+    max-height: 650px !important;
+    object-fit: cover;
+}

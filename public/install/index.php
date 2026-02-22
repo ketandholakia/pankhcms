@@ -1,30 +1,3 @@
-        // ---------- Product Galleries ----------
-        if (!$schema->hasTable('product_galleries')) {
-            $schema->create('product_galleries', function ($t) {
-                $t->increments('id');
-                $t->string('title');
-                $t->string('image_path');
-                $t->string('caption')->nullable();
-                $t->integer('sort_order')->default(0);
-                $t->boolean('active')->default(1);
-                $t->timestamps();
-            });
-        }
-    // ---------- Content Type Fields ----------
-    if (!$schema->hasTable('content_type_fields')) {
-        $schema->create('content_type_fields', function ($t) {
-            $t->increments('id');
-            $t->unsignedInteger('content_type_id');
-            $t->string('name', 100);
-            $t->string('label', 255);
-            $t->string('type', 50)->default('text');
-            $t->text('options')->nullable(); // For select, radio, etc (JSON)
-            $t->tinyInteger('required')->default(0);
-            $t->integer('sort_order')->default(0);
-            $t->timestamps();
-            $t->foreign('content_type_id')->references('id')->on('content_types')->onDelete('cascade');
-        });
-    }
 <?php
 
 $root = dirname(__DIR__, 2);
@@ -292,6 +265,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $t->integer('sort_order')->default(0);
             $t->boolean('active')->default(1);
             $t->timestamps();
+        });
+    }
+
+    // ---------- Contact Messages ----------
+    if (!$schema->hasTable('contact_messages')) {
+        $schema->create('contact_messages', function ($t) {
+            $t->increments('id');
+            $t->string('name');
+            $t->string('email');
+            $t->string('subject')->nullable();
+            $t->text('message');
+            $t->string('ip', 45)->nullable();
+            $t->text('user_agent')->nullable();
+            $t->timestamp('created_at')->nullable();
         });
     }
 

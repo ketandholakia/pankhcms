@@ -31,6 +31,11 @@
           </select>
         </div>
 
+        <div id="custom-fields-section" class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Custom Fields</label>
+            <div id="custom-fields-container" class="grid grid-cols-1 gap-4"></div>
+        </div>
+
         <div class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="content">
                 Content
@@ -46,6 +51,9 @@
                         <button type="button" onclick="addBlock('hero')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center">
                             + Hero Block
                         </button>
+                      <button type="button" onclick="addBlock('product_gallery')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + Product Gallery
+                      </button>
                     </div>
                     <div>
                         <select onchange="loadTemplate(this.value)" class="border p-2 rounded">
@@ -137,6 +145,111 @@
 <script>
 
 let blocks = [];
+const contentTypeFieldsBySlug = @json($contentTypeFieldsBySlug ?? []);
+const oldCustomFields = @json($old['custom_fields'] ?? []);
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function parseOptions(rawOptions) {
+  if (!rawOptions) return [];
+  if (Array.isArray(rawOptions)) return rawOptions;
+
+  const value = String(rawOptions).trim();
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => typeof item === 'string' ? { label: item, value: item } : item);
+    }
+  } catch (_) {}
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => ({ label: item, value: item }));
+}
+
+function sanitizeBlocks(input) {
+  if (!Array.isArray(input)) return [];
+  return input.filter((block) => {
+    if (!block || typeof block !== 'object') return false;
+    return String(block.type || '') !== '__custom_fields';
+  });
+}
+
+function renderCustomFields() {
+  const typeSelect = document.getElementById('type');
+  const container = document.getElementById('custom-fields-container');
+  if (!typeSelect || !container) return;
+
+  const selectedType = typeSelect.value;
+  const fields = contentTypeFieldsBySlug[selectedType] || [];
+  container.innerHTML = '';
+
+  if (!fields.length) {
+    container.innerHTML = '<p class="text-sm text-gray-500">No custom fields for this content type.</p>';
+    return;
+  }
+
+  fields.forEach((field) => {
+    const name = String(field.name || '').trim();
+    if (!name) return;
+
+    const type = String(field.type || 'text').toLowerCase();
+    const label = escapeHtml(field.label || name);
+    const required = !!field.required;
+    const fieldId = `custom_${name}`;
+    const currentValue = oldCustomFields[name] ?? '';
+
+    let html = '<div>';
+    html += `<label class="block text-gray-700 text-sm font-bold mb-2" for="${fieldId}">${label}${required ? ' *' : ''}</label>`;
+
+    if (type === 'textarea') {
+      html += `<textarea id="${fieldId}" name="custom_fields[${name}]" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" ${required ? 'required' : ''}>${escapeHtml(currentValue)}</textarea>`;
+    } else if (type === 'checkbox') {
+      const isChecked = String(currentValue) === '1' || String(currentValue).toLowerCase() === 'true' || currentValue === 1;
+      html += `<input type="hidden" name="custom_fields[${name}]" value="0">`;
+      html += `<label class="inline-flex items-center gap-2"><input id="${fieldId}" type="checkbox" name="custom_fields[${name}]" value="1" class="rounded" ${isChecked ? 'checked' : ''}><span>${label}</span></label>`;
+    } else if (type === 'select') {
+      const options = parseOptions(field.options);
+      html += `<select id="${fieldId}" name="custom_fields[${name}]" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" ${required ? 'required' : ''}>`;
+      html += '<option value="">Select option</option>';
+      options.forEach((option) => {
+        const optionValue = escapeHtml(option.value ?? option.label ?? '');
+        const optionLabel = escapeHtml(option.label ?? option.value ?? '');
+        const selected = String(currentValue) === String(option.value ?? option.label ?? '') ? 'selected' : '';
+        html += `<option value="${optionValue}" ${selected}>${optionLabel}</option>`;
+      });
+      html += '</select>';
+    } else if (type === 'radio') {
+      const options = parseOptions(field.options);
+      html += '<div class="space-y-2">';
+      options.forEach((option, idx) => {
+        const optionRaw = option.value ?? option.label ?? '';
+        const optionValue = escapeHtml(optionRaw);
+        const optionLabel = escapeHtml(option.label ?? option.value ?? '');
+        const checked = String(currentValue) === String(optionRaw) ? 'checked' : '';
+        html += `<label class="inline-flex items-center gap-2 mr-4"><input type="radio" name="custom_fields[${name}]" value="${optionValue}" ${checked} ${required && idx === 0 ? 'required' : ''}><span>${optionLabel}</span></label>`;
+      });
+      html += '</div>';
+    } else {
+      const inputType = ['number', 'date'].includes(type) ? type : 'text';
+      html += `<input id="${fieldId}" name="custom_fields[${name}]" type="${inputType}" value="${escapeHtml(currentValue)}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" ${required ? 'required' : ''}>`;
+    }
+
+    html += '</div>';
+    container.insertAdjacentHTML('beforeend', html);
+  });
+}
 
 function syncContentJson() {
   const contentInput = document.getElementById('content_json');
@@ -244,6 +357,10 @@ function render() {
       innerHTML += `<label class="block font-medium text-sm">Title:</label>
         <input type="text" class="w-full border p-2 rounded" value="${b.title || ''}" oninput="updateBlock(${i}, 'title', this.value)">`;
     }
+
+    if (b.type === 'product_gallery') {
+      innerHTML += `<p class="text-sm text-gray-600">Shows published products with <strong>show_in_product_gallery</strong> enabled, sorted by <strong>gallery_order</strong>.</p>`;
+    }
     
     blockWrapper.innerHTML = innerHTML;
     container.appendChild(blockWrapper);
@@ -292,7 +409,7 @@ async function loadTemplate(id) {
     const data = await res.json();
 
     if (data && data.content_json) {
-      blocks = JSON.parse(data.content_json);
+      blocks = sanitizeBlocks(JSON.parse(data.content_json));
       render();
     } else {
       alert('Template is empty or invalid.');
@@ -326,6 +443,7 @@ function saveTemplate() {
 }
 
 render(); // Initial render for an empty builder
+renderCustomFields();
 </script>
 
 <script>
@@ -337,5 +455,10 @@ document.getElementById('title').addEventListener('input', function () {
 
   document.getElementById('slug').value = slug;
 });
+
+const pageTypeSelect = document.getElementById('type');
+if (pageTypeSelect) {
+  pageTypeSelect.addEventListener('change', renderCustomFields);
+}
 </script>
 @endpush
