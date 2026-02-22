@@ -28,7 +28,11 @@ class SiteController
 
     public static function page($slug)
     {
-        $page = Page::with('categories')->where('slug', $slug)->firstOrFail();
+        $page = Page::with('categories')->where('slug', $slug)->first();
+        if (!$page) {
+            \Flight::halt(404);
+            return;
+        }
         self::renderPage($page);
     }
 
@@ -46,6 +50,33 @@ class SiteController
             $blocks = json_decode($page->content_json, true) ?? [];
         }
         $site_name = \setting('site_name', 'PankhCMS');
-        echo \Flight::get('blade')->render('page', compact('page', 'breadcrumbs', 'blocks', 'site_name'));
+        $blade = \Flight::get('blade');
+
+        $type = trim((string) ($page->type ?? ''));
+        $candidateViews = [];
+
+        if ($type !== '' && $type !== 'page') {
+            $candidateViews[] = 'site.' . $type;
+
+            $singularType = (substr($type, -1) === 's' && strlen($type) > 1)
+                ? substr($type, 0, -1)
+                : $type;
+
+            if ($singularType !== $type) {
+                $candidateViews[] = 'site.' . $singularType;
+            }
+        }
+
+        $candidateViews[] = 'page';
+
+        $viewToRender = 'page';
+        foreach ($candidateViews as $viewName) {
+            if ($blade->exists($viewName)) {
+                $viewToRender = $viewName;
+                break;
+            }
+        }
+
+        echo $blade->render($viewToRender, compact('page', 'breadcrumbs', 'blocks', 'site_name'));
     }
 }

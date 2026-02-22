@@ -18,6 +18,7 @@ class PageController
     private const FILLABLE = [
         'type',
         'title', 'slug', 'content_json',
+        'featured_image',
         'meta_title', 'meta_description', 'meta_keywords',
         'og_title', 'og_description', 'og_image',
         'canonical_url', 'robots', 'twitter_card',
@@ -33,6 +34,7 @@ class PageController
      * (i.e. optional SEO fields — avoids storing "" in the DB)
      */
     private const NULLABLE = [
+        'featured_image',
         'meta_title', 'meta_description', 'meta_keywords',
         'og_title', 'og_description', 'og_image',
         'canonical_url', 'robots', 'twitter_card',

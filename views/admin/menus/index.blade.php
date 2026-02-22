@@ -235,7 +235,8 @@
     document.addEventListener('submit', function(e) {
         var form = e.target;
         var isForm = (form.id === 'menu-create-form' || form.id === 'menu-edit-form' || form.id === 'add-menu-item-form' || form.id === 'menu-item-edit-form');
-        
+        // Intercept menu item move (up/down) forms
+        var isMoveForm = form.action && /\/admin\/menu-items\/.+\/move$/.test(form.action);
         if (isForm) {
             e.preventDefault();
             var data = new FormData(form);
@@ -251,13 +252,28 @@
                 else if (form.id === 'add-menu-item-form') url = '/admin/menu-items';
                 else if (form.id === 'menu-item-edit-form') url = '/admin/menu-items/' + data.get('id') + '/update';
             }
-            
             fetch(url, { method: 'POST', body: data }).then(function(res) {
                 if (res.ok) {
                     showNotice('Saved successfully.');
                     setTimeout(function() { location.reload(); }, 500);
                 }
             });
+        } else if (isMoveForm) {
+            e.preventDefault();
+            var data = new FormData(form);
+            fetch(form.action, { method: 'POST', body: data })
+                .then(function(res) { return res.json(); })
+                .then(function(json) {
+                    if (json && json.success) {
+                        showNotice('Menu order updated.');
+                        setTimeout(function() { location.reload(); }, 500);
+                    } else {
+                        showNotice(json && json.error ? json.error : 'Failed to update order.');
+                    }
+                })
+                .catch(function() {
+                    showNotice('Failed to update order.');
+                });
         } else if (form.classList.contains('js-menu-delete') || form.classList.contains('js-menu-item-delete')) {
             e.preventDefault();
             if (!confirm('Are you sure?')) return;

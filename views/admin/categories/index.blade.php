@@ -13,45 +13,7 @@
         </button>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden w-full">
-        @if(isset($categories) && count($categories))
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200">
-                        <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Slug</th>
-                        <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Parent</th>
-                        <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    @foreach($categories as $cat)
-                        <tr class="hover:bg-gray-50 transition-colors group">
-                            <td class="px-6 py-4 text-sm text-gray-500">{{ $cat->id }}</td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-800">{{ $cat->name }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-500">{{ $cat->slug }}</td>
-                            <td class="px-6 py-4 text-sm">@php $parent = $categories->firstWhere('id', $cat->parent_id); @endphp{{ $parent ? $parent->name : '' }}</td>
-                            <td class="px-6 py-4 text-right space-x-2">
-                                <button onclick="openEditModal('{{ $cat->id }}', '{{ addslashes($cat->name) }}', '{{ addslashes($cat->slug) }}', '{{ $cat->parent_id }}')" class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium text-sm">
-                                    <i data-lucide="pen" class="h-4 w-4 mr-1"></i>
-                                    Edit
-                                </button>
-                                <span class="text-gray-300">|</span>
-                                <button onclick="deleteCategory('{{ $cat->id }}')" class="inline-flex items-center text-red-600 hover:text-red-900 font-medium text-sm">
-                                    <i data-lucide="trash-2" class="h-4 w-4 mr-1"></i>
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @else
-            <div class="px-6 py-8 text-center text-gray-400">No categories found.</div>
-        @endif
-    </div>
-
+    <!-- Only keep the second table rendering below -->
     <div id="category-notice" class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow hidden">
         Saved successfully.
     </div>

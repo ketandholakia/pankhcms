@@ -23,6 +23,7 @@
         @php
             $sidebarLinks = [
                 ["/admin", "layout-dashboard", "Dashboard"],
+                ["/admin/profile", "user-cog", "My Profile"],
                 ["/admin/pages", "file-text", "Pages"],
                 ["/admin/content-types", "shapes", "Content Types"],
                 ["/admin/messages", "inbox", "Messages"],
@@ -74,10 +75,10 @@
             </a>
 
             <div class="flex items-center gap-4">
-                <span class="flex items-center gap-2 text-sm text-gray-700">
+                <a href="/admin/profile" class="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
                     <i data-lucide="user"></i>
                     {{ $displayName }}
-                </span>
+                </a>
                 <form method="POST" action="/admin/logout">
                     {!! csrf_field() !!}
                     <button type="submit" class="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded">

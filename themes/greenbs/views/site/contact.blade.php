@@ -69,7 +69,10 @@
                         <div class="btn btn-square bg-secondary text-white me-3"><i class="bi bi-geo-alt"></i></div>
                         <div>
                             <h6 class="mb-1">Office Address</h6>
-                            <p class="text-muted mb-0">123 Street, New York, USA</p>
+                            <p class="text-muted mb-0">ORGANIC DEHYDRATED FOODS PVT LTD<br>
+                            Plot No. D-38, Kamdhenu Industrial Park - 5,<br>
+                            B/H. BEIL Company, Jitali Road,<br>
+                            Ankleshwar - 393 001, Gujarat, India</p>
                         </div>
                     </div>
 
@@ -77,7 +80,7 @@
                         <div class="btn btn-square bg-secondary text-white me-3"><i class="bi bi-envelope-open"></i></div>
                         <div>
                             <h6 class="mb-1">Email</h6>
-                            <a href="mailto:info@example.com" class="text-muted">info@example.com</a>
+                            <a href="mailto:organic.de.foods@gmail.com" class="text-muted">organic.de.foods@gmail.com</a>
                         </div>
                     </div>
 
@@ -85,15 +88,13 @@
                         <div class="btn btn-square bg-secondary text-white me-3"><i class="bi bi-telephone"></i></div>
                         <div>
                             <h6 class="mb-1">Phone</h6>
-                            <a href="tel:+01234567890" class="text-muted">+012 345 67890</a>
+                            <a href="tel:+917045355128" class="text-muted">+91 70453 55128</a><br>
+                            <a href="tel:+919879929290" class="text-muted">+91 98799 29290</a><br>
+                            <a href="tel:+919586146660" class="text-muted">+91 95861 46660</a>
                         </div>
                     </div>
 
-                    <div class="p-3 rounded" style="background: #F6FFF2;">
-                        <h6 class="mb-2">Business Hours</h6>
-                        <p class="mb-1 text-muted">Mon - Fri: 9:00 AM - 6:00 PM</p>
-                        <p class="mb-0 text-muted">Sat: 10:00 AM - 2:00 PM</p>
-                    </div>
+                   
                 </div>
             </div>
         </div>

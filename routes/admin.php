@@ -21,6 +21,14 @@ Flight::route('POST /admin/logout', ['App\Controllers\AuthController', 'logout']
 
 
 // =========================
+// Admin - User Profile
+// =========================
+Flight::route('GET /admin/profile', ['App\Controllers\Admin\UserController', 'editProfile']);
+Flight::route('POST /admin/profile', ['App\Controllers\Admin\UserController', 'updateProfile']);
+Flight::route('POST /admin/profile/password', ['App\Controllers\Admin\UserController', 'updatePassword']);
+
+
+// =========================
 // Admin Dashboard
 // =========================
 Flight::route('GET /admin', ['App\Controllers\Admin\DashboardController', 'index']);

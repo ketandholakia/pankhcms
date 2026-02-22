@@ -19,6 +19,14 @@
         </div>
 
         <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="featured_image">
+            Featured Image URL
+          </label>
+          <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="featured_image" name="featured_image" type="text" placeholder="/uploads/media/your-image.jpg" value="{{ $old['featured_image'] ?? '' }}">
+          <p class="text-xs text-gray-500 mt-1">Upload via Media, then paste image URL here.</p>
+        </div>
+
+        <div class="mb-4">
           <label class="block text-gray-700 text-sm font-bold mb-2" for="type">
             Content Type
           </label>
