@@ -125,6 +125,11 @@
 			</div>
 
 			<div>
+				<label for="sidebar_search_shortcut" class="block text-sm font-semibold mb-2">Sidebar Search Shortcut</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="sidebar_search_shortcut" name="sidebar_search_shortcut" value="{{ $settings['sidebar_search_shortcut'] ?? 'Ctrl+Shift+F' }}" placeholder="e.g. Ctrl+Shift+F">
+				<p class="mt-1 text-xs text-gray-600">Set the keyboard shortcut for focusing the sidebar search. Example: Ctrl+Shift+F</p>
+			</div>
+			<div>
 				<label for="time_format" class="block text-sm font-semibold mb-2">Time Format</label>
 				<select class="w-full border rounded px-3 py-2" id="time_format" name="time_format">
 					<option value="H:i" {{ ($settings['time_format'] ?? 'H:i') === 'H:i' ? 'selected' : '' }}>24-hour (HH:MM)</option>

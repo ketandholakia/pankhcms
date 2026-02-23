@@ -1,9 +1,21 @@
+    
 <!DOCTYPE html>
 <html>
 <head>
     <title>Admin</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+        /* Ensure Lucide icons are always visible in collapsed sidebar */
+        #admin-sidebar .sidebar-link i[data-lucide] {
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        #admin-sidebar.w-20 .sidebar-label {
+            display: none !important;
+        }
+        </style>
 </head>
 <body class="bg-gray-100">
 
@@ -14,50 +26,68 @@
             <h2 class="text-xl font-bold flex items-center gap-2">
                 <img src="/assets/pankhcms_logo_dark.png" alt="CMS Logo" class="h-20 w-auto sidebar-label" style="max-height:80px;">
             </h2>
-
             <button id="sidebar-toggle" type="button" class="p-2 rounded hover:bg-gray-800" aria-label="Toggle sidebar">
                 <i data-lucide="panel-left-close"></i>
             </button>
         </div>
+        <div class="mb-4">
+            <input id="sidebar-search" type="text" placeholder="Search menu... ({{ $settings['sidebar_search_shortcut'] ?? 'Ctrl+Shift+F' }})" class="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-gray-700" autocomplete="off">
+        </div>
 
         @php
-            $sidebarLinks = [
+        $sidebarGroups = [
+            'General' => [
                 ["/admin", "layout-dashboard", "Dashboard"],
                 ["/admin/profile", "user-cog", "My Profile"],
+            ],
+            'Content Management' => [
                 ["/admin/pages", "file-text", "Pages"],
                 ["/admin/content-types", "shapes", "Content Types"],
-                ["/admin/messages", "inbox", "Messages"],
                 ["/admin/categories", "folder", "Categories"],
                 ["/admin/tags", "tag", "Tags"],
+                ["/admin/media", "image", "Media"],
                 ["/admin/slider", "image", "Slider Images"],
+            ],
+            'Design' => [
                 ["/admin/templates", "layout", "Templates"],
                 ["/admin/themes", "palette", "Themes"],
-                ["/admin/backups", "database-backup", "Backups"],
-                ["/admin/settings", "settings", "Settings"],
-                ["/admin/settings/seo", "search", "SEO Settings", true],
-                ["/admin/settings/breadcrumbs", "chevron-right-square", "Breadcrumbs"],
                 ["/admin/menus", "menu", "Menus"],
-                ["/admin/media", "image", "Media"],
-            ];
-            $currentUrl = $_SERVER['REQUEST_URI'] ?? '';
+            ],
+            'Communication' => [
+                ["/admin/messages", "inbox", "Messages"],
+            ],
+            'System' => [
+                ["/admin/settings", "settings", "Settings"],
+                ["/admin/settings/seo", "search", "SEO Settings"],
+                ["/admin/settings/breadcrumbs", "chevron-right-square", "Breadcrumbs"],
+                ["/admin/backups", "database-backup", "Backups"],
+            ],
+        ];
+        $currentUrl = $_SERVER['REQUEST_URI'] ?? '';
         @endphp
-        <nav class="space-y-1">
-            @foreach ($sidebarLinks as $link)
-                @php
-                    $href = $link[0];
-                    $icon = $link[1];
-                    $label = $link[2];
-                    $isSeo = $link[3] ?? false;
-                    $isActive = strpos($currentUrl, $href) === 0;
-                    $activeClass = $isActive ? ' bg-blue-900 text-white font-semibold' : '';
-                @endphp
-                <a href="{{ $href }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800{{ $activeClass }}">
-                    <i data-lucide="{{ $icon }}"></i>
-                    <span class="sidebar-label">{{ $label }}</span>
-                    @if ($isSeo && $isActive)
-                        <i data-lucide="check-circle" class="text-green-400"></i>
-                    @endif
-                </a>
+        <nav>
+            @foreach ($sidebarGroups as $group => $links)
+                <div class="mb-2">
+                    <button type="button" class="w-full flex items-center justify-between px-2 py-1 text-xs font-bold uppercase tracking-wide text-gray-400 group-toggle focus:outline-none" data-group="{{ $group }}">
+                        <span>{{ $group }}</span>
+                        <i data-lucide="chevron-down"></i>
+                    </button>
+                    <div class="sidebar-group-links space-y-1" data-group="{{ $group }}">
+                        @foreach ($links as $link)
+                            @php
+                                $href = $link[0];
+                                $icon = $link[1];
+                                $label = $link[2];
+                                $isActive = strpos($currentUrl, $href) === 0;
+                                $activeClass = $isActive ? ' bg-blue-900 text-white font-semibold' : '';
+                            @endphp
+                            <a href="{{ $href }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-800{{ $activeClass }}">
+                                <i data-lucide="{{ $icon }}"></i>
+                                <span class="sidebar-label">{{ $label }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
             @endforeach
         </nav>
     </aside>
@@ -163,27 +193,83 @@
     const sidebarLinks = document.querySelectorAll('.sidebar-link');
 
     function setSidebarCollapsed(collapsed) {
-        if (!sidebar) {
-            return;
-        }
-
+        if (!sidebar) return;
         sidebar.classList.toggle('w-64', !collapsed);
         sidebar.classList.toggle('w-20', collapsed);
-
-        sidebarLabels.forEach((label) => {
-            label.classList.toggle('hidden', collapsed);
-        });
-
+        sidebarLabels.forEach((label) => label.classList.toggle('hidden', collapsed));
         sidebarLinks.forEach((link) => {
             link.classList.toggle('justify-center', collapsed);
             link.classList.toggle('px-2', collapsed);
             link.classList.toggle('px-3', !collapsed);
+            // Ensure icon is always visible
+            const icon = link.querySelector('i[data-lucide]');
+            if (icon) {
+                icon.style.display = 'inline-block';
+                icon.style.visibility = 'visible';
+                icon.style.opacity = '1';
+                icon.classList.remove('hidden');
+            }
         });
+        // Hide group links if collapsed
+        document.querySelectorAll('.sidebar-group-links').forEach((group) => {
+            group.classList.toggle('hidden', collapsed);
+        });
+        document.querySelectorAll('.group-toggle').forEach((btn) => {
+            btn.classList.toggle('hidden', collapsed);
+        });
+        // Force lucide icons to re-render after DOM changes
+        setTimeout(function() {
+            if (window.lucide && typeof lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
+        }, 10);
     }
-
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', () => {
             setSidebarCollapsed(!sidebar.classList.contains('w-20'));
+        });
+    }
+
+    // Collapsible groups
+    document.querySelectorAll('.group-toggle').forEach((btn) => {
+        btn.addEventListener('click', function () {
+            const group = this.getAttribute('data-group');
+            const links = document.querySelector(`.sidebar-group-links[data-group="${group}"]`);
+            if (links) {
+                links.classList.toggle('hidden');
+                this.querySelector('i').classList.toggle('rotate-180');
+            }
+        });
+    });
+
+    // Sidebar search/filter
+    const sidebarSearch = document.getElementById('sidebar-search');
+    if (sidebarSearch) {
+        sidebarSearch.addEventListener('input', function () {
+            const query = this.value.toLowerCase();
+            document.querySelectorAll('.sidebar-group-links').forEach((group) => {
+                let anyVisible = false;
+                group.querySelectorAll('.sidebar-link').forEach((link) => {
+                    const label = link.querySelector('.sidebar-label')?.textContent.toLowerCase() || '';
+                    const visible = !query || label.includes(query);
+                    link.classList.toggle('hidden', !visible);
+                    if (visible) anyVisible = true;
+                });
+                // Hide group if no links are visible
+                group.parentElement.classList.toggle('hidden', !anyVisible);
+            });
+        });
+        // Keyboard shortcut: Ctrl+Shift+F
+        document.addEventListener('keydown', function(e) {
+            if (
+                e.key.toLowerCase() === 'f' && e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey
+            ) {
+                if (document.activeElement !== sidebarSearch) {
+                    e.preventDefault();
+                    sidebarSearch.focus();
+                    sidebarSearch.select();
+                }
+            }
         });
     }
 </script>

@@ -25,6 +25,29 @@
                     <label class="block mb-1 font-semibold" for="modal-slug">Slug</label>
                     <input class="w-full border px-3 py-2 rounded" type="text" id="modal-slug" name="slug" required>
                 </div>
+
+                    <script>
+                    // Slugify function
+                    function slugify(text) {
+                        return text.toString().toLowerCase()
+                            .replace(/\s+/g, '-')           // Replace spaces with -
+                            .replace(/[^a-z0-9\-]/g, '')   // Remove non-alphanum
+                            .replace(/-+/g, '-')            // Collapse multiple -
+                            .replace(/^-+|-+$/g, '');       // Trim -
+                    }
+                    let slugAuto = true;
+                    document.getElementById('modal-name').addEventListener('input', function() {
+                        if (slugAuto) {
+                            document.getElementById('modal-slug').value = slugify(this.value);
+                        }
+                    });
+                    document.getElementById('modal-slug').addEventListener('input', function() {
+                        slugAuto = false;
+                    });
+                    document.getElementById('modal-name').addEventListener('focus', function() {
+                        slugAuto = true;
+                    });
+                    </script>
                 <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Save</button>
             </form>
         </div>
