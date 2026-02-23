@@ -382,3 +382,226 @@ if (!function_exists('theme_asset')) {
         return \App\Core\Theme::asset($file);
     }
 }
+
+if (!function_exists('theme_view')) {
+    /**
+     * Resolve the first existing view from a list, with theme->default fallback.
+     *
+     * @param string $view Primary view name
+     * @param string[] $fallbacks Additional view names
+     */
+    function theme_view(string $view, array $fallbacks = []): string
+    {
+        $blade = \Flight::get('blade');
+        $candidates = array_merge([$view], $fallbacks);
+        foreach ($candidates as $candidate) {
+            if ($blade && method_exists($blade, 'exists') && $blade->exists($candidate)) {
+                return $candidate;
+            }
+        }
+        return $view;
+    }
+}
+
+if (!function_exists('render_block')) {
+    /**
+     * Render a theme block by type.
+     *
+     * Usage: {!! render_block($block['type'], $block['settings'] ?? []) !!}
+     */
+    function render_block(string $type, $data = []): string
+    {
+        $type = trim($type);
+        if ($type === '') {
+            return '';
+        }
+
+        $view = theme_view('blocks.' . $type);
+
+        $vars = [];
+        if (is_array($data)) {
+            // If associative, pass keys as variables; otherwise expose as $data
+            $isAssoc = array_keys($data) !== range(0, count($data) - 1);
+            $vars = $isAssoc ? $data : ['data' => $data];
+        } else {
+            $vars = ['data' => $data];
+        }
+
+        try {
+            return (string) \Flight::get('blade')->render($view, $vars);
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+}
+
+if (!function_exists('seo_setting')) {
+    function seo_setting(string $primaryKey, ?string $legacyKey = null, $default = null)
+    {
+        $value = setting($primaryKey, null);
+        if ($value !== null && $value !== '') {
+            return $value;
+        }
+
+        if ($legacyKey) {
+            $legacy = setting($legacyKey, null);
+            if ($legacy !== null && $legacy !== '') {
+                return $legacy;
+            }
+        }
+
+        return $default;
+    }
+}
+
+if (!function_exists('seo_site_title')) {
+    function seo_site_title(): string
+    {
+        return (string) seo_setting('site_title', 'site_name', env('APP_NAME', 'PankhCMS'));
+    }
+}
+
+if (!function_exists('seo_site_url')) {
+    function seo_site_url(): string
+    {
+        $url = (string) seo_setting('site_url', 'canonical_base', env('APP_URL', ''));
+        return rtrim($url, '/');
+    }
+}
+
+if (!function_exists('seo_absolute_url')) {
+    function seo_absolute_url(?string $pathOrUrl): string
+    {
+        $value = trim((string) $pathOrUrl);
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $value)) {
+            return $value;
+        }
+
+        $base = seo_site_url();
+        if ($base === '') {
+            return $value;
+        }
+
+        return $base . '/' . ltrim($value, '/');
+    }
+}
+
+if (!function_exists('seo_title')) {
+    function seo_title($page = null): string
+    {
+        $seoTitle = trim((string) ($page->seo_title ?? $page->meta_title ?? ''));
+        if ($seoTitle !== '') {
+            return $seoTitle;
+        }
+
+        $pageTitle = trim((string) ($page->title ?? ''));
+        $siteTitle = seo_site_title();
+
+        if ($pageTitle === '') {
+            return $siteTitle;
+        }
+
+        return $siteTitle !== '' ? $pageTitle . ' | ' . $siteTitle : $pageTitle;
+    }
+}
+
+if (!function_exists('seo_description')) {
+    function seo_description($page = null): string
+    {
+        $pageDescription = trim((string) ($page->seo_description ?? $page->meta_description ?? ''));
+        if ($pageDescription !== '') {
+            return $pageDescription;
+        }
+
+        $excerpt = trim((string) ($page->excerpt ?? $page->summary ?? ''));
+        if ($excerpt !== '') {
+            return $excerpt;
+        }
+
+        return (string) seo_setting('default_meta_description', 'seo_default_description', setting('site_tagline', ''));
+    }
+}
+
+if (!function_exists('seo_keywords')) {
+    function seo_keywords($page = null): string
+    {
+        $pageKeywords = trim((string) ($page->seo_keywords ?? $page->meta_keywords ?? ''));
+        if ($pageKeywords !== '') {
+            return $pageKeywords;
+        }
+
+        return (string) seo_setting('default_meta_keywords', 'seo_default_keywords', '');
+    }
+}
+
+if (!function_exists('canonical_url')) {
+    function canonical_url($page = null): string
+    {
+        $pageCanonical = trim((string) ($page->canonical_url ?? ''));
+        if ($pageCanonical !== '') {
+            return seo_absolute_url($pageCanonical);
+        }
+
+        $slug = trim((string) ($page->slug ?? ''));
+        if ($slug !== '') {
+            return seo_absolute_url('/' . ltrim($slug, '/'));
+        }
+
+        $requestPath = parse_url(\Flight::request()->url ?? '/', PHP_URL_PATH) ?: '/';
+        return seo_absolute_url($requestPath);
+    }
+}
+
+if (!function_exists('seo_robots')) {
+    function seo_robots($page = null): string
+    {
+        $robots = trim((string) ($page->robots ?? ''));
+        if ($robots !== '') {
+            return $robots;
+        }
+
+        return (string) seo_setting('robots_default', null, 'index, follow');
+    }
+}
+
+if (!function_exists('seo_image')) {
+    function seo_image($page = null): string
+    {
+        $image = trim((string) (
+            $page->seo_image
+            ?? $page->og_image
+            ?? $page->featured_image
+            ?? seo_setting('og_image', 'og_image_default', '')
+        ));
+
+        return seo_absolute_url($image);
+    }
+}
+
+if (!function_exists('seo_twitter_card')) {
+    function seo_twitter_card($page = null): string
+    {
+        $card = trim((string) ($page->twitter_card ?? ''));
+        if ($card !== '') {
+            return $card;
+        }
+
+        return (string) seo_setting('twitter_card', null, 'summary_large_image');
+    }
+}
+
+if (!function_exists('seo_image_alt')) {
+    function seo_image_alt($page = null, ?string $alt = null): string
+    {
+        $candidate = trim((string) ($alt ?? ''));
+        if ($candidate !== '') {
+            return $candidate;
+        }
+
+        return trim((string) ($page->title ?? seo_site_title()));
+    }
+}

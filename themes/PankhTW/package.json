@@ -1,0 +1,11 @@
+{
+  "name": "pankhtw",
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "scripts": {
+    "build": "tailwindcss -c tailwind.config.js -i ./assets/src/tailwind.css -o ./assets/css/theme.css --minify",
+    "watch": "tailwindcss -c tailwind.config.js -i ./assets/src/tailwind.css -o ./assets/css/theme.css --watch"
+  }
+}

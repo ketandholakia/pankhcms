@@ -44,10 +44,12 @@ class Bootstrap
 
     private static function initBlade()
     {
-        $viewPaths = [
-            Theme::viewPath(),
-            dirname(__DIR__, 2) . "/views",
-        ];
+        $viewPaths = [Theme::viewPath()];
+        $defaultThemeViewPath = Theme::viewPath(Theme::default());
+        if ($defaultThemeViewPath !== $viewPaths[0]) {
+            $viewPaths[] = $defaultThemeViewPath;
+        }
+        $viewPaths[] = dirname(__DIR__, 2) . "/views";
         $cachePath = dirname(__DIR__, 2) . "/storage/cache";
 
         $blade = new Blade($viewPaths, $cachePath);
@@ -89,13 +91,16 @@ class Bootstrap
 
         try {
             if (Capsule::schema()->hasTable('settings')) {
-                $siteTitle = Capsule::table('settings')->where('key', 'site_name')->value('value')
+                $siteTitle = Capsule::table('settings')->where('key', 'site_title')->value('value')
+                    ?: Capsule::table('settings')->where('key', 'site_name')->value('value')
                     ?: $siteTitle;
-                $siteDescription = Capsule::table('settings')->where('key', 'site_tagline')->value('value')
+                $siteDescription = Capsule::table('settings')->where('key', 'tagline')->value('value')
+                    ?: Capsule::table('settings')->where('key', 'site_tagline')->value('value')
                     ?: $siteDescription;
                 $seoDefaultTitle = Capsule::table('settings')->where('key', 'seo_default_title')->value('value')
                     ?: $seoDefaultTitle;
-                $seoDefaultDescription = Capsule::table('settings')->where('key', 'seo_default_description')->value('value')
+                $seoDefaultDescription = Capsule::table('settings')->where('key', 'default_meta_description')->value('value')
+                    ?: Capsule::table('settings')->where('key', 'seo_default_description')->value('value')
                     ?: $seoDefaultDescription;
                 $ogTitleDefault = Capsule::table('settings')->where('key', 'og_title_default')->value('value')
                     ?: $ogTitleDefault;
@@ -107,9 +112,11 @@ class Bootstrap
                 $breadcrumbsSchema = Capsule::table('settings')->where('key', 'breadcrumbs_schema')->value('value') ?: $breadcrumbsSchema;
                 $ogDescriptionDefault = Capsule::table('settings')->where('key', 'og_description_default')->value('value')
                     ?: $ogDescriptionDefault;
-                $ogImageDefault = Capsule::table('settings')->where('key', 'og_image_default')->value('value')
+                $ogImageDefault = Capsule::table('settings')->where('key', 'og_image')->value('value')
+                    ?: Capsule::table('settings')->where('key', 'og_image_default')->value('value')
                     ?: $ogImageDefault;
-                $canonicalBase = Capsule::table('settings')->where('key', 'canonical_base')->value('value')
+                $canonicalBase = Capsule::table('settings')->where('key', 'site_url')->value('value')
+                    ?: Capsule::table('settings')->where('key', 'canonical_base')->value('value')
                     ?: $canonicalBase;
                 $robotsDefault = Capsule::table('settings')->where('key', 'robots_default')->value('value')
                     ?: $robotsDefault;
@@ -117,7 +124,8 @@ class Bootstrap
                     ?: $twitterCard;
                 $twitterSite = Capsule::table('settings')->where('key', 'twitter_site')->value('value')
                     ?: $twitterSite;
-                $seoDefaultKeywords = Capsule::table('settings')->where('key', 'seo_default_keywords')->value('value')
+                $seoDefaultKeywords = Capsule::table('settings')->where('key', 'default_meta_keywords')->value('value')
+                    ?: Capsule::table('settings')->where('key', 'seo_default_keywords')->value('value')
                     ?: $seoDefaultKeywords;
                 $contactMapEmbedUrl = Capsule::table('settings')->where('key', 'contact_map_embed_url')->value('value')
                     ?: $contactMapEmbedUrl;

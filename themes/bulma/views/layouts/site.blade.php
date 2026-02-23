@@ -2,30 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ ($page->meta_title ?? null) ?: ($page->title ?? ($seo_default_title ?? $site_title ?? 'PankhCMS')) }}</title>
-    <meta name="description" content="{{ ($page->meta_description ?? null) ?: ($seo_default_description ?? $site_description ?? '') }}">
-    <meta name="keywords" content="{{ ($page->meta_keywords ?? null) ?: ($seo_default_keywords ?? '') }}">
-
-    {{-- Open Graph / Social Sharing --}}
-    <meta property="og:title" content="{{ ($page->og_title ?? null) ?: ($og_title_default ?? ($seo_default_title ?? $site_title ?? 'PankhCMS')) }}">
-    <meta property="og:description" content="{{ ($page->og_description ?? null) ?: ($og_description_default ?? ($seo_default_description ?? $site_description ?? '')) }}">
-    <meta property="og:image" content="{{ ($page->og_image ?? null) ?: ($og_image_default ?? '') }}">
-    <meta property="og:url" content="{{ ($page->canonical_url ?? null) ?: ($canonical_base ?? env('APP_URL') . \Flight::request()->url) }}">
-    <meta property="og:type" content="website">
-
-    {{-- Canonical URL --}}
-    <link rel="canonical" href="{{ ($page->canonical_url ?? null) ?: ($canonical_base ?? env('APP_URL') . \Flight::request()->url) }}">
-
-    {{-- Robots --}}
-    <meta name="robots" content="{{ ($page->robots ?? null) ?: ($robots_default ?? 'index, follow') }}">
-
-    {{-- Twitter Card --}}
-    <meta name="twitter:card" content="{{ ($page->twitter_card ?? null) ?: ($twitter_card ?? 'summary_large_image') }}">
-    <meta name="twitter:site" content="{{ ($page->twitter_site ?? null) ?: ($twitter_site ?? '') }}">
-    <meta name="twitter:title" content="{{ ($page->og_title ?? null) ?: ($og_title_default ?? ($seo_default_title ?? $site_title ?? 'PankhCMS')) }}">
-    <meta name="twitter:description" content="{{ ($page->og_description ?? null) ?: ($og_description_default ?? ($seo_default_description ?? $site_description ?? '')) }}">
-    <meta name="twitter:image" content="{{ ($page->og_image ?? null) ?: ($og_image_default ?? '') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.seo')
 
     {{-- Breadcrumbs --}}
     @if(setting('breadcrumbs_enabled') === '1' && !empty($breadcrumbs))
@@ -48,7 +26,7 @@
     @endif
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
-    <link rel="stylesheet" href="{{ \App\Core\Theme::asset('css/custom.css') }}">
+    <link rel="stylesheet" href="{{ theme_asset('css/custom.css') }}">
     <style>
         /* Align custom menu inside Bulma navbar */
         .navbar-start,

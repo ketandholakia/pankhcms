@@ -19,6 +19,7 @@ class PageController
         'type',
         'title', 'slug', 'content_json',
         'featured_image',
+        'seo_title', 'seo_description', 'seo_keywords', 'seo_image',
         'meta_title', 'meta_description', 'meta_keywords',
         'og_title', 'og_description', 'og_image',
         'canonical_url', 'robots', 'twitter_card',
@@ -35,6 +36,7 @@ class PageController
      */
     private const NULLABLE = [
         'featured_image',
+        'seo_title', 'seo_description', 'seo_keywords', 'seo_image',
         'meta_title', 'meta_description', 'meta_keywords',
         'og_title', 'og_description', 'og_image',
         'canonical_url', 'robots', 'twitter_card',
@@ -68,6 +70,7 @@ class PageController
     public function store(): void
     {
         $input = $this->getValidatedInput();
+        $raw = $this->rawInput();
 
         if (isset($input['errors'])) {
             // Re-render create form with validation errors and old input
@@ -79,6 +82,7 @@ class PageController
         }
 
         try {
+            $input['featured_image'] = $this->resolveFeaturedImageValue($input, $raw);
             $input['slug'] = unique_slug(
                 $input['slug'] ?: $input['title']
             );
@@ -107,10 +111,17 @@ class PageController
 
     public function update(int $id): void
     {
-
-
         $page  = $this->findOrAbort($id);
         $input = $this->getValidatedInput(isUpdate: true);
+        $raw = $this->rawInput();
+
+        // Debug logging
+        $logFile = dirname(__DIR__, 3) . '/storage/logs/debug_page_update.log';
+        $logData = date('Y-m-d H:i:s') . " Update ID: $id\n" .
+                   "POST: " . print_r($_POST, true) . "\n" .
+                   "RAW: " . print_r($raw, true) . "\n" .
+                   "INPUT: " . print_r($input, true) . "\n";
+        file_put_contents($logFile, $logData, FILE_APPEND);
 
         if (isset($input['errors'])) {
             $this->renderView('admin.pages.edit', array_merge(
@@ -121,19 +132,34 @@ class PageController
         }
 
         try {
+            $input['featured_image'] = $this->resolveFeaturedImageValue($input, $raw);
             $input['slug'] = unique_slug(
                 $input['slug'] ?: $input['title'],
                 $id
             );
 
-            $page->update($input);
+            $updateResult = $page->update($input);
+
+            // Debug: log result of update
+            file_put_contents($logFile,
+                date('Y-m-d H:i:s') . " UPDATE RESULT: " . var_export($updateResult, true) . "\n" .
+                "FINAL INPUT passed to update(): " . print_r($input, true) . "\n" .
+                "PAGE after update featured_image=" . $page->fresh()->featured_image . "\n",
+                FILE_APPEND
+            );
+
             $this->syncRelations($page);
 
             \Flight::redirect('/admin/pages?saved=1');
         } catch (Exception $e) {
+            file_put_contents($logFile,
+                date('Y-m-d H:i:s') . " EXCEPTION: " . $e->getMessage() . "\n" .
+                $e->getTraceAsString() . "\n",
+                FILE_APPEND
+            );
             $this->renderView('admin.pages.edit', array_merge(
                 $this->formData(),
-                ['errors' => ['An unexpected error occurred. Please try again.'], 'old' => $this->rawInput(), 'page' => $page],
+                ['errors' => ['An unexpected error occurred: ' . $e->getMessage()], 'old' => $this->rawInput(), 'page' => $page],
             ));
         }
     }
@@ -302,7 +328,35 @@ class PageController
      */
     private function rawInput(): array
     {
-        return (array) \Flight::request()->data->getData();
+        $flightData = (array) \Flight::request()->data->getData();
+
+        // Some environments/middlewares can cause Flight's parsed body to miss
+        // fields that PHP still provides via $_POST. Merge as a safe fallback.
+        if (!empty($_POST) && is_array($_POST)) {
+            return array_merge($flightData, $_POST);
+        }
+
+        return $flightData;
+    }
+
+    private function resolveFeaturedImageValue(array $validatedInput, array $rawInput)
+    {
+        $value = null;
+
+        if (array_key_exists('featured_image', $rawInput)) {
+            $value = $rawInput['featured_image'];
+        } elseif (array_key_exists('featured_image_persist', $rawInput)) {
+            $value = $rawInput['featured_image_persist'];
+        } elseif (array_key_exists('featured_image', $validatedInput)) {
+            $value = $validatedInput['featured_image'];
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        return $value === '' ? null : $value;
     }
 
     /**

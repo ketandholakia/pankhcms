@@ -15,6 +15,10 @@ class Page extends Model
         'slug',
         'content',
         'content_json',
+        'seo_title',
+        'seo_description',
+        'seo_keywords',
+        'seo_image',
         'meta_title',
         'meta_description',
         'meta_keywords',
@@ -92,7 +96,8 @@ class Page extends Model
 
     public function scopeProducts($query)
     {
-        return $query->where('type', 'product');
+        // Backward/forward compatible: some installs use `product`, others use `products`
+        return $query->whereIn('type', ['product', 'products']);
     }
 
     public function customFields(): array

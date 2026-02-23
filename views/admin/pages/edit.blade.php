@@ -17,6 +17,7 @@
     @endphp
 
     <form id="page-form" action="/admin/pages/{{ $page->id }}/update" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        {!! csrf_field() !!}
         <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
                 Title
@@ -35,8 +36,15 @@
           <label class="block text-gray-700 text-sm font-bold mb-2" for="featured_image">
             Featured Image URL
           </label>
-          <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="featured_image" name="featured_image" type="text" placeholder="/uploads/media/your-image.jpg" value="{{ $old['featured_image'] ?? $page->featured_image }}">
-          <p class="text-xs text-gray-500 mt-1">Upload via Media, then paste image URL here.</p>
+          <div class="flex items-center gap-2">
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-1" id="featured_image" name="featured_image" type="text" placeholder="/uploads/media/your-image.jpg" value="{{ $old['featured_image'] ?? $page->featured_image }}">
+            <input type="hidden" id="featured_image_persist" name="featured_image_persist" value="{{ $old['featured_image'] ?? $page->featured_image }}">
+            <input id="featured_image_file" type="file" accept="image/*" class="hidden">
+            <button type="button" id="featured-image-upload-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center">
+              Upload
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mt-1" id="featured-image-upload-status">Upload an image and the URL will be filled automatically.</p>
         </div>
 
         <div class="mb-4">
@@ -144,8 +152,8 @@
             <label class="block font-medium">SEO Title</label>
             <input
                 type="text"
-                name="meta_title"
-                value="{{ $page->meta_title }}"
+              name="seo_title"
+              value="{{ $page->seo_title ?? $page->meta_title }}"
                 class="w-full border p-2"
                 placeholder="Leave empty to use page title"
             >
@@ -156,13 +164,58 @@
 
             <label class="block font-medium">Meta Description</label>
             <textarea
-                name="meta_description"
+              name="seo_description"
                 class="w-full border p-2"
                 rows="3"
                 placeholder="Recommended: 150–160 characters"
-            >{{ $page->meta_description }}</textarea>
+            >{{ $page->seo_description ?? $page->meta_description }}</textarea>
 
         </div>
+
+          <div class="mt-3">
+            <label class="block font-medium">SEO Keywords</label>
+            <input
+              type="text"
+              name="seo_keywords"
+              value="{{ $page->seo_keywords ?? $page->meta_keywords }}"
+              class="w-full border p-2"
+              placeholder="keyword1, keyword2"
+            >
+          </div>
+
+          <div class="mt-3">
+            <label class="block font-medium">SEO Image URL</label>
+            <input
+              type="text"
+              name="seo_image"
+              value="{{ $page->seo_image ?? $page->og_image }}"
+              class="w-full border p-2"
+              placeholder="/uploads/og.jpg"
+            >
+          </div>
+
+          <div class="mt-3">
+            <label class="block font-medium">Canonical URL</label>
+            <input
+              type="text"
+              name="canonical_url"
+              value="{{ $page->canonical_url }}"
+              class="w-full border p-2"
+              placeholder="https://example.com/page-slug"
+            >
+          </div>
+
+          <div class="mt-3 mb-3">
+            <label class="block font-medium">Robots</label>
+            <select name="robots" class="w-full border p-2">
+              @php($robotsValue = $page->robots ?? '')
+              <option value="" {{ $robotsValue === '' ? 'selected' : '' }}>Default (index, follow)</option>
+              <option value="index, follow" {{ $robotsValue === 'index, follow' ? 'selected' : '' }}>index, follow</option>
+              <option value="noindex, follow" {{ $robotsValue === 'noindex, follow' ? 'selected' : '' }}>noindex, follow</option>
+              <option value="index, nofollow" {{ $robotsValue === 'index, nofollow' ? 'selected' : '' }}>index, nofollow</option>
+              <option value="noindex, nofollow" {{ $robotsValue === 'noindex, nofollow' ? 'selected' : '' }}>noindex, nofollow</option>
+            </select>
+          </div>
 
         <div class="flex items-center justify-between">
             <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
@@ -178,6 +231,75 @@
 @push('scripts')
 <script src="/assets/tinymce/tinymce.min.js"></script>
 <script>
+
+// Featured image uploader: uploads to /admin/media/upload and fills the URL field
+document.addEventListener('DOMContentLoaded', () => {
+  const urlInput = document.getElementById('featured_image');
+  const fileInput = document.getElementById('featured_image_file');
+  const uploadBtn = document.getElementById('featured-image-upload-btn');
+  const statusEl = document.getElementById('featured-image-upload-status');
+  const persistInput = document.getElementById('featured_image_persist');
+  if (!urlInput || !fileInput || !uploadBtn) return;
+
+  const setStatus = (msg) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+  };
+
+  const syncPersist = () => {
+    if (persistInput) {
+      persistInput.value = (urlInput.value || '').trim();
+    }
+  };
+
+  urlInput.addEventListener('input', syncPersist);
+  urlInput.addEventListener('change', syncPersist);
+  syncPersist();
+
+  uploadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+
+    uploadBtn.disabled = true;
+    uploadBtn.classList.add('opacity-50');
+    setStatus('Uploading...');
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/admin/media/upload', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg = (data && (data.error || data.message)) ? (data.error || data.message) : 'Upload failed.';
+        setStatus(msg);
+        return;
+      }
+
+      const url = data && data.media && data.media.url;
+      if (!url) {
+        setStatus('Upload succeeded but no URL returned.');
+        return;
+      }
+
+      urlInput.value = url;
+      urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      urlInput.dispatchEvent(new Event('change', { bubbles: true }));
+      syncPersist();
+      setStatus('Uploaded.');
+    } catch (e) {
+      console.error(e);
+      setStatus('Upload failed.');
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.classList.remove('opacity-50');
+      fileInput.value = '';
+    }
+  });
+});
 
 // Add Template: Appends template blocks to current blocks
 async function addTemplate(id) {
@@ -501,6 +623,12 @@ function removeBlock(i) {
 
   // Copy HTML to hidden input before submit
 document.getElementById('page-form').addEventListener('submit', () => {
+  const featuredImageInput = document.getElementById('featured_image');
+  const featuredImagePersistInput = document.getElementById('featured_image_persist');
+  if (featuredImagePersistInput && featuredImageInput) {
+    featuredImagePersistInput.value = (featuredImageInput.value || '').trim();
+  }
+
   if (window.tinymce) {
     tinymce.triggerSave();
     document.querySelectorAll('.wysiwyg-text-block').forEach((el) => {

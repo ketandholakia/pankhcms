@@ -6,6 +6,7 @@ use App\Models\Page;
 use App\Models\Category; // Needed for categoryBreadcrumbs
 use App\Models\Menu; // Needed for menuBreadcrumbs
 use App\Models\MenuItem; // Needed for menuBreadcrumbs
+use App\Models\SliderImage;
 use App\Core\Theme;
 use App\Core\VisitTracker;
 
@@ -23,7 +24,8 @@ class SiteController
         VisitTracker::track(null, '/');
         // Fallback: render custom home view
         $site_name = \setting('site_name', 'PankhCMS');
-        echo \Flight::get('blade')->render('site.home', compact('site_name'));
+        $sliders = SliderImage::where('active', 1)->orderBy('sort_order')->get();
+        echo \Flight::get('blade')->render('site.home', compact('site_name', 'sliders'));
     }
 
     public static function page($slug)
@@ -52,10 +54,24 @@ class SiteController
         $site_name = \setting('site_name', 'PankhCMS');
         $blade = \Flight::get('blade');
 
+        $homepageId = (int) (\setting('homepage_id') ?: 0);
+        $isHome = $homepageId > 0 && (int) $page->id === $homepageId;
+
+        $sliders = $isHome
+            ? SliderImage::where('active', 1)->orderBy('sort_order')->get()
+            : collect();
+
         $type = trim((string) ($page->type ?? ''));
         $candidateViews = [];
 
+        // Home page can have its own template
+        if ($isHome) {
+            $candidateViews[] = 'templates.home';
+            $candidateViews[] = 'site.home';
+        }
+
         if ($type !== '' && $type !== 'page') {
+            $candidateViews[] = 'templates.' . $type;
             $candidateViews[] = 'site.' . $type;
 
             $singularType = (substr($type, -1) === 's' && strlen($type) > 1)
@@ -63,10 +79,12 @@ class SiteController
                 : $type;
 
             if ($singularType !== $type) {
+                $candidateViews[] = 'templates.' . $singularType;
                 $candidateViews[] = 'site.' . $singularType;
             }
         }
 
+        $candidateViews[] = 'templates.page';
         $candidateViews[] = 'page';
 
         $viewToRender = 'page';
@@ -77,6 +95,6 @@ class SiteController
             }
         }
 
-        echo $blade->render($viewToRender, compact('page', 'breadcrumbs', 'blocks', 'site_name'));
+        echo $blade->render($viewToRender, compact('page', 'breadcrumbs', 'blocks', 'site_name', 'sliders'));
     }
 }

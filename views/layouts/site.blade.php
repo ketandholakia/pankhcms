@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ ($page->meta_title ?? null) ?: ($page->title ?? 'PankhCMS') }}</title>
-    <meta name="description" content="{{ $page->meta_description ?? '' }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.seo')
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -30,6 +29,8 @@
             </form>
         </div>
     </nav>
+
+    @yield('hero')
 
     <main class="container mx-auto p-4">
         @yield('content')

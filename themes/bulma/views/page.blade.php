@@ -1,7 +1,7 @@
 @extends('layouts.site')
 
 @section('content')
-    @include('blocks.hero', ['page' => $page])
+    @include(theme_view('blocks.hero'), ['page' => $page])
 
     <section class="section py-5">
         <div class="container">
@@ -9,7 +9,7 @@
                 <div class="column is-two-thirds">
                     @if(!empty($blocks))
                         @foreach($blocks as $block)
-                            @includeIf('blocks.' . ($block['type'] ?? ''), ['block' => $block])
+                            @includeIf(theme_view('blocks.' . ($block['type'] ?? '')), ['block' => $block])
                         @endforeach
                     @else
                         <div class="box">
@@ -18,11 +18,11 @@
                     @endif
                 </div>
                 <div class="column is-one-third">
-                    @include('blocks.sidebar')
+                    @include(theme_view('blocks.sidebar'))
                 </div>
             </div>
         </div>
     </section>
 
-    @include('blocks.cta')
+    @include(theme_view('blocks.cta'))
 @endsection

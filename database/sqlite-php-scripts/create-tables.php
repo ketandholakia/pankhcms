@@ -75,6 +75,10 @@ if (!$schema->hasTable('pages')) {
         $t->string('title');
         $t->string('slug')->unique();
         $t->text('content')->nullable();
+        $t->text('seo_title')->nullable();
+        $t->text('seo_description')->nullable();
+        $t->text('seo_keywords')->nullable();
+        $t->text('seo_image')->nullable();
         $t->text('meta_title')->nullable();
         $t->text('meta_description')->nullable();
         $t->text('meta_keywords')->nullable();
@@ -290,6 +294,13 @@ Capsule::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_slu
 
 Capsule::table('settings')->updateOrInsert(['key' => 'site_name'], ['value' => 'PankhCMS']);
 Capsule::table('settings')->updateOrInsert(['key' => 'site_tagline'], ['value' => 'A lightweight CMS']);
+Capsule::table('settings')->updateOrInsert(['key' => 'site_title'], ['value' => 'PankhCMS']);
+Capsule::table('settings')->updateOrInsert(['key' => 'tagline'], ['value' => 'Lightweight PHP CMS']);
+Capsule::table('settings')->updateOrInsert(['key' => 'site_url'], ['value' => env('APP_URL', '')]);
+Capsule::table('settings')->updateOrInsert(['key' => 'default_meta_description'], ['value' => 'Modern CMS for fast websites']);
+Capsule::table('settings')->updateOrInsert(['key' => 'default_meta_keywords'], ['value' => 'cms, php, website']);
+Capsule::table('settings')->updateOrInsert(['key' => 'favicon'], ['value' => '/uploads/favicon.ico']);
+Capsule::table('settings')->updateOrInsert(['key' => 'og_image'], ['value' => '/uploads/og.jpg']);
 Capsule::table('settings')->updateOrInsert(['key' => 'active_theme'], ['value' => 'default']);
 // Default Breadcrumb Settings
 Capsule::table('settings')->updateOrInsert(['key' => 'breadcrumbs_enabled'], ['value' => '1']);

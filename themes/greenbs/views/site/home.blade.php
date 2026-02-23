@@ -2,28 +2,8 @@
 
 @section('content')
 
-<!-- ================= HERO ================= -->
-<section class="section-padding bg-light">
-  <div class="container">
-    <div class="row align-items-center">
-      <div class="col-lg-6">
-        <img src="https://via.placeholder.com/600x400" class="img-fluid rounded shadow" alt="">
-      </div>
-      <div class="col-lg-6">
-        <h2 class="fw-bold">Welcome to Organic Dehydrated Foods Pvt. Ltd.</h2>
-        <p class="mt-3">
-          An ISO 22000:2018, WHO-GMP, FSSAI & ORGANIC Certified Company established in 2016,
-          manufacturing premium Food Supplements, Herbal Oil Drops, Organic Vegetables
-          and Herbal Powders using a unique dehydration technique.
-        </p>
-        <p>
-          Our products support health and wellness while maintaining a strong connection
-          between Mother Nature, farmers, and consumers.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- ================= SLIDER ================= -->
+@includeIf(theme_view('blocks.slider_bootstrap'))
 
 <!-- ================= FEATURES ================= -->
 <section class="section-padding text-center">

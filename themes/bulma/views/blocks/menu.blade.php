@@ -4,7 +4,7 @@
     <div class="box">
         <p class="menu-label">Quick Links</p>
         <aside class="menu">
-            @include('partials.menu-bulma', ['items' => $menuItems])
+            @include(theme_view('partials.menu-bulma'), ['items' => $menuItems])
         </aside>
     </div>
 @endif

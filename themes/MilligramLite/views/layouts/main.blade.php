@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-    <title>{{ $page->title ?? ($site_name ?? 'Site Name') }}</title>
-
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @include('partials.seo')
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ theme_asset('css/normalize.css') }}">

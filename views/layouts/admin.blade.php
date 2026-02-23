@@ -31,7 +31,7 @@
             </button>
         </div>
         <div class="mb-4">
-            <input id="sidebar-search" type="text" placeholder="Search menu... ({{ $settings['sidebar_search_shortcut'] ?? 'Ctrl+Shift+F' }})" class="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-gray-700" autocomplete="off">
+            <input id="sidebar-search" type="text" placeholder="Search menu... ({{ setting('sidebar_search_shortcut', 'Ctrl+Shift+F') }})" class="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-gray-700" autocomplete="off">
         </div>
 
         @php
@@ -259,17 +259,51 @@
                 group.parentElement.classList.toggle('hidden', !anyVisible);
             });
         });
-        // Keyboard shortcut: Ctrl+Shift+F
-        document.addEventListener('keydown', function(e) {
-            if (
-                e.key.toLowerCase() === 'f' && e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey
-            ) {
-                if (document.activeElement !== sidebarSearch) {
-                    e.preventDefault();
-                    sidebarSearch.focus();
-                    sidebarSearch.select();
-                }
+        // Keyboard shortcut: configurable via settings (e.g. "Ctrl+Shift+F")
+        const shortcutRaw = "{{ addslashes(setting('sidebar_search_shortcut', 'Ctrl+Shift+F')) }}";
+
+        function parseShortcut(input) {
+            const parts = String(input || '').split('+').map(p => p.trim()).filter(Boolean);
+            const mods = { ctrl: false, shift: false, alt: false, meta: false };
+            let key = '';
+            for (const part of parts) {
+                const p = part.toLowerCase();
+                if (p === 'ctrl' || p === 'control') mods.ctrl = true;
+                else if (p === 'shift') mods.shift = true;
+                else if (p === 'alt' || p === 'option') mods.alt = true;
+                else if (p === 'meta' || p === 'cmd' || p === 'command' || p === 'win') mods.meta = true;
+                else key = part;
             }
+            key = key || 'F';
+            return { ...mods, key };
+        }
+
+        const shortcut = parseShortcut(shortcutRaw);
+
+        function normalizeKeyName(k) {
+            const key = String(k || '').toLowerCase();
+            if (key === 'slash') return '/';
+            if (key === 'space') return ' ';
+            if (key.length === 1) return key;
+            return key;
+        }
+
+        document.addEventListener('keydown', function (e) {
+            const keyWanted = normalizeKeyName(shortcut.key);
+            const pressed = normalizeKeyName(e.key);
+            const match =
+                pressed === keyWanted &&
+                (!!e.ctrlKey === !!shortcut.ctrl) &&
+                (!!e.shiftKey === !!shortcut.shift) &&
+                (!!e.altKey === !!shortcut.alt) &&
+                (!!e.metaKey === !!shortcut.meta);
+
+            if (!match) return;
+            if (document.activeElement === sidebarSearch) return;
+
+            e.preventDefault();
+            sidebarSearch.focus();
+            sidebarSearch.select();
         });
     }
 </script>

@@ -8,11 +8,16 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 $table = "pages";
 
 $columns = [
+    "seo_title TEXT",
+    "seo_description TEXT",
+    "seo_keywords TEXT",
+    "seo_image TEXT",
     "meta_title TEXT",
     "meta_description TEXT",
     "meta_keywords TEXT",
     "og_image TEXT",
     "canonical_url TEXT",
+    "robots TEXT",
     "noindex INTEGER DEFAULT 0",
 ];
 
@@ -41,6 +46,23 @@ foreach ($columns as $colDef) {
         echo "✅ Added column: $colName\n";
     } else {
         echo "⚠️ Column already exists: $colName\n";
+    }
+}
+
+$defaultSettings = [
+    'site_title' => 'PankhCMS',
+    'tagline' => 'Lightweight PHP CMS',
+    'site_url' => getenv('APP_URL') ?: '',
+    'default_meta_description' => 'Modern CMS for fast websites',
+    'default_meta_keywords' => 'cms, php, website',
+    'favicon' => '/uploads/favicon.ico',
+    'og_image' => '/uploads/og.jpg',
+];
+
+if (Capsule::schema()->hasTable('settings')) {
+    foreach ($defaultSettings as $key => $value) {
+        Capsule::table('settings')->updateOrInsert(['key' => $key], ['value' => $value]);
+        echo "✅ Upserted setting: {$key}\n";
     }
 }
 

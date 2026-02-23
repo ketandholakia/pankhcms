@@ -35,6 +35,35 @@ class ThemeController
             ['value' => $theme]
         );
 
+        // Automatically create symlink for theme assets
+        $publicThemesDir = dirname(__DIR__, 3) . '/public/themes';
+        $themeAssetsSource = dirname(__DIR__, 3) . '/themes/' . $theme . '/assets';
+        $themeAssetsTargetDir = $publicThemesDir . '/' . $theme;
+        $themeAssetsTarget = $themeAssetsTargetDir . '/assets';
+
+        // Ensure public/themes/[theme] directory exists
+        if (!is_dir($themeAssetsTargetDir)) {
+            @mkdir($themeAssetsTargetDir, 0777, true);
+        }
+
+        // Remove existing symlink or directory if present
+        if (is_link($themeAssetsTarget) || is_dir($themeAssetsTarget)) {
+            @unlink($themeAssetsTarget);
+        }
+
+        // Create symlink if source exists and symlink() is available
+        if (is_dir($themeAssetsSource)) {
+            if (function_exists('symlink')) {
+                $result = @\symlink($themeAssetsSource, $themeAssetsTarget);
+                if ($result === false) {
+                    $error = error_get_last();
+                    error_log('symlink() failed: ' . print_r($error, true) . " | Source: $themeAssetsSource | Target: $themeAssetsTarget");
+                }
+            } else {
+                error_log('symlink() is not available in this PHP environment. Source: ' . $themeAssetsSource . ' Target: ' . $themeAssetsTarget);
+            }
+        }
+
         \Flight::redirect('/admin/themes?status=updated');
     }
 

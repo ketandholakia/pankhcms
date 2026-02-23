@@ -9,7 +9,7 @@
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <div class="navbar-nav mx-auto py-0">
                 @php($tree = menu_tree('header'))
-                @include('blocks.menu', ['tree' => $tree])
+                @include(theme_view('blocks.menu'), ['tree' => $tree])
             </div>
         </div>
     </nav>
