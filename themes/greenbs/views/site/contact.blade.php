@@ -12,7 +12,7 @@
         <div class="row g-4 align-items-center">
             <div class="col-lg-7">
                 <h1 class="display-5 mb-3">Contact Us</h1>
-                <p class="mb-0 text-muted">Have questions or need help with your project? Send us a message and our team will get back to you shortly.</p>
+                <p class="mb-0 text-muted">Have questions or need help with our products? Send us a message and our team will get back to you shortly.</p>
             </div>
             <div class="col-lg-5 text-lg-end">
                 <span class="badge bg-primary fs-6 px-3 py-2">We usually reply within 24 hours</span>

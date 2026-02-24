@@ -7,6 +7,23 @@ use Exception;
 
 class BackupManager
 {
+    /**
+     * Create a database-only backup (structure + data)
+     */
+    public function createDatabaseBackup(string $notes = 'Database backup'): string
+    {
+        $meta   = $this->getMetadata('database', $notes);
+        $tmpDir = sys_get_temp_dir() . '/pankhcms_db_backup_' . uniqid();
+        mkdir($tmpDir, 0775, true);
+        $this->backupDatabase($tmpDir);
+        file_put_contents(
+            $tmpDir . '/backup.json',
+            json_encode($meta, JSON_PRETTY_PRINT)
+        );
+        $zipPath = $this->packageBackup($tmpDir);
+        $this->cleanup($tmpDir);
+        return $zipPath;
+    }
     protected string $backupDir;
     protected array $dbConfig;
     protected string $appVersion = '1.0.0';
@@ -107,20 +124,46 @@ class BackupManager
         }
 
         if ($type === 'mysql') {
-            $cmd = sprintf(
-                'mysqldump -h%s -u%s -p%s %s > %s',
-                escapeshellarg($this->dbConfig['host'] ?? 'localhost'),
-                escapeshellarg($this->dbConfig['username']),
-                escapeshellarg($this->dbConfig['password']),
-                escapeshellarg($this->dbConfig['database']),
-                escapeshellarg($targetDir . '/database.sql')
+            $mysqli = new \mysqli(
+                $this->dbConfig['host'] ?? 'localhost',
+                $this->dbConfig['username'],
+                $this->dbConfig['password'],
+                $this->dbConfig['database']
             );
-
-            exec($cmd, $o, $result);
-
-            if ($result !== 0) {
-                throw new Exception('MySQL dump failed');
+            if ($mysqli->connect_errno) {
+                throw new Exception('MySQL connection failed: ' . $mysqli->connect_error);
             }
+
+            $sql = "";
+            $tables = [];
+            $result = $mysqli->query("SHOW TABLES");
+            while ($row = $result->fetch_row()) {
+                $tables[] = $row[0];
+            }
+
+            foreach ($tables as $table) {
+                // Structure
+                $res = $mysqli->query("SHOW CREATE TABLE `" . $table . "`");
+                $row = $res->fetch_assoc();
+                $sql .= "\n-- Table structure for `{$table}`\n";
+                $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
+                $sql .= $row['Create Table'] . ";\n\n";
+
+                // Data
+                $res = $mysqli->query("SELECT * FROM `" . $table . "`");
+                if ($res->num_rows > 0) {
+                    $sql .= "-- Dumping data for `{$table}`\n";
+                    while ($row = $res->fetch_assoc()) {
+                        $vals = array_map(function($v) use ($mysqli) {
+                            return isset($v) ? "'" . $mysqli->real_escape_string($v) . "'" : "NULL";
+                        }, array_values($row));
+                        $sql .= "INSERT INTO `{$table}` VALUES(" . implode(",", $vals) . ");\n";
+                    }
+                    $sql .= "\n";
+                }
+            }
+            file_put_contents($targetDir . '/database.sql', $sql);
+            $mysqli->close();
             return;
         }
 
