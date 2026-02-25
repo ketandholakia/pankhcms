@@ -51,15 +51,41 @@ class PageController
         $types = ContentType::orderBy('name')->get();
 
         $selectedType = $_GET['type'] ?? 'all';
+        $search = $_GET['q'] ?? null;
 
         $query = Page::with(['categories', 'tags']);
         if (!empty($selectedType) && $selectedType !== 'all') {
             $query = $query->type($selectedType);
         }
 
-        $pages = $query->get();
+        if (!empty($search)) {
+            $query = $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('slug', 'like', "%{$search}%")
+                  ->orWhere('content_json', 'like', "%{$search}%");
+            });
+        }
 
-        $this->renderView('admin.pages.index', compact('pages', 'types', 'selectedType'));
+        // paginate results (20 per page) without relying on Illuminate paginator being bootstrapped
+        $perPage = 20;
+        $pageNum = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+
+        // total before limit
+        $total = (int) $query->count();
+
+        $offset = ($pageNum - 1) * $perPage;
+        $pages = $query->orderBy('title')->skip($offset)->take($perPage)->get();
+
+        $lastPage = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
+
+        $paginator = [
+            'current' => $pageNum,
+            'last' => $lastPage,
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+
+        $this->renderView('admin.pages.index', compact('pages', 'types', 'selectedType', 'search', 'paginator'));
     }
 
     public function create(): void

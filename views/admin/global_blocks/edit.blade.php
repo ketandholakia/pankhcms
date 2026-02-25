@@ -33,6 +33,10 @@
                 <option value="0" {{ !$block->status ? 'selected' : '' }}>Inactive</option>
             </select>
         </div>
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="show_title" name="show_title" value="1" {{ $block->show_title ? 'checked' : '' }}>
+            <label class="form-check-label" for="show_title">Show title</label>
+        </div>
         <button type="submit" class="btn btn-success">Update Block</button>
         <a href="/admin/global-blocks" class="btn btn-secondary">Cancel</a>
     </form>

@@ -32,15 +32,20 @@
                         Add Page
                     </a>
                     <form method="GET" action="/admin/pages" class="flex items-center gap-2">
-                        <label for="type" class="text-sm font-medium text-gray-700">Type</label>
-                        <select id="type" name="type" class="border rounded px-3 py-2 text-sm" onchange="this.form.submit()">
-                            <option value="all" {{ ($selectedType ?? 'all') === 'all' ? 'selected' : '' }}>All</option>
-                            @foreach($types as $type)
-                                <option value="{{ $type->slug }}" {{ ($selectedType ?? 'all') === $type->slug ? 'selected' : '' }}>
-                                    {{ $type->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                      <label for="q" class="sr-only">Search</label>
+                      <input id="q" name="q" type="search" placeholder="Search title or slug" value="{{ $search ?? '' }}" class="border rounded px-3 py-2 text-sm" />
+
+                      <label for="type" class="text-sm font-medium text-gray-700">Type</label>
+                      <select id="type" name="type" class="border rounded px-3 py-2 text-sm" onchange="this.form.submit()">
+                        <option value="all" {{ ($selectedType ?? 'all') === 'all' ? 'selected' : '' }}>All</option>
+                        @foreach($types as $type)
+                          <option value="{{ $type->slug }}" {{ ($selectedType ?? 'all') === $type->slug ? 'selected' : '' }}>
+                            {{ $type->name }}
+                          </option>
+                        @endforeach
+                      </select>
+
+                      <button type="submit" class="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded text-sm">Search</button>
                     </form>
                 </div>
             </div>
@@ -84,6 +89,33 @@
               @endforelse
             </tbody>
         </table>
+        </div>
+
+        <div class="p-4 bg-white">
+          @if(method_exists($pages, 'links'))
+            {!! $pages->appends(array_diff_key($_GET ?? [], ['page' => null]))->links() !!}
+          @elseif(!empty($paginator) && ($paginator['last'] ?? 0) > 1)
+            @php
+              $params = $_GET ?? [];
+              unset($params['page']);
+              $base = '/admin/pages';
+            @endphp
+            <div class="flex items-center justify-between">
+              <div>
+                @if($paginator['current'] > 1)
+                  @php $prev = array_merge($params, ['page' => $paginator['current'] - 1]); @endphp
+                  <a href="{{ $base }}?{{ http_build_query($prev) }}" class="px-3 py-2 bg-gray-100 rounded">&laquo; Previous</a>
+                @endif
+              </div>
+              <div class="text-sm text-gray-600">Page {{ $paginator['current'] }} of {{ $paginator['last'] }}</div>
+              <div>
+                @if($paginator['current'] < $paginator['last'])
+                  @php $next = array_merge($params, ['page' => $paginator['current'] + 1]); @endphp
+                  <a href="{{ $base }}?{{ http_build_query($next) }}" class="px-3 py-2 bg-gray-100 rounded">Next &raquo;</a>
+                @endif
+              </div>
+            </div>
+          @endif
+        </div>
       </div>
-    </div>
 @endsection

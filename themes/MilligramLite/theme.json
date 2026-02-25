@@ -1,9 +1,0 @@
-{
-  "name": "Milligram Lite",
-  "slug": "milligramlite",
-  "version": "1.0.0",
-  "author": "VI_CON",
-  "description": "Production-ready lightweight Milligram theme for PankhCMS",
-  "framework": "Milligram",
-  "responsive": true
-}

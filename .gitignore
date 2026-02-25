@@ -1,4 +1,16 @@
-# =========================
+/.env
+/vendor/
+/node_modules/
+/public/storage/
+/storage/backups/
+/storage/cache/
+/storage/logs/
+*.sqlite
+.idea/
+.vscode/
+*.log
+/.env.*
+/.DS_Store# =========================
 # OS Files
 # =========================
 .DS_Store

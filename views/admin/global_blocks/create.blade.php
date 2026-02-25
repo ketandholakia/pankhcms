@@ -33,6 +33,10 @@
                 <option value="0">Inactive</option>
             </select>
         </div>
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="show_title" name="show_title" value="1" checked>
+            <label class="form-check-label" for="show_title">Show title</label>
+        </div>
         <button type="submit" class="btn btn-success">Create Block</button>
         <a href="/admin/global-blocks" class="btn btn-secondary">Cancel</a>
     </form>

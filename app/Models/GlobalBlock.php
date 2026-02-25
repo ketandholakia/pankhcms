@@ -9,6 +9,7 @@ class GlobalBlock extends Model
     protected $guarded = [];
     protected $casts = [
         'content' => 'array',
+        'show_title' => 'boolean',
     ];
     public $timestamps = false;
 

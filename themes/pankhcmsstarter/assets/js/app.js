@@ -12,3 +12,30 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	});
 });
+
+// Initialize Bulma carousel with retry in case the library loads slightly later
+document.addEventListener('DOMContentLoaded', () => {
+	const tryInit = (attemptsLeft = 8, delay = 200) => {
+		if (typeof bulmaCarousel !== 'undefined' && bulmaCarousel && typeof bulmaCarousel.attach === 'function') {
+			try {
+				bulmaCarousel.attach('.carousel', {
+					slidesToScroll: 1,
+					slidesToShow: 1,
+					infinite: true,
+					autoplay: true,
+					pauseOnHover: true
+				});
+			} catch (e) {
+				// silently ignore init errors
+				// console.error('bulmaCarousel init error', e);
+			}
+			return;
+		}
+
+		if (attemptsLeft > 0) {
+			setTimeout(() => tryInit(attemptsLeft - 1, delay), delay);
+		}
+	};
+
+	tryInit();
+});

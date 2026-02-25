@@ -30,6 +30,7 @@ class GlobalBlockController
             'location' => $data['location'] ?? '',
             'content' => $data['content'] ?? '',
             'status' => isset($data['status']) ? (int)$data['status'] : 1,
+            'show_title' => isset($data['show_title']) ? (bool)$data['show_title'] : true,
         ]);
         Flight::json(['success' => true, 'id' => $block->id]);
     }
@@ -52,6 +53,7 @@ class GlobalBlockController
             'location' => $data['location'] ?? $block->location,
             'content' => $data['content'] ?? $block->content,
             'status' => isset($data['status']) ? (int)$data['status'] : $block->status,
+            'show_title' => isset($data['show_title']) ? (bool)$data['show_title'] : $block->show_title,
         ]);
         Flight::json(['success' => true]);
     }

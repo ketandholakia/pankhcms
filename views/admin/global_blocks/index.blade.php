@@ -21,6 +21,7 @@
                             <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Title</th>
                             <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
                             <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</th>
+                            <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Show title</th>
                             <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                             <th class="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">Actions</th>
                         </tr>
@@ -33,9 +34,12 @@
                                     <td class="px-6 py-4 text-sm font-semibold text-gray-800">{{ $block->title }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-600">{{ $block->type }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-600">{{ $block->location }}</td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        <input type="checkbox" class="gb-show-title-toggle" data-id="{{ $block->id }}" {{ $block->show_title ? 'checked' : '' }}>
+                                    </td>
                                     <td class="px-6 py-4 text-sm text-gray-600">{{ $block->status ? 'Active' : 'Inactive' }}</td>
                                     <td class="px-6 py-4 text-right space-x-2">
-                                        <button onclick="openEditModal({{ $block->id }}, {{ json_encode($block->title) }}, {{ json_encode($block->type) }}, {{ json_encode($block->location) }}, {{ json_encode($block->content) }}, {{ $block->status ? '1' : '0' }})" class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium text-sm">Edit</button>
+                                        <button onclick="openEditModal({{ $block->id }}, {{ json_encode($block->title) }}, {{ json_encode($block->type) }}, {{ json_encode($block->location) }}, {{ json_encode($block->content) }}, {{ $block->status ? '1' : '0' }}, {{ $block->show_title ? '1' : '0' }})" class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium text-sm">Edit</button>
                                         <span class="text-gray-300">|</span>
                                         <button onclick="deleteBlock('{{ $block->id }}')" class="inline-flex items-center text-red-600 hover:text-red-900 font-medium text-sm">Delete</button>
                                     </td>
@@ -61,6 +65,10 @@
                 <div class="mb-3">
                     <label class="block mb-1 font-semibold">Title</label>
                     <input class="w-full border px-3 py-2 rounded" type="text" id="gb-title" name="title" required>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" id="gb-show-title" name="show_title" class="form-check-input" value="1" checked>
+                    <label class="form-check-label">Show title</label>
                 </div>
                 <div class="mb-3">
                     <label class="block mb-1 font-semibold">Type</label>
@@ -130,6 +138,9 @@
             data.append('location', document.getElementById('gb-location').value);
             data.append('content', document.getElementById('gb-content').value);
             data.append('status', document.getElementById('gb-status').value);
+            // Only append show_title when present in DOM
+            const showEl = document.getElementById('gb-show-title');
+            if (showEl) data.append('show_title', showEl.checked ? '1' : '0');
             let url = '/admin/global-blocks';
             if (id) url = `/admin/global-blocks/${id}`;
             const res = await fetch(url, { method: 'POST', body: data });
@@ -143,5 +154,16 @@
             const res = await fetch(`/admin/global-blocks/${id}/delete`, { method: 'POST' });
             if (res.ok) location.reload();
         }
+
+        // Toggle show_title quickly from index table
+        document.querySelectorAll('.gb-show-title-toggle').forEach(function(cb){
+            cb.addEventListener('change', async function(){
+                const id = this.getAttribute('data-id');
+                const val = this.checked ? '1' : '0';
+                const fd = new FormData(); fd.append('show_title', val);
+                const res = await fetch(`/admin/global-blocks/${id}`, { method: 'POST', body: fd });
+                if (!res.ok) alert('Failed to update');
+            });
+        });
     </script>
 @endsection
