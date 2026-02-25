@@ -13,6 +13,9 @@ class Bootstrap
     public static function init()
     {
         self::loadHelpers();
+        // Load plugins before routes so they can register routes and hooks
+        require_once __DIR__ . '/PluginManager.php';
+        \PluginManager::boot();
         self::loadEnv();
         self::initConfig();
         self::initDatabase();
@@ -187,6 +190,6 @@ class Bootstrap
         require_once dirname(__DIR__) . "/Helpers/menu.php";
         require_once dirname(__DIR__) . "/Helpers/breadcrumbs.php"; // New helper file
         require_once dirname(__DIR__) . "/helpers.php";
-        require_once dirname(__DIR__) . "/helpers/global_blocks.php";
+        require_once dirname(__DIR__) . "/Helpers/global_blocks.php";
     }
 }

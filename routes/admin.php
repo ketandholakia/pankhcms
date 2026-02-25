@@ -212,3 +212,10 @@ Flight::route('POST /admin/block-placements', ['App\\Controllers\\Admin\\BlockPl
 Flight::route('GET /admin/block-placements/@id/edit', ['App\\Controllers\\Admin\\BlockPlacementController', 'edit']);
 Flight::route('POST /admin/block-placements/@id', ['App\\Controllers\\Admin\\BlockPlacementController', 'update']);
 Flight::route('POST /admin/block-placements/@id/delete', ['App\\Controllers\\Admin\\BlockPlacementController', 'destroy']);
+
+
+// Plugin admin routes
+Flight::route('GET /admin/plugins', ['App\\Controllers\\Admin\\PluginController', 'index']);
+Flight::route('POST /admin/plugins/toggle', ['App\\Controllers\\Admin\\PluginController', 'toggle']);
+Flight::route('POST /admin/plugins/upload', ['App\\Controllers\\Admin\\PluginController', 'upload']);
+Flight::route('POST /admin/plugins/uninstall', ['App\\Controllers\\Admin\\PluginController', 'uninstall']);

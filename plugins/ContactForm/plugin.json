@@ -1,0 +1,8 @@
+{
+  "name": "Contact Form",
+  "slug": "contact-form",
+  "version": "1.0.0",
+  "author": "Vittix",
+  "description": "Adds contact form functionality",
+  "main": "Plugin.php"
+}

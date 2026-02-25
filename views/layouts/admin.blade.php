@@ -63,8 +63,31 @@
                 ["/admin/settings/seo", "search", "SEO Settings"],
                 ["/admin/settings/breadcrumbs", "chevron-right-square", "Breadcrumbs"],
                 ["/admin/backups", "database-backup", "Backups"],
+                ["/admin/plugins", "plug", "Plugins"],
             ],
         ];
+        // Merge admin menu items provided by plugins/extensions
+        try {
+            if (class_exists('\AdminMenu')) {
+                $extItems = \AdminMenu::items();
+                if (!empty($extItems)) {
+                    // Ensure an 'Extensions' group exists
+                    if (!isset($sidebarGroups['Extensions'])) $sidebarGroups['Extensions'] = [];
+                    foreach ($extItems as $it) {
+                        // Support either indexed arrays [href, icon, label] or associative arrays
+                        if (is_array($it)) {
+                            if (isset($it[0]) && isset($it[2])) {
+                                $sidebarGroups['Extensions'][] = [$it[0], $it[1] ?? 'circle', $it[2]];
+                            } elseif (isset($it['href']) && isset($it['label'])) {
+                                $sidebarGroups['Extensions'][] = [$it['href'], $it['icon'] ?? 'circle', $it['label']];
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignore if registry unavailable
+        }
         $currentUrl = $_SERVER['REQUEST_URI'] ?? '';
         @endphp
         <nav>
