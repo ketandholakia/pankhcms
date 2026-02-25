@@ -1,0 +1,14 @@
+{
+  "name": "PankhCMS Starter",
+  "slug": "pankhcmsstarter",
+  "version": "1.0.0",
+  "author": "Vittix",
+  "author_url": "https://example.com",
+  "description": "Full-featured starter theme for PankhCMS",
+  "supports": {
+    "blocks": true,
+    "menus": true,
+    "templates": true,
+    "blog": true
+  }
+}

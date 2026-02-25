@@ -15,6 +15,13 @@ if (!function_exists('render_menu')) {
     }
 }
 
+if (!function_exists('menu')) {
+    function menu($location = 'header')
+    {
+        return render_menu($location);
+    }
+}
+
 if (!function_exists('menu_tree')) {
     function menu_tree($location = 'header')
     {

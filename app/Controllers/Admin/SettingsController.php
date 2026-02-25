@@ -10,8 +10,8 @@ class SettingsController
     {
         // Load all relevant settings
         $keys = [
-            'site_name', 'site_tagline', 'site_url', 'admin_email', 'logo_path', 'favicon_path',
-            'default_language', 'timezone', 'date_format', 'time_format', 'show_theme_credit',
+            'site_name', 'site_tagline', 'site_url', 'admin_email', 'logo_path', 'favicon_path', 'logo_enabled',
+            'default_language', 'timezone', 'date_format', 'time_format',
             'maintenance_mode', 'maintenance_message', 'maintenance_allowed_ips',
             'contact_map_embed_url', 'sidebar_search_shortcut'
         ];
@@ -71,6 +71,8 @@ class SettingsController
         $files = \Flight::request()->files->getData(); // Get uploaded files
 
         $settingsToUpdate = [];
+        // Handle logo_enabled checkbox
+        $settingsToUpdate['logo_enabled'] = !empty($data['logo_enabled']) && $data['logo_enabled'] == '1' ? '1' : '0';
         $redirectStatus = 'updated'; // Default success status
 
         // Define the upload directory for settings-related files
@@ -183,8 +185,7 @@ class SettingsController
             }
         }
 
-        // Handle show_theme_credit checkbox (save as '1' if checked, '0' if not)
-        $settingsToUpdate['show_theme_credit'] = !empty($data['show_theme_credit']) && $data['show_theme_credit'] == '1' ? '1' : '0';
+        // Note: 'show_theme_credit' is now managed from Theme settings.
 
         // Maintenance settings
         $settingsToUpdate['maintenance_mode'] = !empty($data['maintenance_mode']) && $data['maintenance_mode'] == '1' ? '1' : '0';

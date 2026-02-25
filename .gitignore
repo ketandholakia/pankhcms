@@ -34,9 +34,8 @@ yarn-error.log*
 # Composer
 # =========================
 vendor/
-composer.lock
+# composer.lock should NOT be ignored for apps
 
-# (Remove composer.lock ignore if building an app, not a library)
 
 # =========================
 # Node / Frontend
@@ -72,8 +71,14 @@ storage/app/*
 # =========================
 uploads/
 public/uploads/
+public/uploads/media/
+public/uploads/settings/
+public/uploads/slider/
 media/
 files/
+storage/backups/
+storage/cache/
+storage/logs/
 
 # =========================
 # Database

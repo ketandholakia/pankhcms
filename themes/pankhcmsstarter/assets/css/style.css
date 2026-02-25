@@ -1,0 +1,82 @@
+body { font-family: Arial; margin: 0; }
+
+.container { max-width: 1200px; margin: auto; padding: 20px; }
+
+.site-header, .site-footer {
+    background: #111;
+    color: #fff;
+    padding: 15px;
+}
+
+.hero { padding: 60px 0; text-align: center; }
+
+.with-sidebar { display: flex; gap: 30px; }
+
+.sidebar { width: 300px; }
+
+/* ===== Custom Premium Navbar ===== */
+
+.custom-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    border-bottom: 1px solid #f0f0f0;
+    backdrop-filter: blur(8px);
+}
+
+/* Brand styling */
+.brand-logo {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.logo-text {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: #1f2937;
+}
+
+.logo-tagline {
+    font-size: 0.7rem;
+    color: #6b7280;
+}
+
+/* Nav links */
+.nav-links a.navbar-item {
+    font-weight: 500;
+    position: relative;
+    transition: color .2s ease;
+}
+
+.nav-links a.navbar-item::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 8px;
+    width: 0;
+    height: 2px;
+    background: #3273dc;
+    transition: width .25s ease;
+}
+
+.nav-links a.navbar-item:hover::after {
+    width: 100%;
+}
+
+/* CTA button */
+.cta-button {
+    font-weight: 600;
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
+    box-shadow: 0 6px 18px rgba(50, 115, 220, .25);
+}
+
+/* Mobile improvements */
+@media (max-width: 1023px) {
+    .navbar-menu {
+        box-shadow: 0 12px 40px rgba(0,0,0,.08);
+        border-radius: 12px;
+        margin-top: 10px;
+    }
+}

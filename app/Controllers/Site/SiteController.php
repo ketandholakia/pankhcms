@@ -85,6 +85,7 @@ class SiteController
         }
 
         $candidateViews[] = 'templates.page';
+        $candidateViews[] = 'site.page';
         $candidateViews[] = 'page';
 
         $viewToRender = 'page';

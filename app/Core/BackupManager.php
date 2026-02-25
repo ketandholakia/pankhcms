@@ -248,8 +248,25 @@ class BackupManager
     {
         $zip = new ZipArchive();
 
+        // Get site_name from settings and sanitize for filename
+        $siteName = setting('site_name', 'pankhcms');
+        $safeSiteName = preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower($siteName));
+        $safeSiteName = rtrim($safeSiteName, '_');
+
+        // Detect backup type from backup.json
+        $backupType = 'full';
+        $metaFile = $srcDir . '/backup.json';
+        if (file_exists($metaFile)) {
+            $meta = json_decode(file_get_contents($metaFile), true);
+            if (!empty($meta['type'])) {
+                $backupType = $meta['type'];
+            }
+        }
+
+        $typeLabel = ($backupType === 'database') ? 'db-backup' : 'full-backup';
+
         $filename = $this->backupDir .
-            'pankhcms-backup-' . date('Ymd-His') . '.zip';
+            $safeSiteName . '-' . $typeLabel . '-' . date('Ymd-His') . '.zip';
 
         if ($zip->open($filename, ZipArchive::CREATE) !== true) {
             throw new Exception('Cannot create ZIP');

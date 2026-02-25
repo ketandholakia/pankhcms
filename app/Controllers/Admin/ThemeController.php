@@ -12,7 +12,18 @@ class ThemeController
         $themes = self::availableThemes();
         $activeTheme = Theme::active();
 
-        echo \Flight::get('blade')->render('admin.themes.index', compact('themes', 'activeTheme'));
+        // Read current show_theme_credit setting so theme settings can control footer credit
+        $showThemeCredit = '1';
+        try {
+            $val = Capsule::table('settings')->where('key', 'show_theme_credit')->value('value');
+            if ($val !== null) {
+                $showThemeCredit = (string) $val;
+            }
+        } catch (\Exception $e) {
+            // If settings table missing or other db error, default to '1'
+        }
+
+        echo \Flight::get('blade')->render('admin.themes.index', compact('themes', 'activeTheme', 'showThemeCredit'));
     }
 
     public static function update()
@@ -34,6 +45,14 @@ class ThemeController
             ['key' => 'active_theme'],
             ['value' => $theme]
         );
+
+        // Save show_theme_credit if provided in the theme settings form
+        $showCredit = !empty($data['show_theme_credit']) && $data['show_theme_credit'] == '1' ? '1' : '0';
+        try {
+            Capsule::table('settings')->updateOrInsert(['key' => 'show_theme_credit'], ['value' => $showCredit]);
+        } catch (\Exception $e) {
+            // Ignore errors here; theme change already persisted above
+        }
 
         // Automatically create symlink for theme assets
         $publicThemesDir = dirname(__DIR__, 3) . '/public/themes';

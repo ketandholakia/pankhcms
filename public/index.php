@@ -1,5 +1,4 @@
 <?php
-
 $root = dirname(__DIR__);
 
 if (!file_exists($root . '/.env') && !file_exists(__DIR__ . '/install/lock')) {
@@ -9,13 +8,9 @@ if (!file_exists($root . '/.env') && !file_exists(__DIR__ . '/install/lock')) {
 
 require $root . '/vendor/autoload.php';
 
-// Ensure helpers are loaded
-require_once $root . '/app/Helpers/functions.php';
-require_once $root . '/app/helpers.php';
+\App\Core\Bootstrap::init();
 
 session_init();
-
-\App\Core\Bootstrap::init();
 
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $isAdminPath = str_starts_with($requestPath, '/admin');

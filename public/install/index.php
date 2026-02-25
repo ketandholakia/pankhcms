@@ -1,453 +1,175 @@
+
 <?php
 
-$root = dirname(__DIR__, 2);
+$root = realpath(__DIR__ . '/../..');
+$lockFile = __DIR__ . '/lock';
 
-if (file_exists(__DIR__ . '/lock') || file_exists($root . '/.env')) {
-    http_response_code(403);
-    die('Installer is locked.');
+if (file_exists($lockFile) || file_exists($root . '/.env')) {
+    die("Installer is locked.");
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $installDemo = isset($_POST['install_demo']) && $_POST['install_demo'] === '1';
+/* ======================================================
+   REQUIREMENTS
+====================================================== */
 
-    $driver = $_POST['db_driver'] ?? 'sqlite';
-    $env = "\nAPP_URL={$_POST['app_url']}\nDB_DRIVER={$driver}\nDB_CONNECTION={$driver}\nACTIVE_THEME=default\n";
-
-    if ($driver === 'mysql') {
-        $dbHost = trim($_POST['db_host'] ?? '127.0.0.1');
-        $dbPort = trim($_POST['db_port'] ?? '3306');
-
-        if ($dbHost === 'localhost') {
-            $dbHost = '127.0.0.1';
-        }
-
-        $env .= "DB_HOST={$dbHost}\nDB_PORT={$dbPort}\nDB_DATABASE={$_POST['db_database']}\nDB_USERNAME={$_POST['db_username']}\nDB_PASSWORD={$_POST['db_password']}\n";
-    } else {
-        $absoluteSqlite = $root . '/database/database.sqlite';
-        $env .= "DB_DATABASE={$absoluteSqlite}\n";
-    }
-
-    file_put_contents($root . '/.env', trim($env));
-
-    if ($driver === 'sqlite') {
-        if (!file_exists($root . '/database')) {
-            mkdir($root . '/database', 0777, true);
-        }
-        touch($root . '/database/database.sqlite');
-    }
-
-    require $root . '/vendor/autoload.php';
-
-    $dotenv = Dotenv\Dotenv::createImmutable($root);
-    $dotenv->load();
-
-    require $root . '/app/database.php';
-
-    // SQLite only: PRAGMA foreign_keys = ON
-    if ($driver === 'sqlite') {
-        \Illuminate\Database\Capsule\Manager::connection()->statement('PRAGMA foreign_keys = ON');
-    }
-
-    $schema = \Illuminate\Database\Capsule\Manager::schema();
-
-    // ---------- Categories ----------
-    if (!$schema->hasTable('categories')) {
-        $schema->create('categories', function ($t) {
-            $t->increments('id');
-            $t->string('name')->nullable();
-            $t->string('slug')->unique();
-            $t->integer('parent_id')->nullable();
-        });
-    }
-
-    // ---------- Tags ----------
-    if (!$schema->hasTable('tags')) {
-        $schema->create('tags', function ($t) {
-            $t->increments('id');
-            $t->string('name')->nullable();
-            $t->string('slug')->unique();
-        });
-    }
-
-    // ⭐ NEW — CONTENT TYPES TABLE
-    if (!$schema->hasTable('content_types')) {
-        $schema->create('content_types', function ($t) {
-            $t->increments('id');
-            $t->string('name');
-            $t->string('slug')->unique();
-            $t->text('description')->nullable();
-            $t->string('icon')->nullable();
-            $t->integer('has_categories')->default(1);
-            $t->integer('has_tags')->default(1);
-            $t->integer('is_system')->default(0);
-            $t->timestamps();
-        });
-    }
-
-    // ---------- Menus ----------
-    if (!$schema->hasTable('menus')) {
-        $schema->create('menus', function ($t) {
-            $t->increments('id');
-            $t->string('name')->nullable();
-            $t->string('location')->nullable();
-            $t->integer('sort_order')->default(0);
-        });
-    }
-
-    // ---------- Users ----------
-    if (!$schema->hasTable('users')) {
-        $schema->create('users', function ($t) {
-            $t->increments('id');
-            $t->string('name')->nullable();
-            $t->string('email')->unique();
-            $t->string('password');
-            $t->timestamps();
-        });
-    }
-
-    // ---------- Pages ----------
-    if (!$schema->hasTable('pages')) {
-        $schema->create('pages', function ($t) {
-            $t->increments('id');
-            $t->integer('parent_id')->nullable();
-
-            // ⭐ NEW — TYPE FIELD
-            $t->string('type')->default('page');
-
-            $t->string('title');
-            $t->string('slug')->unique();
-            $t->text('content')->nullable();
-
-            $t->text('meta_title')->nullable();
-            $t->text('meta_description')->nullable();
-            $t->text('meta_keywords')->nullable();
-
-            $t->text('og_title')->nullable();
-            $t->text('og_description')->nullable();
-            $t->text('og_image')->nullable();
-            $t->text('canonical_url')->nullable();
-            $t->string('robots')->nullable();
-            $t->string('twitter_card')->nullable();
-            $t->string('twitter_site')->nullable();
-            $t->integer('noindex')->default(0);
-
-            $t->text('content_json')->nullable();
-            $t->string('layout')->default('default');
-            $t->string('status')->default('published');
-            $t->text('featured_image')->nullable();
-
-            $t->timestamps();
-        });
-    }
-
-    // ---------- Menu Items ----------
-    if (!$schema->hasTable('menu_items')) {
-        $schema->create('menu_items', function ($t) {
-            $t->increments('id');
-            $t->unsignedInteger('menu_id')->nullable();
-            $t->unsignedInteger('parent_id')->nullable();
-            $t->string('title')->nullable();
-            $t->string('url')->nullable();
-            $t->unsignedInteger('page_id')->nullable();
-            $t->integer('sort_order')->default(0);
-
-            $t->foreign('menu_id')->references('id')->on('menus')->onDelete('cascade');
-            $t->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
-        });
-    }
-
-    // ---------- Page Categories Pivot ----------
-    if (!$schema->hasTable('page_categories')) {
-        $schema->create('page_categories', function ($t) {
-            $t->unsignedInteger('page_id');
-            $t->unsignedInteger('category_id');
-            $t->primary(['page_id', 'category_id']);
-
-            $t->foreign('page_id')->references('id')->on('pages')->onDelete('cascade');
-            $t->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
-        });
-    }
-
-    // ---------- Page Tags Pivot ----------
-    if (!$schema->hasTable('page_tags')) {
-        $schema->create('page_tags', function ($t) {
-            $t->unsignedInteger('page_id');
-            $t->unsignedInteger('tag_id');
-            $t->primary(['page_id', 'tag_id']);
-
-            $t->foreign('page_id')->references('id')->on('pages')->onDelete('cascade');
-            $t->foreign('tag_id')->references('id')->on('tags')->onDelete('cascade');
-        });
-    }
-
-    // ---------- Templates ----------
-    if (!$schema->hasTable('templates')) {
-        $schema->create('templates', function ($t) {
-            $t->increments('id');
-            $t->string('name')->nullable();
-            $t->text('content_json')->nullable();
-            $t->timestamp('created_at')->useCurrent();
-        });
-    }
-
-    // ---------- Roles ----------
-    if (!$schema->hasTable('roles')) {
-        $schema->create('roles', function ($t) {
-            $t->increments('id');
-            $t->string('name');
-        });
-    }
-
-    // ---------- Permissions ----------
-    if (!$schema->hasTable('permissions')) {
-        $schema->create('permissions', function ($t) {
-            $t->increments('id');
-            $t->string('name');
-        });
-    }
-
-    // ---------- Role Permissions Pivot ----------
-    if (!$schema->hasTable('role_permissions')) {
-        $schema->create('role_permissions', function ($t) {
-            $t->unsignedInteger('role_id');
-            $t->unsignedInteger('permission_id');
-
-            $t->primary(['role_id', 'permission_id']);
-            $t->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
-            $t->foreign('permission_id')->references('id')->on('permissions')->onDelete('cascade');
-        });
-    }
-
-    // ---------- User Roles Pivot ----------
-    if (!$schema->hasTable('user_roles')) {
-        $schema->create('user_roles', function ($t) {
-            $t->unsignedInteger('user_id');
-            $t->unsignedInteger('role_id');
-
-            $t->primary(['user_id', 'role_id']);
-            $t->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $t->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
-        });
-    }
-
-    // ---------- Settings ----------
-    if (!$schema->hasTable('settings')) {
-        $schema->create('settings', function ($t) {
-            $t->string('key')->primary();
-            $t->text('value')->nullable();
-        });
-    }
-
-    // ---------- Media ----------
-    if (!$schema->hasTable('media')) {
-        $schema->create('media', function ($t) {
-            $t->increments('id');
-            $t->string('filename');
-            $t->string('original_name')->nullable();
-            $t->string('mime_type')->nullable();
-            $t->integer('size')->nullable();
-            $t->string('url');
-            $t->integer('user_id')->nullable();
-            $t->string('alt')->nullable();
-            $t->string('title')->nullable();
-            $t->text('description')->nullable();
-            $t->timestamps();
-        });
-    }
-
-    // ---------- Slider Images ----------
-    if (!$schema->hasTable('slider_images')) {
-        $schema->create('slider_images', function ($t) {
-            $t->increments('id');
-            $t->string('image_path');
-            $t->string('caption')->nullable();
-            $t->string('link')->nullable();
-            $t->integer('sort_order')->default(0);
-            $t->boolean('active')->default(1);
-            $t->timestamps();
-        });
-    }
-
-    // ---------- Contact Messages ----------
-    if (!$schema->hasTable('contact_messages')) {
-        $schema->create('contact_messages', function ($t) {
-            $t->increments('id');
-            $t->string('name');
-            $t->string('email');
-            $t->string('subject')->nullable();
-            $t->text('message');
-            $t->string('ip', 45)->nullable();
-            $t->text('user_agent')->nullable();
-            $t->timestamp('created_at')->nullable();
-        });
-    }
-
-    // ---------- Redirects ----------
-    if (!$schema->hasTable('redirects')) {
-        $schema->create('redirects', function ($t) {
-            $t->increments('id');
-            $t->text('old_url')->nullable();
-            $t->text('new_url')->nullable();
-            $t->integer('type')->default(301);
-        });
-    }
-
-    // ---------- Logs ----------
-    if (!$schema->hasTable('logs')) {
-        $schema->create('logs', function ($t) {
-            $t->increments('id');
-            $t->unsignedInteger('user_id')->nullable();
-            $t->text('action')->nullable();
-            $t->dateTime('created_at')->nullable();
-
-            $t->foreign('user_id')->references('id')->on('users')->onDelete('set null');
-        });
-    }
-
-    // ---------- Useful Indexes ----------
-    \Illuminate\Database\Capsule\Manager::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_slug ON pages(slug)');
-    \Illuminate\Database\Capsule\Manager::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug)');
-    \Illuminate\Database\Capsule\Manager::connection()->statement('CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_slug ON tags(slug)');
-
-    // ⭐ SEED DEFAULT CONTENT TYPES
-    $now = date('Y-m-d H:i:s');
-
-    \Illuminate\Database\Capsule\Manager::table('content_types')->updateOrInsert(
-        ['slug' => 'page'],
-        [
-            'name' => 'Page',
-            'description' => 'Standard website page',
-            'icon' => 'file',
-            'has_categories' => 1,
-            'has_tags' => 1,
-            'is_system' => 1,
-            'created_at' => $now,
-            'updated_at' => $now,
+$requirements = [
+    'php' => [
+        'title' => 'PHP Version',
+        'required' => '8.1.0',
+        'current' => PHP_VERSION,
+        'status' => version_compare(PHP_VERSION, '8.1.0', '>=')
+    ],
+    'extensions' => [
+        'title' => 'Required PHP Extensions',
+        'required' => [
+            'pdo',
+            'pdo_mysql',
+            'pdo_sqlite',
+            'mbstring',
+            'json',
+            'openssl',
+            'fileinfo',
+            'curl',
+            'zip'
         ]
-    );
-
-    \Illuminate\Database\Capsule\Manager::table('content_types')->updateOrInsert(
-        ['slug' => 'feature'],
-        [
-            'name' => 'Feature',
-            'description' => 'Product or service feature',
-            'icon' => 'star',
-            'has_categories' => 1,
-            'has_tags' => 1,
-            'is_system' => 0,
-            'created_at' => $now,
-            'updated_at' => $now,
+    ],
+    'permissions' => [
+        'title' => 'Writable Directories',
+        'paths' => [
+            $root,
+            $root . '/database',
+            $root . '/storage',
+            $root . '/public'
         ]
-    );
+    ],
+    'composer' => [
+        'title' => 'Composer Autoload',
+        'path' => $root . '/vendor/autoload.php'
+    ]
+];
 
-    \Illuminate\Database\Capsule\Manager::table('content_types')->updateOrInsert(
-        ['slug' => 'product'],
-        [
-            'name' => 'Product',
-            'description' => 'Sellable product',
-            'icon' => 'shopping-cart',
-            'has_categories' => 1,
-            'has_tags' => 1,
-            'is_system' => 0,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]
-    );
+/* ======================================================
+   CHECK EXTENSIONS
+====================================================== */
 
-    // ⭐ Example admin user
-    \Illuminate\Database\Capsule\Manager::table('users')->updateOrInsert(
-        ['email' => $_POST['admin_email']],
-        [
-            'password' => password_hash($_POST['admin_password'], PASSWORD_DEFAULT),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]
-    );
-
-    // ---------- Default Settings ----------
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'site_name'], ['value' => 'PankhCMS']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'site_tagline'], ['value' => 'A lightweight CMS']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'active_theme'], ['value' => 'default']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_enabled'], ['value' => '1']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_type'], ['value' => 'auto']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_show_home'], ['value' => '1']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_home_label'], ['value' => 'Home']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_separator'], ['value' => '/']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'breadcrumbs_schema'], ['value' => '1']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'homepage_id'], ['value' => '']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'posts_per_page'], ['value' => '10']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'timezone'], ['value' => 'UTC']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'logo_path'], ['value' => '']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'site_url'], ['value' => '']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'favicon_path'], ['value' => '']);
-    \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(['key' => 'show_theme_credit'], ['value' => '1']);
-
-    file_put_contents(__DIR__ . '/lock', 'installed');
-
-    header('Location: /install/complete.php');
-    exit;
+$extensionsStatus = [];
+foreach ($requirements['extensions']['required'] as $ext) {
+    $extensionsStatus[$ext] = extension_loaded($ext);
 }
+
+/* ======================================================
+   CHECK PERMISSIONS
+====================================================== */
+
+$permissionsStatus = [];
+foreach ($requirements['permissions']['paths'] as $path) {
+    if (!file_exists($path)) {
+        @mkdir($path, 0777, true);
+    }
+    $permissionsStatus[$path] = is_writable($path);
+}
+
+/* ======================================================
+   COMPOSER CHECK
+====================================================== */
+
+$composerOk = file_exists($requirements['composer']['path']);
+
+/* ======================================================
+   FINAL STATUS
+====================================================== */
+
+$allOk = true;
+if (!$requirements['php']['status']) $allOk = false;
+foreach ($extensionsStatus as $ok)
+    if (!$ok) $allOk = false;
+foreach ($permissionsStatus as $ok)
+    if (!$ok) $allOk = false;
+if (!$composerOk) $allOk = false;
+
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-<title>CMS Setup</title>
+<title>PankhCMS — System Check</title>
 <style>
-body{font-family:Arial;background:#f5f5f5}
-.box{max-width:500px;margin:60px auto;background:#fff;padding:25px;border-radius:8px}
-input{width:100%;padding:8px;margin:8px 0}
-button{padding:10px 15px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer}
-button:hover{background:#0056b3}
+body{font-family:Arial;background:#f4f6f9;margin:0}
+.box{max-width:800px;margin:40px auto;background:#fff;padding:30px;border-radius:8px}
+h1{text-align:center;color:#007bff;margin-bottom:5px}
+.subtitle{text-align:center;color:#666;margin-bottom:25px}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px;border-bottom:1px solid #eee}
+.pass{color:#28a745;font-weight:bold}
+.fail{color:#dc3545;font-weight:bold}
+.button{display:inline-block;padding:12px 18px;background:#007bff;color:#fff;text-decoration:none;border-radius:5px;margin-top:20px}
+.button.disabled{background:#aaa;pointer-events:none}
+.path{font-size:12px;color:#666}
 </style>
 </head>
 <body>
+
 <div class="box">
-<h2>🚀 CMS Setup Wizard</h2>
-<form method="POST">
-<label>App URL</label>
-<input name="app_url" value="http://<?php echo $_SERVER['HTTP_HOST']; ?>">
 
-<h3>Database Type</h3>
-<select name="db_driver" id="db_driver" onchange="toggleDbFields()">
-  <option value="sqlite" selected>SQLite (default)</option>
-  <option value="mysql">MySQL</option>
-</select>
+<h1>PankhCMS Installer</h1>
+<div class="subtitle">Pre-Installation System Check</div>
 
-<div id="mysql-fields" style="display:none;">
-  <label>MySQL Host</label>
-    <input name="db_host" value="127.0.0.1">
-    <label>MySQL Port</label>
-    <input name="db_port" value="3306">
-  <label>MySQL Database</label>
-  <input name="db_database">
-  <label>MySQL Username</label>
-  <input name="db_username">
-  <label>MySQL Password</label>
-  <input type="password" name="db_password">
+<table>
+
+<tr><th colspan="3">PHP</th></tr>
+
+<tr>
+<td>PHP Version</td>
+<td><?php echo PHP_VERSION; ?> (Required: <?php echo $requirements['php']['required']; ?>)</td>
+<td class="<?php echo $requirements['php']['status'] ? 'pass':'fail'; ?>">
+<?php echo $requirements['php']['status'] ? 'PASS':'FAIL'; ?>
+</td>
+</tr>
+
+<tr><th colspan="3">Extensions</th></tr>
+
+<?php foreach ($extensionsStatus as $ext => $ok): ?>
+<tr>
+<td><?php echo $ext; ?></td>
+<td>Required</td>
+<td class="<?php echo $ok ? 'pass':'fail'; ?>">
+<?php echo $ok ? 'PASS':'FAIL'; ?>
+</td>
+</tr>
+<?php endforeach; ?>
+
+<tr><th colspan="3">Permissions</th></tr>
+
+<?php foreach ($permissionsStatus as $path => $ok): ?>
+<tr>
+<td>Writable</td>
+<td class="path"><?php echo $path; ?></td>
+<td class="<?php echo $ok ? 'pass':'fail'; ?>">
+<?php echo $ok ? 'PASS':'FAIL'; ?>
+</td>
+</tr>
+<?php endforeach; ?>
+
+<tr><th colspan="3">Composer</th></tr>
+
+<tr>
+<td>vendor/autoload.php</td>
+<td>Required</td>
+<td class="<?php echo $composerOk ? 'pass':'fail'; ?>">
+<?php echo $composerOk ? 'PASS':'FAIL'; ?>
+</td>
+</tr>
+
+</table>
+
+<div style="text-align:center">
+<?php if ($allOk): ?>
+<a class="button" href="setup.php">Continue Installation →</a>
+<?php else: ?>
+<div class="button disabled">Fix issues to continue</div>
+<?php endif; ?>
 </div>
 
-<h3>Admin Account</h3>
-<label>Email</label>
-<input name="admin_email" required>
-
-<label>Password</label>
-<input type="password" name="admin_password" required>
-
-<label style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-<input type="checkbox" name="install_demo" value="1" checked>
-Install demo content
-</label>
-
-<button>Install CMS</button>
-</form>
-<script>
-function toggleDbFields() {
-  var driver = document.getElementById('db_driver').value;
-  document.getElementById('mysql-fields').style.display = (driver === 'mysql') ? '' : 'none';
-}
-document.getElementById('db_driver').addEventListener('change', toggleDbFields);
-window.onload = toggleDbFields;
-</script>
 </div>
+
 </body>
 </html>

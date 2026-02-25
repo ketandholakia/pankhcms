@@ -22,8 +22,22 @@ class Bootstrap
 
     private static function loadEnv()
     {
-        $dotenv = Dotenv::createImmutable(dirname(__DIR__, 2));
-        $dotenv->load();
+        $root = dirname(__DIR__, 2);
+        $envFile = $root . '/.env';
+        $installLock = $root . '/public/install/lock';
+        $dotenv = Dotenv::createImmutable($root);
+        try {
+            $dotenv->load();
+        } catch (\Dotenv\Exception\InvalidPathException $e) {
+            if (!file_exists($envFile) && file_exists($installLock)) {
+                http_response_code(500);
+                echo '<h2>Configuration Error</h2>';
+                echo '<p>The configuration file <code>.env</code> is missing and an installer lock file was found at <code>public/install/lock</code>.</p>';
+                echo '<p>If you wish to reinstall the application, please ask your administrator to remove the lock file at <code>public/install/lock</code> and then access the installer.</p>';
+                exit;
+            }
+            throw $e;
+        }
     }
 
     private static function initConfig()
@@ -49,6 +63,8 @@ class Bootstrap
         if ($defaultThemeViewPath !== $viewPaths[0]) {
             $viewPaths[] = $defaultThemeViewPath;
         }
+        // Include legacy `resources/views` as a fallback for some installs
+        $viewPaths[] = dirname(__DIR__, 2) . "/resources/views";
         $viewPaths[] = dirname(__DIR__, 2) . "/views";
         $cachePath = dirname(__DIR__, 2) . "/storage/cache";
 
@@ -167,8 +183,10 @@ class Bootstrap
 
     private static function loadHelpers()
     {
-        require dirname(__DIR__) . "/Helpers/functions.php";
-        require dirname(__DIR__) . "/Helpers/menu.php";
-        require dirname(__DIR__) . "/Helpers/breadcrumbs.php"; // New helper file
+        require_once dirname(__DIR__) . "/Helpers/functions.php";
+        require_once dirname(__DIR__) . "/Helpers/menu.php";
+        require_once dirname(__DIR__) . "/Helpers/breadcrumbs.php"; // New helper file
+        require_once dirname(__DIR__) . "/helpers.php";
+        require_once dirname(__DIR__) . "/helpers/global_blocks.php";
     }
 }

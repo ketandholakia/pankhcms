@@ -4,6 +4,11 @@
 	<h1 class="text-2xl font-bold mb-4">Settings</h1>
 
 	<form method="POST" action="/admin/settings/update" enctype="multipart/form-data" class="bg-white border rounded-lg p-4 space-y-4">
+					<div>
+						<label for="logo_enabled" class="block text-sm font-semibold mb-2">Show Logo in Header</label>
+						<input type="checkbox" id="logo_enabled" name="logo_enabled" value="1" {{ !empty($settings['logo_enabled']) && $settings['logo_enabled'] == '1' ? 'checked' : '' }}>
+						<span class="ml-2 text-sm text-gray-600">Enable to show logo in site header</span>
+					</div>
 		@if(isset($_GET['status']))
 			@if($_GET['status'] === 'updated')
 				<div class="mb-4 rounded border border-green-300 bg-green-50 text-green-800 px-4 py-2">
@@ -55,11 +60,7 @@
 				<p class="mt-1 text-xs text-gray-600">Paste Google Maps iframe embed URL for the full-width map on contact page.</p>
 			</div>
 
-			<div>
-				<label for="show_theme_credit" class="block text-sm font-semibold mb-2">Show Theme Designer Credit in Footer</label>
-				<input type="checkbox" id="show_theme_credit" name="show_theme_credit" value="1" {{ !empty($settings['show_theme_credit']) && $settings['show_theme_credit'] == '1' ? 'checked' : '' }}>
-				<span class="ml-2 text-sm text-gray-600">Display theme designer/author in the footer</span>
-			</div>
+
 			<div>
 				<label for="site_name" class="block text-sm font-semibold mb-2">Site Name</label>
 				<input type="text" class="w-full border rounded px-3 py-2" id="site_name" name="site_name" value="{{ $settings['site_name'] ?? '' }}">

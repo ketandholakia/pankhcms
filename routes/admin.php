@@ -195,3 +195,20 @@ Flight::before('start', function () {
         \App\Middleware\AdminMiddleware::handle();
     }
 });
+
+
+// Global Blocks CRUD
+Flight::route('GET /admin/global-blocks', ['App\\Controllers\\Admin\\GlobalBlockController', 'index']);
+Flight::route('GET /admin/global-blocks/create', ['App\\Controllers\\Admin\\GlobalBlockController', 'create']);
+Flight::route('POST /admin/global-blocks', ['App\\Controllers\\Admin\\GlobalBlockController', 'store']);
+Flight::route('GET /admin/global-blocks/@id/edit', ['App\\Controllers\\Admin\\GlobalBlockController', 'edit']);
+Flight::route('POST /admin/global-blocks/@id', ['App\\Controllers\\Admin\\GlobalBlockController', 'update']);
+Flight::route('POST /admin/global-blocks/@id/delete', ['App\\Controllers\\Admin\\GlobalBlockController', 'delete']);
+
+// Block Placements CRUD
+Flight::route('GET /admin/block-placements', ['App\\Controllers\\Admin\\BlockPlacementController', 'index']);
+Flight::route('GET /admin/block-placements/create', ['App\\Controllers\\Admin\\BlockPlacementController', 'create']);
+Flight::route('POST /admin/block-placements', ['App\\Controllers\\Admin\\BlockPlacementController', 'store']);
+Flight::route('GET /admin/block-placements/@id/edit', ['App\\Controllers\\Admin\\BlockPlacementController', 'edit']);
+Flight::route('POST /admin/block-placements/@id', ['App\\Controllers\\Admin\\BlockPlacementController', 'update']);
+Flight::route('POST /admin/block-placements/@id/delete', ['App\\Controllers\\Admin\\BlockPlacementController', 'destroy']);

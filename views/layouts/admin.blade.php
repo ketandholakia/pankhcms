@@ -47,6 +47,8 @@
                 ["/admin/tags", "tag", "Tags"],
                 ["/admin/media", "image", "Media"],
                 ["/admin/slider", "image", "Slider Images"],
+                ["/admin/global-blocks", "blocks", "Global Blocks"],
+                ["/admin/block-placements", "layout-grid", "Block Placements"],
             ],
             'Design' => [
                 ["/admin/templates", "layout", "Templates"],

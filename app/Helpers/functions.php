@@ -21,9 +21,22 @@ use App\Models\Page;
 if (!function_exists("env")) {
     function env($key, $default = null)
     {
-        $value = getenv($key);
+        $value = null;
 
-        if ($value === false) {
+        if (is_string($key)) {
+            if (array_key_exists($key, $_ENV)) {
+                $value = $_ENV[$key];
+            } elseif (array_key_exists($key, $_SERVER)) {
+                $value = $_SERVER[$key];
+            } else {
+                $envValue = getenv($key);
+                if ($envValue !== false) {
+                    $value = $envValue;
+                }
+            }
+        }
+
+        if ($value === null) {
             return $default;
         }
 
@@ -320,15 +333,15 @@ if (!function_exists('csrf_require')) {
 
         if (class_exists('Flight')) {
             if ($isJson) {
-                \Flight::response()->status(419);
-                \Flight::json(['error' => 'CSRF token mismatch'], 419);
+                \Flight::response()->status(403);
+                \Flight::json(['error' => 'CSRF token mismatch'], 403);
                 exit;
             }
 
-            \Flight::halt(419, 'CSRF token mismatch');
+            \Flight::halt(403, 'CSRF token mismatch');
         }
 
-        http_response_code(419);
+        http_response_code(403);
         echo 'CSRF token mismatch';
         exit;
     }
