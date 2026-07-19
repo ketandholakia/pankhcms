@@ -18,6 +18,13 @@ if (!function_exists('build_menu_tree')) {
 
 use App\Models\Page;
 
+if (!function_exists('__')) {
+    function __($key, $default = null)
+    {
+        return \App\Core\Translator::get($key, $default);
+    }
+}
+
 if (!function_exists("env")) {
     function env($key, $default = null)
     {

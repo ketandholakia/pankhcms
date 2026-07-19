@@ -54,4 +54,6 @@ if (!$isAdminPath && !$isInstallPath && !$isStaticAssetPath) {
     }
 }
 
+\Flight::before('start', function() { \App\Middleware\PageCache::before(); });
+\Flight::after('start', function() { \App\Middleware\PageCache::after(); });
 \Flight::start();

@@ -2,15 +2,15 @@
 // =========================
 // Admin - Slider Images
 // =========================
-Flight::route('GET /admin/slider', ['App\\Controllers\\Admin\\SliderController', 'index']);
-Flight::route('GET /admin/slider/create', ['App\\Controllers\\Admin\\SliderController', 'create']);
-Flight::route('POST /admin/slider/store', ['App\\Controllers\\Admin\\SliderController', 'store']);
-Flight::route('GET /admin/slider/edit/@id', ['App\\Controllers\\Admin\\SliderController', 'edit']);
-Flight::route('POST /admin/slider/update/@id', ['App\\Controllers\\Admin\\SliderController', 'update']);
-Flight::route('POST /admin/slider/delete/@id', ['App\\Controllers\\Admin\\SliderController', 'delete']);
+Flight::route('GET /admin/slider', ['App\\Controllers\\Admin\\SliderController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('GET /admin/slider/create', ['App\\Controllers\\Admin\\SliderController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('POST /admin/slider/store', ['App\\Controllers\\Admin\\SliderController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('GET /admin/slider/edit/@id', ['App\\Controllers\\Admin\\SliderController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('POST /admin/slider/update/@id', ['App\\Controllers\\Admin\\SliderController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('POST /admin/slider/delete/@id', ['App\\Controllers\\Admin\\SliderController', 'delete'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
 // Main Settings page
-Flight::route('GET /admin/settings', ['App\Controllers\Admin\SettingsController', 'index']);
-Flight::route('POST /admin/settings/update', ['App\Controllers\Admin\SettingsController', 'update']);
+Flight::route('GET /admin/settings', ['App\Controllers\Admin\SettingsController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('POST /admin/settings/update', ['App\Controllers\Admin\SettingsController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
 
 // =========================
 // Admin - Auth (NO middleware)
@@ -48,44 +48,44 @@ Flight::route('POST /admin/backups/restore', ['App\Controllers\Admin\BackupContr
 // =========================
 // Admin - Pages
 // =========================
-Flight::route('GET /admin/pages', ['App\Controllers\Admin\PageController', 'index']);
-Flight::route('GET /admin/pages/create', ['App\Controllers\Admin\PageController', 'create']);
-Flight::route('POST /admin/pages', ['App\Controllers\Admin\PageController', 'store']);
-Flight::route('GET /admin/pages/@id/edit', ['App\Controllers\Admin\PageController', 'edit']);
-Flight::route('POST /admin/pages/@id', ['App\Controllers\Admin\PageController', 'update']);
-Flight::route('POST /admin/pages/@id/update', ['App\Controllers\Admin\PageController', 'update']);
+Flight::route('GET /admin/pages', ['App\Controllers\Admin\PageController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
+Flight::route('GET /admin/pages/create', ['App\Controllers\Admin\PageController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
+Flight::route('POST /admin/pages', ['App\Controllers\Admin\PageController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
+Flight::route('GET /admin/pages/@id/edit', ['App\Controllers\Admin\PageController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
+Flight::route('POST /admin/pages/@id', ['App\Controllers\Admin\PageController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
+Flight::route('POST /admin/pages/@id/update', ['App\Controllers\Admin\PageController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
 
 
 // Content Types
 Flight::route('GET /admin/content-types',
     ['App\\Controllers\\Admin\\ContentTypeController', 'index']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 Flight::route('GET /admin/content-types/create',
     ['App\\Controllers\\Admin\\ContentTypeController', 'create']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 Flight::route('POST /admin/content-types',
     ['App\\Controllers\\Admin\\ContentTypeController', 'store']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 Flight::route('GET /admin/content-types/@id/edit',
     ['App\\Controllers\\Admin\\ContentTypeController', 'edit']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 
 Flight::route('POST /admin/content-types/@id',
     ['App\\Controllers\\Admin\\ContentTypeController', 'update']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 // Custom fields for content types
 Flight::route('POST /admin/content-types/@id/fields',
     ['App\\Controllers\\Admin\\ContentTypeController', 'saveFields']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 Flight::route('POST /admin/content-types/@id/delete',
     ['App\\Controllers\\Admin\\ContentTypeController', 'delete']
-);
+)->addMiddleware([new \App\Middleware\RequirePermission('manage_content_types')]);
 
 
 // =========================
@@ -93,85 +93,84 @@ Flight::route('POST /admin/content-types/@id/delete',
 // =========================
 Flight::route('GET /admin/messages', ['App\Controllers\Admin\MessageController', 'index']);
 
-
 // =========================
 // Admin - Categories
 // =========================
-Flight::route('GET /admin/categories', ['App\Controllers\Admin\CategoryController', 'index']);
-Flight::route('POST /admin/categories', ['App\Controllers\Admin\CategoryController', 'store']);
-Flight::route('POST /admin/categories/@id', ['App\Controllers\Admin\CategoryController', 'update']);
-Flight::route('POST /admin/categories/@id/delete', ['App\Controllers\Admin\CategoryController', 'destroy']);
+Flight::route('GET /admin/categories', ['App\Controllers\Admin\CategoryController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
+Flight::route('POST /admin/categories', ['App\Controllers\Admin\CategoryController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
+Flight::route('POST /admin/categories/@id', ['App\Controllers\Admin\CategoryController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
+Flight::route('POST /admin/categories/@id/delete', ['App\Controllers\Admin\CategoryController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
 
 
 // =========================
 // Admin - Tags
 // =========================
-Flight::route('GET /admin/tags', ['App\Controllers\Admin\TagController', 'index']);
-Flight::route('POST /admin/tags', ['App\Controllers\Admin\TagController', 'store']);
-Flight::route('POST /admin/tags/@id', ['App\Controllers\Admin\TagController', 'update']);
-Flight::route('POST /admin/tags/@id/delete', ['App\Controllers\Admin\TagController', 'destroy']);
+Flight::route('GET /admin/tags', ['App\Controllers\Admin\TagController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
+Flight::route('POST /admin/tags', ['App\Controllers\Admin\TagController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
+Flight::route('POST /admin/tags/@id', ['App\Controllers\Admin\TagController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
+Flight::route('POST /admin/tags/@id/delete', ['App\Controllers\Admin\TagController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_taxonomies')]);
 
 
 // =========================
 // Admin - Templates
 // =========================
-Flight::route('GET /admin/templates', ['App\Controllers\Admin\TemplateController', 'index']);
-Flight::route('GET /admin/templates/@id', ['App\Controllers\Admin\TemplateController', 'show']);
-Flight::route('POST /admin/templates', ['App\Controllers\Admin\TemplateController', 'store']);
-Flight::route('POST /admin/templates/@id', ['App\Controllers\Admin\TemplateController', 'update']);
-Flight::route('POST /admin/templates/@id/delete', ['App\Controllers\Admin\TemplateController', 'destroy']);
+Flight::route('GET /admin/templates', ['App\Controllers\Admin\TemplateController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_templates')]);
+Flight::route('GET /admin/templates/@id', ['App\Controllers\Admin\TemplateController', 'show'])->addMiddleware([new \App\Middleware\RequirePermission('manage_templates')]);
+Flight::route('POST /admin/templates', ['App\Controllers\Admin\TemplateController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_templates')]);
+Flight::route('POST /admin/templates/@id', ['App\Controllers\Admin\TemplateController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_templates')]);
+Flight::route('POST /admin/templates/@id/delete', ['App\Controllers\Admin\TemplateController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_templates')]);
 
 
 // =========================
 // Admin - Themes
 // =========================
-Flight::route('GET /admin/themes', ['App\Controllers\Admin\ThemeController', 'index']);
-Flight::route('POST /admin/themes', ['App\Controllers\Admin\ThemeController', 'update']);
+Flight::route('GET /admin/themes', ['App\Controllers\Admin\ThemeController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_themes')]);
+Flight::route('POST /admin/themes', ['App\Controllers\Admin\ThemeController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_themes')]);
 
 
 // =========================
 // Admin - Settings
 // =========================
-Flight::route('GET /admin/settings/seo', ['App\Controllers\Admin\SeoController', 'index']);
-Flight::route('POST /admin/settings/seo', ['App\Controllers\Admin\SeoController', 'update']);
+Flight::route('GET /admin/settings/seo', ['App\Controllers\Admin\SeoController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('POST /admin/settings/seo', ['App\Controllers\Admin\SeoController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
 
-Flight::route('GET /admin/settings/breadcrumbs', ['App\Controllers\Admin\SettingsController', 'breadcrumbsIndex']);
-Flight::route('POST /admin/settings/breadcrumbs', ['App\Controllers\Admin\SettingsController', 'breadcrumbsUpdate']);
+Flight::route('GET /admin/settings/breadcrumbs', ['App\Controllers\Admin\SettingsController', 'breadcrumbsIndex'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
+Flight::route('POST /admin/settings/breadcrumbs', ['App\Controllers\Admin\SettingsController', 'breadcrumbsUpdate'])->addMiddleware([new \App\Middleware\RequirePermission('manage_settings')]);
 
 
 // =========================
 // Admin - Menus
 // =========================
-Flight::route('GET /admin/menus', ['App\Controllers\Admin\MenuController', 'index']);
-Flight::route('POST /admin/menus', ['App\Controllers\Admin\MenuController', 'store']);
-Flight::route('POST /admin/menus/@id', ['App\Controllers\Admin\MenuController', 'update']);
-Flight::route('POST /admin/menus/@id/update', ['App\Controllers\Admin\MenuController', 'update']);
-Flight::route('POST /admin/menus/@id/delete', ['App\Controllers\Admin\MenuController', 'destroy']);
+Flight::route('GET /admin/menus', ['App\Controllers\Admin\MenuController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menus', ['App\Controllers\Admin\MenuController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menus/@id', ['App\Controllers\Admin\MenuController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menus/@id/update', ['App\Controllers\Admin\MenuController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menus/@id/delete', ['App\Controllers\Admin\MenuController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
 
 
 // =========================
 // Admin - Menu Items
 // =========================
-Flight::route('POST /admin/menu-items', ['App\Controllers\Admin\MenuItemController', 'store']);
-Flight::route('POST /admin/menu-items/@id', ['App\Controllers\Admin\MenuItemController', 'update']);
-Flight::route('POST /admin/menu-items/@id/update', ['App\Controllers\Admin\MenuItemController', 'update']);
-Flight::route('POST /admin/menu-items/@id/move', ['App\Controllers\Admin\MenuItemController', 'move']);
-Flight::route('POST /admin/menu-items/@id/delete', ['App\Controllers\Admin\MenuItemController', 'destroy']);
+Flight::route('POST /admin/menu-items', ['App\Controllers\Admin\MenuItemController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menu-items/@id', ['App\Controllers\Admin\MenuItemController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menu-items/@id/update', ['App\Controllers\Admin\MenuItemController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menu-items/@id/move', ['App\Controllers\Admin\MenuItemController', 'move'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
+Flight::route('POST /admin/menu-items/@id/delete', ['App\Controllers\Admin\MenuItemController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_menus')]);
 
 
 // =========================
 // Admin - Uploads
 // =========================
-Flight::route('POST /admin/upload/image', ['App\Controllers\Admin\UploadController', 'image']);
+Flight::route('POST /admin/upload/image', ['App\Controllers\Admin\UploadController', 'image'])->addMiddleware([new \App\Middleware\RequirePermission('manage_media')]);
 
 
 // =========================
 // Admin - Media
 // =========================
-Flight::route('GET /admin/media', ['App\Controllers\Admin\MediaController', 'index']);
-Flight::route('POST /admin/media/upload', ['App\Controllers\Admin\MediaController', 'upload']);
-Flight::route('POST /admin/media/@id/delete', ['App\Controllers\Admin\MediaController', 'delete']);
-Flight::route('GET /admin/media/picker', ['App\Controllers\Admin\MediaController', 'picker']);
+Flight::route('GET /admin/media', ['App\Controllers\Admin\MediaController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_media')]);
+Flight::route('POST /admin/media/upload', ['App\Controllers\Admin\MediaController', 'upload'])->addMiddleware([new \App\Middleware\RequirePermission('manage_media')]);
+Flight::route('POST /admin/media/@id/delete', ['App\Controllers\Admin\MediaController', 'delete'])->addMiddleware([new \App\Middleware\RequirePermission('manage_media')]);
+Flight::route('GET /admin/media/picker', ['App\Controllers\Admin\MediaController', 'picker'])->addMiddleware([new \App\Middleware\RequirePermission('manage_media')]);
 
 
 // =========================
@@ -198,24 +197,40 @@ Flight::before('start', function () {
 
 
 // Global Blocks CRUD
-Flight::route('GET /admin/global-blocks', ['App\\Controllers\\Admin\\GlobalBlockController', 'index']);
-Flight::route('GET /admin/global-blocks/create', ['App\\Controllers\\Admin\\GlobalBlockController', 'create']);
-Flight::route('POST /admin/global-blocks', ['App\\Controllers\\Admin\\GlobalBlockController', 'store']);
-Flight::route('GET /admin/global-blocks/@id/edit', ['App\\Controllers\\Admin\\GlobalBlockController', 'edit']);
-Flight::route('POST /admin/global-blocks/@id', ['App\\Controllers\\Admin\\GlobalBlockController', 'update']);
-Flight::route('POST /admin/global-blocks/@id/delete', ['App\\Controllers\\Admin\\GlobalBlockController', 'delete']);
+Flight::route('GET /admin/global-blocks', ['App\\Controllers\\Admin\\GlobalBlockController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('GET /admin/global-blocks/create', ['App\\Controllers\\Admin\\GlobalBlockController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('POST /admin/global-blocks', ['App\\Controllers\\Admin\\GlobalBlockController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('GET /admin/global-blocks/@id/edit', ['App\\Controllers\\Admin\\GlobalBlockController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('POST /admin/global-blocks/@id', ['App\\Controllers\\Admin\\GlobalBlockController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('POST /admin/global-blocks/@id/delete', ['App\\Controllers\\Admin\\GlobalBlockController', 'delete'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
 
 // Block Placements CRUD
-Flight::route('GET /admin/block-placements', ['App\\Controllers\\Admin\\BlockPlacementController', 'index']);
-Flight::route('GET /admin/block-placements/create', ['App\\Controllers\\Admin\\BlockPlacementController', 'create']);
-Flight::route('POST /admin/block-placements', ['App\\Controllers\\Admin\\BlockPlacementController', 'store']);
-Flight::route('GET /admin/block-placements/@id/edit', ['App\\Controllers\\Admin\\BlockPlacementController', 'edit']);
-Flight::route('POST /admin/block-placements/@id', ['App\\Controllers\\Admin\\BlockPlacementController', 'update']);
-Flight::route('POST /admin/block-placements/@id/delete', ['App\\Controllers\\Admin\\BlockPlacementController', 'destroy']);
+Flight::route('GET /admin/block-placements', ['App\\Controllers\\Admin\\BlockPlacementController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('GET /admin/block-placements/create', ['App\\Controllers\\Admin\\BlockPlacementController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('POST /admin/block-placements', ['App\\Controllers\\Admin\\BlockPlacementController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('GET /admin/block-placements/@id/edit', ['App\\Controllers\\Admin\\BlockPlacementController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('POST /admin/block-placements/@id', ['App\\Controllers\\Admin\\BlockPlacementController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
+Flight::route('POST /admin/block-placements/@id/delete', ['App\\Controllers\\Admin\\BlockPlacementController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_blocks')]);
 
 
 // Plugin admin routes
-Flight::route('GET /admin/plugins', ['App\\Controllers\\Admin\\PluginController', 'index']);
-Flight::route('POST /admin/plugins/toggle', ['App\\Controllers\\Admin\\PluginController', 'toggle']);
-Flight::route('POST /admin/plugins/upload', ['App\\Controllers\\Admin\\PluginController', 'upload']);
-Flight::route('POST /admin/plugins/uninstall', ['App\\Controllers\\Admin\\PluginController', 'uninstall']);
+Flight::route('GET /admin/plugins', ['App\\Controllers\\Admin\\PluginController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_plugins')]);
+Flight::route('POST /admin/plugins/toggle', ['App\\Controllers\\Admin\\PluginController', 'toggle'])->addMiddleware([new \App\Middleware\RequirePermission('manage_plugins')]);
+Flight::route('POST /admin/plugins/upload', ['App\\Controllers\\Admin\\PluginController', 'upload'])->addMiddleware([new \App\Middleware\RequirePermission('manage_plugins')]);
+Flight::route('POST /admin/plugins/uninstall', ['App\\Controllers\\Admin\\PluginController', 'uninstall'])->addMiddleware([new \App\Middleware\RequirePermission('manage_plugins')]);
+
+// Users admin routes
+Flight::route('GET /admin/users', ['App\\Controllers\\Admin\\UserController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('GET /admin/users/create', ['App\\Controllers\\Admin\\UserController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('POST /admin/users/store', ['App\\Controllers\\Admin\\UserController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('GET /admin/users/edit/@id', ['App\\Controllers\\Admin\\UserController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('POST /admin/users/update/@id', ['App\\Controllers\\Admin\\UserController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('POST /admin/users/delete/@id', ['App\\Controllers\\Admin\\UserController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+
+// Roles admin routes
+Flight::route('GET /admin/roles', ['App\\Controllers\\Admin\\RoleController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('GET /admin/roles/create', ['App\\Controllers\\Admin\\RoleController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('POST /admin/roles/store', ['App\\Controllers\\Admin\\RoleController', 'store'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('GET /admin/roles/edit/@id', ['App\\Controllers\\Admin\\RoleController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('POST /admin/roles/update/@id', ['App\\Controllers\\Admin\\RoleController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);
+Flight::route('POST /admin/roles/delete/@id', ['App\\Controllers\\Admin\\RoleController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_users')]);

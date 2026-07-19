@@ -98,4 +98,70 @@ class UserController
 
         \Flight::redirect('/admin/profile?status=password-updated');
     }
+
+    public static function index()
+    {
+        $users = User::with('roles')->get();
+        echo \Flight::get('blade')->render('admin.users.index', compact('users'));
+    }
+
+    public static function create()
+    {
+        $roles = \App\Models\Role::all();
+        echo \Flight::get('blade')->render('admin.users.form', ['user' => new User(), 'roles' => $roles, 'action' => '/admin/users/store']);
+    }
+
+    public static function store()
+    {
+        $data = \Flight::request()->data->getData();
+        
+        $user = new User();
+        $user->name = $data['name'] ?? null;
+        $user->email = $data['email'] ?? '';
+        $user->password = password_hash($data['password'] ?? 'password', PASSWORD_DEFAULT);
+        $user->save();
+
+        if (!empty($data['role_id'])) {
+            $user->roles()->attach($data['role_id']);
+        }
+
+        \Flight::redirect('/admin/users?status=created');
+    }
+
+    public static function edit($id)
+    {
+        $user = User::with('roles')->find($id);
+        if (!$user) \Flight::redirect('/admin/users');
+        
+        $roles = \App\Models\Role::all();
+        echo \Flight::get('blade')->render('admin.users.form', ['user' => $user, 'roles' => $roles, 'action' => "/admin/users/update/{$id}"]);
+    }
+
+    public static function update($id)
+    {
+        $user = User::find($id);
+        if (!$user) \Flight::redirect('/admin/users');
+
+        $data = \Flight::request()->data->getData();
+        $user->name = $data['name'] ?? null;
+        $user->email = $data['email'] ?? $user->email;
+        if (!empty($data['password'])) {
+            $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+        $user->save();
+
+        if (isset($data['role_id'])) {
+            $user->roles()->sync([$data['role_id']]);
+        }
+
+        \Flight::redirect('/admin/users?status=updated');
+    }
+
+    public static function destroy($id)
+    {
+        if ($id != Auth::user()->id) {
+            User::destroy($id);
+        }
+        \Flight::redirect('/admin/users?status=deleted');
+    }
 }

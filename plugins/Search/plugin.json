@@ -1,0 +1,8 @@
+{
+    "name": "Search",
+    "slug": "search",
+    "version": "1.0.0",
+    "author": "PankhCMS",
+    "description": "Adds full-text search capability for pages.",
+    "main": "Plugin.php"
+}

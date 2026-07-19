@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
         <style>
         /* Ensure Lucide icons are always visible in collapsed sidebar */
-        #admin-sidebar .sidebar-link i[data-lucide] {
+        #admin-sidebar .sidebar-link svg {
             display: inline-block !important;
             visibility: visible !important;
             opacity: 1 !important;
@@ -30,7 +30,10 @@
                 <i data-lucide="panel-left-close"></i>
             </button>
         </div>
-        <div class="mb-4">
+        <div class="mb-4" id="sidebar-search-container">
+            <button type="button" id="sidebar-search-icon" class="hidden w-full flex items-center justify-center p-2 rounded bg-gray-800 text-gray-400 hover:text-gray-100 hover:bg-gray-700" aria-label="Search">
+                <i data-lucide="search"></i>
+            </button>
             <input id="sidebar-search" type="text" placeholder="Search menu... ({{ setting('sidebar_search_shortcut', 'Ctrl+Shift+F') }})" class="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-gray-700" autocomplete="off">
         </div>
 
@@ -62,6 +65,8 @@
                 ["/admin/settings", "settings", "Settings"],
                 ["/admin/settings/seo", "search", "SEO Settings"],
                 ["/admin/settings/breadcrumbs", "chevron-right-square", "Breadcrumbs"],
+                ["/admin/users", "users", "Users"],
+                ["/admin/roles", "shield", "Roles"],
                 ["/admin/backups", "database-backup", "Backups"],
                 ["/admin/plugins", "plug", "Plugins"],
             ],
@@ -221,13 +226,21 @@
         if (!sidebar) return;
         sidebar.classList.toggle('w-64', !collapsed);
         sidebar.classList.toggle('w-20', collapsed);
+
+        const searchInput = document.getElementById('sidebar-search');
+        const searchIcon = document.getElementById('sidebar-search-icon');
+        if (searchInput && searchIcon) {
+            searchInput.classList.toggle('hidden', collapsed);
+            searchIcon.classList.toggle('hidden', !collapsed);
+        }
+
         sidebarLabels.forEach((label) => label.classList.toggle('hidden', collapsed));
         sidebarLinks.forEach((link) => {
             link.classList.toggle('justify-center', collapsed);
             link.classList.toggle('px-2', collapsed);
             link.classList.toggle('px-3', !collapsed);
             // Ensure icon is always visible
-            const icon = link.querySelector('i[data-lucide]');
+            const icon = link.querySelector('svg');
             if (icon) {
                 icon.style.display = 'inline-block';
                 icon.style.visibility = 'visible';
@@ -235,9 +248,12 @@
                 icon.classList.remove('hidden');
             }
         });
-        // Hide group links if collapsed
+        // Hide group toggles if collapsed, but keep the links container visible for icons!
         document.querySelectorAll('.sidebar-group-links').forEach((group) => {
-            group.classList.toggle('hidden', collapsed);
+            if (!collapsed) {
+                // When expanding, make sure they are visible again if they were manually closed
+                group.classList.remove('hidden');
+            }
         });
         document.querySelectorAll('.group-toggle').forEach((btn) => {
             btn.classList.toggle('hidden', collapsed);
@@ -252,6 +268,17 @@
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', () => {
             setSidebarCollapsed(!sidebar.classList.contains('w-20'));
+        });
+    }
+
+    const searchIconBtn = document.getElementById('sidebar-search-icon');
+    if (searchIconBtn) {
+        searchIconBtn.addEventListener('click', () => {
+            setSidebarCollapsed(false);
+            setTimeout(() => {
+                const searchInput = document.getElementById('sidebar-search');
+                if (searchInput) searchInput.focus();
+            }, 50);
         });
     }
 

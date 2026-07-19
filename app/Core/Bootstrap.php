@@ -181,6 +181,7 @@ class Bootstrap
     private static function loadRoutes()
     {
         require dirname(__DIR__, 2) . "/routes/admin.php";
+        require dirname(__DIR__, 2) . "/routes/api.php";
         require dirname(__DIR__, 2) . "/routes/web.php";
     }
 

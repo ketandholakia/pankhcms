@@ -21,5 +21,8 @@
     "files": [
       "app/Helpers/functions.php"
     ]
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^13.2"
   }
 }

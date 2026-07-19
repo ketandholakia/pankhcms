@@ -1,0 +1,8 @@
+{
+    "name": "Sitemap",
+    "slug": "sitemap",
+    "version": "1.0.0",
+    "author": "PankhCMS",
+    "description": "Generates a dynamic XML sitemap.",
+    "main": "Plugin.php"
+}
