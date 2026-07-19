@@ -115,10 +115,15 @@ class UserController
     {
         $data = \Flight::request()->data->getData();
         
+        if (empty($data['password'])) {
+            \Flight::redirect('/admin/users/create?error=password_required');
+            return;
+        }
+
         $user = new User();
         $user->name = $data['name'] ?? null;
         $user->email = $data['email'] ?? '';
-        $user->password = password_hash($data['password'] ?? 'password', PASSWORD_DEFAULT);
+        $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
         $user->save();
 
         if (!empty($data['role_id'])) {

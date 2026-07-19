@@ -115,6 +115,7 @@ class PageController
 
             $page = Page::create($input);
             $this->syncRelations($page);
+            \Event::dispatch('page.created', $page);
 
             \Flight::redirect('/admin/pages?saved=1');
         } catch (Exception $e) {
@@ -175,6 +176,7 @@ class PageController
             );
 
             $this->syncRelations($page);
+            \Event::dispatch('page.updated', $page);
 
             \Flight::redirect('/admin/pages?saved=1');
         } catch (Exception $e) {
@@ -198,6 +200,7 @@ class PageController
             $page->categories()->detach();
             $page->tags()->detach();
             $page->delete();
+            \Event::dispatch('page.deleted', $page);
 
             \Flight::redirect('/admin/pages?deleted=1');
         } catch (Exception $e) {

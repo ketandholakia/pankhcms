@@ -13,12 +13,14 @@ class Bootstrap
     public static function init()
     {
         self::loadHelpers();
-        // Load plugins before routes so they can register routes and hooks
-        require_once __DIR__ . '/PluginManager.php';
-        \PluginManager::boot();
         self::loadEnv();
         self::initConfig();
         self::initDatabase();
+        
+        // Load plugins before routes so they can register routes and hooks
+        require_once __DIR__ . '/PluginManager.php';
+        \PluginManager::boot();
+        
         self::initBlade();
         self::loadRoutes();
     }
@@ -66,8 +68,6 @@ class Bootstrap
         if ($defaultThemeViewPath !== $viewPaths[0]) {
             $viewPaths[] = $defaultThemeViewPath;
         }
-        // Include legacy `resources/views` as a fallback for some installs
-        $viewPaths[] = dirname(__DIR__, 2) . "/resources/views";
         $viewPaths[] = dirname(__DIR__, 2) . "/views";
         $cachePath = dirname(__DIR__, 2) . "/storage/cache";
 

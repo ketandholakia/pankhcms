@@ -53,10 +53,14 @@ class PluginManager
         foreach ($active as $slug) {
             if (!isset($all[$slug])) continue;
             $meta = $all[$slug];
-            $inst = self::instantiate($meta);
-            if ($inst) {
-                if (method_exists($inst, 'register')) $inst->register();
-                if (method_exists($inst, 'boot')) $inst->boot();
+            try {
+                $inst = self::instantiate($meta);
+                if ($inst) {
+                    if (method_exists($inst, 'register')) $inst->register();
+                    if (method_exists($inst, 'boot')) $inst->boot();
+                }
+            } catch (\Throwable $e) {
+                error_log("Plugin [$slug] failed to boot: " . $e->getMessage());
             }
         }
     }
