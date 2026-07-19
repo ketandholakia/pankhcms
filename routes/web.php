@@ -57,7 +57,7 @@ Flight::route('GET /sitemap.xml', function () {
     header('Content-Type: application/xml; charset=utf-8');
 
     $pages = \App\Models\Page::query()
-        ->where('status', 'published')
+        ->visible()
         ->where(function ($query) {
             $query->where('type', 'page')->orWhereNull('type');
         })
@@ -65,13 +65,13 @@ Flight::route('GET /sitemap.xml', function () {
         ->get();
 
     $posts = \App\Models\Page::query()
-        ->where('status', 'published')
+        ->visible()
         ->where('type', 'post')
         ->orderBy('updated_at', 'desc')
         ->get();
 
     $products = \App\Models\Page::query()
-        ->where('status', 'published')
+        ->visible()
         ->whereIn('type', ['product', 'products'])
         ->orderBy('updated_at', 'desc')
         ->get();

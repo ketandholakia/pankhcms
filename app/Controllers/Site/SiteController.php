@@ -12,11 +12,20 @@ use App\Core\VisitTracker;
 
 class SiteController
 {
+    private static function getPageQuery()
+    {
+        $query = Page::with('categories');
+        if (!(\App\Core\Auth::check() && isset(\Flight::request()->query->preview) && \Flight::request()->query->preview)) {
+            $query->visible();
+        }
+        return $query;
+    }
+
     public static function home()
     {
         $homepageId = \setting('homepage_id');
         if ($homepageId) {
-            $page = Page::with('categories')->find($homepageId);
+            $page = self::getPageQuery()->where('id', $homepageId)->first();
             if ($page) {
                 return self::renderPage($page);
             }
@@ -30,7 +39,7 @@ class SiteController
 
     public static function page($slug)
     {
-        $page = Page::with('categories')->where('slug', $slug)->first();
+        $page = self::getPageQuery()->where('slug', $slug)->first();
         if (!$page) {
             \Flight::halt(404);
             return;

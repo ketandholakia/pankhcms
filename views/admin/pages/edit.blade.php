@@ -217,6 +217,21 @@
             </select>
           </div>
 
+          <div class="mb-6 flex gap-4">
+            <div class="flex-1">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Status</label>
+                <select name="status" id="page-status" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                  <option value="draft" {{ $page->status === 'draft' ? 'selected' : '' }}>Draft</option>
+                  <option value="published" {{ $page->status === 'published' ? 'selected' : '' }}>Published</option>
+                </select>
+            </div>
+            <div class="flex-1" id="publish-at-wrap">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Publish date/time</label>
+                <input type="datetime-local" name="published_at" id="page-published-at" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="{{ $page->published_at ? $page->published_at->format('Y-m-d\TH:i') : '' }}">
+                <p class="text-xs text-gray-500 mt-1">Leave blank to publish immediately when saved as Published.</p>
+            </div>
+        </div>
+
         <div class="flex items-center justify-between">
             <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
                 Update Page

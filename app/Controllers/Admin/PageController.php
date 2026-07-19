@@ -23,6 +23,7 @@ class PageController
         'meta_title', 'meta_description', 'meta_keywords',
         'og_title', 'og_description', 'og_image',
         'canonical_url', 'robots', 'twitter_card',
+        'status', 'published_at',
     ];
 
     /**
@@ -113,6 +114,10 @@ class PageController
                 $input['slug'] ?: $input['title']
             );
 
+            $input['published_at'] = !empty($raw['published_at'])
+                ? date('Y-m-d H:i:s', strtotime($raw['published_at']))
+                : ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
+
             $page = Page::create($input);
             $this->syncRelations($page);
             \Event::dispatch('page.created', $page);
@@ -164,6 +169,10 @@ class PageController
                 $input['slug'] ?: $input['title'],
                 $id
             );
+
+            $input['published_at'] = !empty($raw['published_at'])
+                ? date('Y-m-d H:i:s', strtotime($raw['published_at']))
+                : ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
 
             $updateResult = $page->update($input);
 

@@ -33,12 +33,14 @@ class Page extends Model
         'layout',
         'status',
         'featured_image',
+        'published_at',
     ];
 
     public $timestamps = true;
 
     protected $casts = [
         'noindex' => 'boolean',
+        'published_at' => 'datetime',
     ];
 
     // =============================
@@ -77,6 +79,22 @@ class Page extends Model
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
+    }
+
+    public function scopeVisible($query)
+    {
+        return $query->where('status', 'published')
+                     ->where(function ($q) {
+                         $q->whereNull('published_at')
+                           ->orWhere('published_at', '<=', \Illuminate\Support\Carbon::now());
+                     });
+    }
+
+    public function isScheduled(): bool
+    {
+        return $this->status === 'published'
+            && $this->published_at
+            && $this->published_at->isFuture();
     }
 
     public function scopeType($query, $type)
