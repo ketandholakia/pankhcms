@@ -15,7 +15,7 @@ PankhCMS is a modular, PHP-based content management system designed for flexibil
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ketandholakia/pankhcms.git
    cd PankhCMS
    ```
 2. Install dependencies:
