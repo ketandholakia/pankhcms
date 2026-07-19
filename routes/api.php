@@ -8,16 +8,14 @@ Flight::group('/api/v1', function () {
 
     // Content API
     Flight::route('GET /pages', function () {
-        $pages = \Illuminate\Database\Capsule\Manager::table('pages')
-            ->where('status', 'published')
+        $pages = \App\Models\Page::visible()
             ->select('id', 'title', 'slug', 'updated_at')
             ->get();
         Flight::json(['data' => $pages]);
-    });
+    })->addMiddleware([new \App\Middleware\RequireApiToken()]);
     
     Flight::route('GET /pages/@slug', function ($slug) {
-        $page = \Illuminate\Database\Capsule\Manager::table('pages')
-            ->where('status', 'published')
+        $page = \App\Models\Page::visible()
             ->where('slug', $slug)
             ->first();
             
@@ -27,6 +25,6 @@ Flight::group('/api/v1', function () {
         }
         
         Flight::json(['data' => $page]);
-    });
+    })->addMiddleware([new \App\Middleware\RequireApiToken()]);
 
 });

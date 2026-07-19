@@ -27,4 +27,9 @@ class User extends Model
             return $role->permissions->contains('name', $permission);
         })->isNotEmpty();
     }
+
+    public function apiTokens()
+    {
+        return $this->hasMany(ApiToken::class);
+    }
 }

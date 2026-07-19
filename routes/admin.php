@@ -26,6 +26,8 @@ Flight::route('POST /admin/logout', ['App\Controllers\AuthController', 'logout']
 Flight::route('GET /admin/profile', ['App\Controllers\Admin\UserController', 'editProfile']);
 Flight::route('POST /admin/profile', ['App\Controllers\Admin\UserController', 'updateProfile']);
 Flight::route('POST /admin/profile/password', ['App\Controllers\Admin\UserController', 'updatePassword']);
+Flight::route('POST /admin/profile/api-tokens', ['App\Controllers\Admin\UserController', 'generateApiToken']);
+Flight::route('POST /admin/profile/api-tokens/@id/revoke', ['App\Controllers\Admin\UserController', 'revokeApiToken']);
 
 
 // =========================

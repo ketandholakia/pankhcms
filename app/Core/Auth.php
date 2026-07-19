@@ -6,13 +6,24 @@ use App\Models\User;
 
 class Auth
 {
+    protected static $statelessUser = null;
+
+    public static function setStatelessUser($user)
+    {
+        self::$statelessUser = $user;
+    }
+
     public static function check()
     {
-        return isset($_SESSION['user_id']);
+        return self::$statelessUser !== null || isset($_SESSION['user_id']);
     }
 
     public static function user()
     {
+        if (self::$statelessUser !== null) {
+            return self::$statelessUser;
+        }
+
         return self::check()
             ? User::find($_SESSION['user_id'])
             : null;

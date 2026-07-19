@@ -92,6 +92,58 @@
 					</div>
 				</form>
 			</section>
+
+			<section class="bg-white border rounded-lg p-4 space-y-4 md:col-span-2">
+				<h2 class="text-lg font-semibold">API Tokens</h2>
+				<p class="text-sm text-gray-600">Generate API tokens to authenticate external applications. Pass the token in the <code>Authorization: Bearer &lt;token&gt;</code> header.</p>
+
+				@if(isset($newApiToken) && $newApiToken)
+					<div class="rounded border border-yellow-300 bg-yellow-50 text-yellow-800 px-4 py-4 text-sm mb-4">
+						<p class="font-bold mb-2">Please copy your new API token now. You will not be able to see it again!</p>
+						<code class="block bg-white border px-3 py-2 rounded text-lg">{{ $newApiToken }}</code>
+					</div>
+				@endif
+
+				@if(isset($apiTokens) && count($apiTokens) > 0)
+					<div class="border rounded overflow-hidden mb-4">
+						<table class="w-full text-left text-sm">
+							<thead class="bg-gray-50 border-b">
+								<tr>
+									<th class="px-4 py-2 font-medium">Name</th>
+									<th class="px-4 py-2 font-medium">Last Used</th>
+									<th class="px-4 py-2 font-medium">Created</th>
+									<th class="px-4 py-2 font-medium text-right">Action</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y">
+								@foreach($apiTokens as $token)
+								<tr>
+									<td class="px-4 py-2">{{ $token->name }}</td>
+									<td class="px-4 py-2">{{ $token->last_used_at ? $token->last_used_at->diffForHumans() : 'Never' }}</td>
+									<td class="px-4 py-2">{{ $token->created_at->format('Y-m-d H:i') }}</td>
+									<td class="px-4 py-2 text-right">
+										<form method="POST" action="/admin/profile/api-tokens/{{ $token->id }}/revoke" onsubmit="return confirm('Are you sure you want to revoke this token?');">
+											{!! csrf_field() !!}
+											<button type="submit" class="text-red-600 hover:text-red-800">Revoke</button>
+										</form>
+									</td>
+								</tr>
+								@endforeach
+							</tbody>
+						</table>
+					</div>
+				@else
+					<p class="text-sm text-gray-500 mb-4">You have not created any API tokens yet.</p>
+				@endif
+
+				<form method="POST" action="/admin/profile/api-tokens" class="flex gap-2 max-w-sm">
+					{!! csrf_field() !!}
+					<input type="text" name="name" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="Token name (e.g. Mobile App)" required>
+					<button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded">
+						Generate Token
+					</button>
+				</form>
+			</section>
 		</div>
 	</div>
 @endsection

@@ -16,8 +16,18 @@ class UserController
             return;
         }
 
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $newApiToken = $_SESSION['new_api_token'] ?? null;
+        unset($_SESSION['new_api_token']);
+
+        $apiTokens = $user->apiTokens()->orderBy('created_at', 'desc')->get();
+
         echo \Flight::get('blade')->render('admin.profile', [
             'user' => $user,
+            'apiTokens' => $apiTokens,
+            'newApiToken' => $newApiToken,
         ]);
     }
 
@@ -97,6 +107,54 @@ class UserController
         session_regenerate_id(true);
 
         \Flight::redirect('/admin/profile?status=password-updated');
+    }
+
+    public static function generateApiToken()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            \Flight::redirect('/admin/login');
+            return;
+        }
+
+        $data = \Flight::request()->data->getData();
+        $name = trim((string) ($data['name'] ?? ''));
+
+        if ($name === '') {
+            \Flight::redirect('/admin/profile?status=token-name-missing');
+            return;
+        }
+
+        $plainTextToken = bin2hex(random_bytes(30));
+        $hashedToken = hash('sha256', $plainTextToken);
+
+        $user->apiTokens()->create([
+            'name' => $name,
+            'token' => $hashedToken,
+        ]);
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['new_api_token'] = $plainTextToken;
+
+        \Flight::redirect('/admin/profile?status=token-created');
+    }
+
+    public static function revokeApiToken($id)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            \Flight::redirect('/admin/login');
+            return;
+        }
+
+        $token = $user->apiTokens()->where('id', $id)->first();
+        if ($token) {
+            $token->delete();
+        }
+
+        \Flight::redirect('/admin/profile?status=token-revoked');
     }
 
     public static function index()
