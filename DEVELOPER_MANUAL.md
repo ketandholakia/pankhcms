@@ -2,99 +2,147 @@
 
 ## 1. Introduction
 
-PankhCMS is a modular, PHP-based content management system designed for flexibility, speed, and extensibility. It uses FlightPHP, Eloquent ORM, and Blade for templating.
+PankhCMS is a modular, PHP-based content management system designed for flexibility, speed, and extensibility. It uses FlightPHP for routing, Eloquent ORM for database operations, and Jenssegers Blade for templating.
 
-## 2. Getting Started
+This manual serves as the primary resource for backend developers, core maintainers, and plugin authors.
 
-### Prerequisites
-- PHP 8.2+
-- Composer
-- SQLite or MySQL database
-- Local web server (Apache, Nginx, or PHP built-in server)
+---
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ketandholakia/pankhcms.git
-   cd PankhCMS
-   ```
-2. Install dependencies:
-   ```bash
-   composer install
-   ```
-3. Configure `.env` and `config/app.php`, `config/database.php`.
-4. Run migration scripts:
-   ```bash
-   php database/sqlite-php-scripts/create-tables.php
-   php database/sqlite-php-scripts/seed.php
-   ```
-5. Start the server:
-   ```bash
-   php -S localhost:8000 -t public
-   ```
+## 2. Architecture & Structure
 
-## 3. Architecture & Structure
+PankhCMS is structured to keep the core small while allowing robust extensions via plugins and themes.
 
-- `app/` - Controllers, models, helpers
-- `views/` - Blade templates
-- `public/` - Entry point, assets
-- `database/` - Migration/seed scripts
-- `storage/` - Cache, logs, uploads
-- `config/` - App and DB config
-- `vendor/` - Composer dependencies
+### Project Layout
+
+- `app/` — Controllers, models, core classes, and helpers.
+  - `app/Core/Bootstrap.php` — Bootstraps environment, database, Blade, and plugins.
+  - `app/Core/PluginManager.php` — Discovers and boots active plugins, managing their lifecycle (`activate`, `deactivate`, `uninstall`).
+  - `app/Core/BasePlugin.php` — Base class plugins should extend.
+  - `app/Core/Hooks.php` & `app/Core/Event.php` — Extension points and event dispatcher.
+- `views/` — Global Blade templates and admin interface views.
+- `public/` — Web server entry point (`index.php`) and published assets.
+- `database/` — Migration and seed scripts.
+- `storage/` — Cache, logs, uploads.
+- `config/` — Application and database configuration.
+- `plugins/` — Discoverable plugin packages.
+- `themes/` — Front-end themes and view overrides.
+- `vendor/` — Composer dependencies.
+
+---
+
+## 3. Plugin System — Developer Guide
+
+PankhCMS features a powerful plugin architecture that enables independently packaged features.
+
+### Creating a Plugin
+
+Plugins reside in the `plugins/` directory. A standard plugin contains:
+
+- `plugin.json` — Metadata (slug, name, version, main file path, description)
+- `Plugin.php` — The main plugin class (must extend `BasePlugin`)
+- `routes.php` / `admin.php` — (Optional) Route registration for frontend and admin pages
+- `views/` — (Optional) Plugin-specific Blade views
+- `assets/` — (Optional) JS/CSS to be served
+- `migrations/` or `migrations/install.sql` — DB schema for plugin activation
+
+#### Example `plugin.json`
+
+```json
+{
+  "slug": "contact-form",
+  "name": "Contact Form",
+  "version": "1.0.0",
+  "main": "Plugin.php",
+  "description": "A simple contact form plugin."
+}
+```
+
+### Plugin Lifecycle & Class
+
+Your main plugin file (e.g., `Plugin.php`) should extend `app\Core\BasePlugin`. 
+
+- **`register()`**: Use this to register hooks, events, and admin menus.
+- **`boot()`**: Use this to attach runtime behavior, such as including route files.
+- **`activate()`**: Called when the plugin is activated via the admin panel. Use it to run migrations or seed data.
+- **`deactivate()`**: Called when deactivated. 
+- **`uninstall()`**: Called when uninstalled. Clean up your tables and files here.
+
+### Integration Points
+
+#### Hooks and Events
+
+PankhCMS uses a hook system for loose coupling between plugins and the core.
+
+- Register a hook: `Hooks::add('hook.name', $callable)`
+- Trigger a hook: `Hooks::run('hook.name', $args)`
+
+#### Admin Menus
+
+To add your plugin to the admin sidebar under "Extensions", call the `AdminMenu::add` method in your plugin's `register()` method:
+
+```php
+AdminMenu::add([
+    'href' => '/admin/your-plugin', 
+    'icon' => 'plug', 
+    'label' => 'Your Plugin'
+]);
+```
+
+#### Plugin Migrations
+
+If your plugin requires database tables, provide SQL in the `migrations/` folder (e.g., `install.sql`). The `PluginManager` can execute packaged SQL files upon activation. Alternatively, you can run DB setup manually inside the `activate()` method.
+
+---
 
 ## 4. Coding Standards
 
-- Use PSR-4 autoloading for new classes
-- Use Eloquent ORM for DB access
-- Use Blade for templating
-- Keep controllers thin; use helpers/models for business logic
-- Validate input, escape output, use prepared statements
+When contributing to core or building plugins, adhere to these standards:
 
-## 5. Security Checklist
+- **PSR-4 Autoloading:** Ensure new classes follow PSR-4 naming and directory conventions.
+- **ORM:** Use Eloquent ORM for database access instead of raw queries whenever possible.
+- **Templating:** Use Blade for all view rendering. Keep PHP logic out of templates.
+- **Controllers:** Keep controllers thin. Push heavy business logic into models or specialized helper classes.
 
-- Use `password_hash()` for storing passwords
-- Validate file uploads with MIME sniffing and extension mapping
-- Use CSRF tokens in all forms and AJAX requests
-- Harden session settings (`session_init()` in helpers)
-- Use rate limiting for login and sensitive endpoints
+---
 
-## 6. Testing
+## 5. Security Practices
 
-- Use `php -l` for syntax checks
-- Add PHPUnit tests in `tests/` (if available)
-- Run `composer test` to execute tests
-- Test new features and bug fixes before submitting PRs
+PankhCMS is heavily focused on security. Any code you write (core or plugin) must comply with these rules:
 
-## 7. Deployment
+- **Password Storage:** Always use `password_hash()` for storing passwords. The system relies on strong hashing (BCrypt/Argon2).
+- **File Uploads:** Never trust user uploads. Validate file uploads with MIME sniffing and extension mapping. Ensure uploaded files are not executable by the web server.
+- **CSRF Protection:** Use CSRF tokens in all forms and AJAX requests. The core admin panel handles this automatically for standard routes.
+- **Session Hardening:** Rely on the core `session_init()` helper to enforce secure session settings (e.g., `SameSite=Lax`, strict mode).
+- **Rate Limiting:** Protect sensitive endpoints (like login forms) with rate limiting and exponential backoff mechanisms.
+- **Input/Output:** Validate all incoming input. Escape output in Blade templates using `{{ $var }}` (which runs `htmlspecialchars`). Use `{!! $var !!}` ONLY when you are absolutely certain the HTML is safe and sanitized.
 
-- Deploy to any PHP-compatible server (Apache, Nginx, etc.)
-- Point web root to `public/`
-- Set up `.env` and config files for production
-- Use HTTPS and secure session settings in production
-- Run migrations and seed scripts as needed
+---
 
-## 8. API Extension
+## 6. Testing & Troubleshooting
 
-- Add new routes in `routes/web.php` or `routes/admin.php`
-- Create controllers in `app/Controllers/`
-- Use Eloquent models for data access
-- Return JSON responses for API endpoints
-- Secure API endpoints with middleware and CSRF/auth checks
+- **Linting:** Always lint your PHP files before committing:
+  ```bash
+  php -l path/to/file.php
+  ```
+- **Tests:** Add PHPUnit tests in `tests/` for core changes. Run them via `composer test`.
+- **Cache Clearing:** Blade views are compiled and cached in `storage/cache/`. If changes aren't appearing, clear the cache:
+  ```bash
+  find storage/cache -type f -name '*.php' -delete
+  ```
+- **Permissions:** If you encounter errors relating to uploads, themes, or plugin removal, verify that your web user owns `storage/`, `public/uploads/`, and `themes/`.
 
-## 9. Contributing
+---
 
-- Fork the repo and create a feature branch
-- Make your changes and add tests if possible
-- Run `php -l` and `composer test` (if tests exist) before submitting
-- Submit a Pull Request with a clear description
+## 7. Contributing
 
-## 10. Troubleshooting
+1. Fork the repository and create a feature branch.
+2. Make your changes in a small, focused manner.
+3. If adding a feature that modifies core schemas, add the necessary install SQL to `database/migrations`.
+4. Run `php -l` and existing tests before submitting.
+5. Submit a Pull Request with a clear description of the problem solved or feature added.
 
-- Installer locked: Remove `.env` and `public/install/lock` to rerun installer
-- Session issues: Clear cookies and ensure secure settings
-- Login issues: Wait for rate limit or reset password with strong `ADMIN_PASSWORD`
+---
 
-## 11. License
+## 8. License
 
-MIT License
+PankhCMS is released under the MIT License.
