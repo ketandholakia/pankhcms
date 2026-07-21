@@ -16,6 +16,7 @@ class PageSchedulingTest extends TestCase
         // Ensure test user exists
         if (!User::where('email', 'admin@example.com')->exists()) {
             User::create([
+                'username' => 'testadmin',
                 'name' => 'Test Admin',
                 'email' => 'admin@example.com',
                 'password' => password_hash('password', PASSWORD_DEFAULT),

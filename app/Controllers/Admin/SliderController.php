@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Models\SliderImage;
+use Illuminate\Database\Capsule\Manager as Capsule;
 
 class SliderController
 {
@@ -19,6 +20,8 @@ class SliderController
 
     public function store()
     {
+        self::ensureSliderSchema();
+
         $data = $_POST;
         $file = $_FILES['image'] ?? null;
         if ($file && $file['error'] === UPLOAD_ERR_OK) {
@@ -35,13 +38,19 @@ class SliderController
             move_uploaded_file($file['tmp_name'], $path);
             $data['image_path'] = '/uploads/slider/' . $name;
         }
-        SliderImage::create([
+        $payload = [
             'image_path' => $data['image_path'] ?? '',
-            'caption' => $data['caption'] ?? '',
             'link' => $data['link'] ?? '',
             'sort_order' => (int)($data['sort_order'] ?? 0),
-            'active' => !empty($data['active']) ? 1 : 0,
-        ]);
+        ];
+
+        $payload = array_merge($payload, self::buildTextPayload($data));
+
+        if (self::hasColumn('active')) {
+            $payload['active'] = !empty($data['active']) ? 1 : 0;
+        }
+
+        SliderImage::create($payload);
         \Flight::redirect('/admin/slider');
     }
 
@@ -57,6 +66,8 @@ class SliderController
 
     public function update($id)
     {
+        self::ensureSliderSchema();
+
         $slider = SliderImage::find($id);
         if (!$slider) {
             \Flight::redirect('/admin/slider?status=not-found');
@@ -78,10 +89,15 @@ class SliderController
             move_uploaded_file($file['tmp_name'], $path);
             $slider->image_path = '/uploads/slider/' . $name;
         }
-        $slider->caption = $data['caption'] ?? '';
+        $textPayload = self::buildTextPayload($data);
+        foreach ($textPayload as $key => $value) {
+            $slider->{$key} = $value;
+        }
         $slider->link = $data['link'] ?? '';
         $slider->sort_order = (int)($data['sort_order'] ?? 0);
-        $slider->active = !empty($data['active']) ? 1 : 0;
+        if (self::hasColumn('active')) {
+            $slider->active = !empty($data['active']) ? 1 : 0;
+        }
         $slider->save();
         \Flight::redirect('/admin/slider');
     }
@@ -93,5 +109,74 @@ class SliderController
             $slider->delete();
         }
         \Flight::redirect('/admin/slider');
+    }
+
+    private static function buildTextPayload(array $data): array
+    {
+        $title = trim((string) ($data['title'] ?? ''));
+        $description = trim((string) ($data['description'] ?? ''));
+        $caption = trim((string) ($data['caption'] ?? ''));
+
+        $payload = [];
+
+        if (self::hasColumn('title')) {
+            $payload['title'] = $title !== '' ? $title : $caption;
+        }
+
+        if (self::hasColumn('description')) {
+            $payload['description'] = $description;
+        }
+
+        if (self::hasColumn('caption')) {
+            $payload['caption'] = $caption !== '' ? $caption : $title;
+        }
+
+        return $payload;
+    }
+
+    private static function ensureSliderSchema(): void
+    {
+        try {
+            $schema = Capsule::schema();
+            if (!$schema->hasTable('slider_images')) {
+                return;
+            }
+
+            if (!$schema->hasColumn('slider_images', 'title')) {
+                $schema->table('slider_images', function ($table) {
+                    $table->string('title')->nullable();
+                });
+            }
+
+            if (!$schema->hasColumn('slider_images', 'description')) {
+                $schema->table('slider_images', function ($table) {
+                    $table->text('description')->nullable();
+                });
+            }
+
+            if (!$schema->hasColumn('slider_images', 'caption')) {
+                $schema->table('slider_images', function ($table) {
+                    $table->string('caption')->nullable();
+                });
+            }
+
+            if (!$schema->hasColumn('slider_images', 'active')) {
+                $schema->table('slider_images', function ($table) {
+                    $table->boolean('active')->default(1);
+                });
+            }
+        } catch (\Throwable $e) {
+            // Keep slider management usable even if schema repair fails.
+        }
+    }
+
+    private static function hasColumn(string $column): bool
+    {
+        try {
+            return Capsule::schema()->hasTable('slider_images')
+                && Capsule::schema()->hasColumn('slider_images', $column);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

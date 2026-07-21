@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\Role;
 
 $user = User::create([
+    'username' => 'testadmin',
     'name' => 'Test Admin',
     'email' => 'admin@example.com',
     'password' => password_hash('password', PASSWORD_DEFAULT),

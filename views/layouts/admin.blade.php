@@ -125,7 +125,7 @@
     <main class="flex-1 p-6">
         @php
             $loggedInUser = \App\Core\Auth::user();
-            $displayName = $loggedInUser->name ?? $loggedInUser->email ?? 'Admin';
+            $displayName = $loggedInUser->name ?? $loggedInUser->username ?? $loggedInUser->email ?? 'Admin';
         @endphp
 
         <div class="bg-white border rounded-lg px-4 py-3 mb-6 flex items-center justify-between">

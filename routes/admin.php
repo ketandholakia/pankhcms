@@ -17,6 +17,10 @@ Flight::route('POST /admin/settings/update', ['App\Controllers\Admin\SettingsCon
 // =========================
 Flight::route('GET /admin/login', ['App\Controllers\AuthController', 'showLogin']);
 Flight::route('POST /admin/login', ['App\Controllers\AuthController', 'login']);
+Flight::route('GET /admin/password/forgot', ['App\Controllers\AuthController', 'showForgotPassword']);
+Flight::route('POST /admin/password/forgot', ['App\Controllers\AuthController', 'sendResetLink']);
+Flight::route('GET /admin/password/reset', ['App\Controllers\AuthController', 'showResetPassword']);
+Flight::route('POST /admin/password/reset', ['App\Controllers\AuthController', 'resetPassword']);
 Flight::route('POST /admin/logout', ['App\Controllers\AuthController', 'logout']);
 
 
@@ -191,7 +195,8 @@ Flight::before('start', function () {
     }
 
     if (str_starts_with($path, '/admin')
-        && !str_starts_with($path, '/admin/login')) {
+        && !str_starts_with($path, '/admin/login')
+        && !str_starts_with($path, '/admin/password')) {
 
         \App\Middleware\AdminMiddleware::handle();
     }

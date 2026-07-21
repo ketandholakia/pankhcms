@@ -13,7 +13,10 @@ class SettingsController
             'site_name', 'site_tagline', 'site_url', 'admin_email', 'logo_path', 'favicon_path', 'logo_enabled',
             'default_language', 'timezone', 'date_format', 'time_format',
             'maintenance_mode', 'maintenance_message', 'maintenance_allowed_ips',
-            'contact_map_embed_url', 'sidebar_search_shortcut'
+            'contact_map_embed_url', 'sidebar_search_shortcut',
+            'header_cta_label', 'header_cta_url',
+            'hero_intro_text', 'hero_primary_cta_label', 'hero_primary_cta_url',
+            'hero_secondary_cta_label', 'hero_secondary_cta_url'
         ];
         $settings = \Illuminate\Database\Capsule\Manager::table('settings')
             ->whereIn('key', $keys)
@@ -178,7 +181,13 @@ class SettingsController
 
 
         // Process other form fields. Note: 'site_url' is readonly in the form, so it's not included here.
-        $formKeys = ['site_name', 'site_tagline', 'admin_email', 'default_language', 'timezone', 'date_format', 'time_format', 'sidebar_search_shortcut'];
+        $formKeys = [
+            'site_name', 'site_tagline', 'admin_email', 'default_language', 'timezone',
+            'date_format', 'time_format', 'sidebar_search_shortcut',
+            'header_cta_label', 'header_cta_url',
+            'hero_intro_text', 'hero_primary_cta_label', 'hero_primary_cta_url',
+            'hero_secondary_cta_label', 'hero_secondary_cta_url',
+        ];
         foreach ($formKeys as $key) {
             if (isset($data[$key])) {
                 $settingsToUpdate[$key] = $data[$key];

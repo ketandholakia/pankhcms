@@ -1,9 +1,11 @@
 <header class="site-header">
-
     {!! blocks_html('header_top') !!}
 
     @php
-        $menuHtml = (string) menu('main');
+        $menuHtml = (string) menu('topbar');
+        if (trim($menuHtml) === '') {
+            $menuHtml = (string) menu('main');
+        }
         if (trim($menuHtml) === '') {
             $menuHtml = (string) menu('header');
         }
@@ -17,21 +19,29 @@
             <a class="navbar-item brand-logo" href="/">
                 @php
                     $logoPath = setting('logo_path', '/public/assets/tinymce/logo.png');
-                    $siteTitle = setting('site_title', 'PankhCMS');
-                    $logoEnabled = setting('logo_enabled', '1');
-                @endphp
-                @if($logoEnabled == '1' && $logoPath)
-                    <img src="{{ $logoPath }}" alt="{{ $siteTitle }}" style="max-height: 48px;">
-                @else
-                    <span class="logo-text">{{ $siteTitle }}</span>
+            $siteTitle = setting('site_title', 'PankhCMS');
+            $logoEnabled = setting('logo_enabled', '1');
+            $tagline = setting('site_tagline', '');
+            $ctaLabel = setting('header_cta_label', 'Get Quote');
+            $ctaUrl = setting('header_cta_url', '/contact-us');
+        @endphp
+        @if($logoEnabled == '1' && $logoPath)
+            <img src="{{ $logoPath }}" alt="{{ $siteTitle }}" style="max-height: 48px;">
+        @else
+            <span class="logo-lockup">
+                <span class="logo-text">{{ $siteTitle }}</span>
+                @if($tagline !== '')
+                    <span class="logo-tagline">{{ $tagline }}</span>
                 @endif
-            </a>
+            </span>
+        @endif
+    </a>
 
-            <a role="button" class="navbar-burger" aria-label="menu"
-               aria-expanded="false" data-target="mainNavbar">
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
+    <a role="button" class="navbar-burger" aria-label="menu"
+       aria-expanded="false" aria-controls="mainNavbar" data-target="mainNavbar">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
             </a>
         </div>
 
@@ -44,19 +54,16 @@
 
             <!-- RIGHT SIDE -->
             <div class="navbar-end">
-
                 <div class="navbar-item">
-                    <a href="/contact-us" class="button is-primary is-rounded cta-button">
-                        Get Quote
+                    <a href="{{ $ctaUrl }}" class="button is-primary is-rounded cta-button">
+                        {{ $ctaLabel }}
                     </a>
                 </div>
-
             </div>
         </div>
 
     </div>
-</nav>  
+</nav>
 
     {!! blocks_html('header_bottom') !!}
-
 </header>

@@ -8,6 +8,6 @@ class SliderImage extends Model
 {
     protected $table = 'slider_images';
     protected $fillable = [
-        'image_path', 'caption', 'link', 'sort_order', 'active'
+        'title', 'description', 'image_path', 'caption', 'link', 'sort_order', 'active'
     ];
 }

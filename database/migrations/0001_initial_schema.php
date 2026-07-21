@@ -34,6 +34,7 @@ if (!$schema->hasTable('menus')) {
 if (!$schema->hasTable('users')) {
     $schema->create('users', function ($t) {
         $t->increments('id');
+        $t->string('username')->unique();
         $t->string('name')->nullable();
         $t->string('email')->unique();
         $t->string('password');
@@ -337,4 +338,4 @@ if ($adminRole) {
 
 // Settings
 Capsule::table('settings')->updateOrInsert(['key' => 'site_name'], ['value' => 'PankhCMS']);
-Capsule::table('settings')->updateOrInsert(['key' => 'active_theme'], ['value' => 'default']);
+Capsule::table('settings')->updateOrInsert(['key' => 'active_theme'], ['value' => 'pankhcmsstarter']);

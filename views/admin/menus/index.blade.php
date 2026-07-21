@@ -52,11 +52,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="mb-2">
                         <label class="block mb-1 font-semibold">Title</label>
-                        <input class="w-full border px-3 py-2 rounded" type="text" name="title" required>
+                        <input class="w-full border px-3 py-2 rounded" type="text" name="title" id="add-item-title" required>
                     </div>
                     <div class="mb-2">
                         <label class="block mb-1 font-semibold">Page</label>
-                        <select class="w-full border px-3 py-2 rounded" name="page_id">
+                        <select class="w-full border px-3 py-2 rounded" name="page_id" id="add-item-page_id">
                             <option value="">Custom URL</option>
                             @foreach($pages as $p)
                                 <option value="{{ $p->id }}">{{ $p->title }}</option>
@@ -285,39 +285,63 @@
             });
         }
     });
-    // Auto-fill URL when a page is selected (Add Menu Item form)
-    document.querySelector('select[name="page_id"]').addEventListener('change', function(e) {
-        var pageId = this.value;
-        var urlInput = this.closest('form').querySelector('input[name="url"]');
-        if (pageId && window.pageSlugs && window.pageSlugs[pageId]) {
-            urlInput.value = '/' + window.pageSlugs[pageId];
-            urlInput.readOnly = true;
-        } else {
-            urlInput.value = '';
-            urlInput.readOnly = false;
-        }
-    });
+    function wireMenuItemAutofill(pageSelect, titleInput, urlInput) {
+        if (!pageSelect || !titleInput || !urlInput) return;
 
-    // Auto-fill URL when a page is selected (Edit Menu Item modal)
-    var editPageSelect = document.getElementById('edit-item-page_id');
-    if (editPageSelect) {
-        editPageSelect.addEventListener('change', function(e) {
-            var pageId = this.value;
-            var urlInput = document.getElementById('edit-item-url');
+        var syncTitleState = function() {
+            titleInput.dataset.manualOverride = titleInput.value.trim() !== '' ? 'true' : 'false';
+        };
+
+        var fillFromPage = function() {
+            var pageId = pageSelect.value;
             if (pageId && window.pageSlugs && window.pageSlugs[pageId]) {
                 urlInput.value = '/' + window.pageSlugs[pageId];
                 urlInput.readOnly = true;
+
+                if (titleInput.dataset.manualOverride !== 'true' && window.pageTitles && window.pageTitles[pageId]) {
+                    titleInput.value = window.pageTitles[pageId];
+                }
             } else {
                 urlInput.value = '';
                 urlInput.readOnly = false;
+
+                if (titleInput.dataset.manualOverride !== 'true') {
+                    titleInput.value = '';
+                }
             }
+        };
+
+        titleInput.addEventListener('input', syncTitleState);
+
+        pageSelect.addEventListener('change', function() {
+            if (titleInput.value.trim() === '') {
+                titleInput.dataset.manualOverride = 'false';
+            }
+            fillFromPage();
         });
+
+        syncTitleState();
     }
 
-    // Provide page slugs to JS
+    var addPageSelect = document.getElementById('add-item-page_id');
+    var addTitleInput = document.getElementById('add-item-title');
+    var addUrlInput = document.querySelector('#add-menu-item-form input[name="url"]');
+    wireMenuItemAutofill(addPageSelect, addTitleInput, addUrlInput);
+
+    var editPageSelect = document.getElementById('edit-item-page_id');
+    var editTitleInput = document.getElementById('edit-item-title');
+    var editUrlInput = document.getElementById('edit-item-url');
+    wireMenuItemAutofill(editPageSelect, editTitleInput, editUrlInput);
+
+    // Provide page metadata to JS
     window.pageSlugs = {
         @foreach($pages as $p)
             {{ $p->id }}: '{{ addslashes($p->slug) }}',
+        @endforeach
+    };
+    window.pageTitles = {
+        @foreach($pages as $p)
+            {{ $p->id }}: '{{ addslashes($p->title) }}',
         @endforeach
     };
     </script>

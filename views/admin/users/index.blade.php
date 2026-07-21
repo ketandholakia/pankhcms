@@ -19,7 +19,8 @@
             <thead>
                 <tr class="bg-gray-50 border-b">
                     <th class="p-4 text-sm font-semibold text-gray-600">ID</th>
-                    <th class="p-4 text-sm font-semibold text-gray-600">Name</th>
+                    <th class="p-4 text-sm font-semibold text-gray-600">Username</th>
+                    <th class="p-4 text-sm font-semibold text-gray-600">Display Name</th>
                     <th class="p-4 text-sm font-semibold text-gray-600">Email</th>
                     <th class="p-4 text-sm font-semibold text-gray-600">Role</th>
                     <th class="p-4 text-sm font-semibold text-gray-600 text-right">Actions</th>
@@ -29,7 +30,8 @@
                 @foreach($users as $u)
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-4 text-sm text-gray-800">{{ $u->id }}</td>
-                    <td class="p-4 text-sm text-gray-800">{{ $u->name }}</td>
+                    <td class="p-4 text-sm text-gray-800">{{ $u->username }}</td>
+                    <td class="p-4 text-sm text-gray-800">{{ $u->name ?: '-' }}</td>
                     <td class="p-4 text-sm text-gray-800">{{ $u->email }}</td>
                     <td class="p-4 text-sm text-gray-800">
                         @if($u->roles->count() > 0)

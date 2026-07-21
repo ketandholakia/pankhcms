@@ -7,6 +7,15 @@ use App\Models\User;
 
 class UserController
 {
+    protected static function normalizeUsername(?string $username): string
+    {
+        $username = strtolower(trim((string) $username));
+        $username = preg_replace('/[^a-z0-9._-]+/', '_', $username) ?? '';
+        $username = trim($username, '._-');
+
+        return $username;
+    }
+
     public static function editProfile()
     {
         $user = Auth::user();
@@ -42,11 +51,26 @@ class UserController
 
         $data = \Flight::request()->data->getData();
 
+        $username = self::normalizeUsername($data['username'] ?? '');
         $name = isset($data['name']) ? trim((string) $data['name']) : '';
         $email = isset($data['email']) ? trim((string) $data['email']) : '';
 
+        if ($username === '') {
+            \Flight::redirect('/admin/profile?status=username-required');
+            return;
+        }
+
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             \Flight::redirect('/admin/profile?status=invalid-email');
+            return;
+        }
+
+        $usernameTaken = User::where('username', $username)
+            ->where('id', '!=', $user->id)
+            ->exists();
+
+        if ($usernameTaken) {
+            \Flight::redirect('/admin/profile?status=username-taken');
             return;
         }
 
@@ -59,6 +83,7 @@ class UserController
             return;
         }
 
+        $user->username = $username;
         $user->name = $name !== '' ? $name : null;
         $user->email = $email;
         $user->save();
@@ -172,15 +197,39 @@ class UserController
     public static function store()
     {
         $data = \Flight::request()->data->getData();
+        $username = self::normalizeUsername($data['username'] ?? '');
+        $email = trim((string) ($data['email'] ?? ''));
+        $name = trim((string) ($data['name'] ?? ''));
         
+        if ($username === '') {
+            \Flight::redirect('/admin/users/create?error=username_required');
+            return;
+        }
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            \Flight::redirect('/admin/users/create?error=invalid_email');
+            return;
+        }
+
         if (empty($data['password'])) {
             \Flight::redirect('/admin/users/create?error=password_required');
             return;
         }
 
+        if (User::where('username', $username)->exists()) {
+            \Flight::redirect('/admin/users/create?error=username_taken');
+            return;
+        }
+
+        if (User::where('email', $email)->exists()) {
+            \Flight::redirect('/admin/users/create?error=email_taken');
+            return;
+        }
+
         $user = new User();
-        $user->name = $data['name'] ?? null;
-        $user->email = $data['email'] ?? '';
+        $user->username = $username;
+        $user->name = $name !== '' ? $name : null;
+        $user->email = $email;
         $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
         $user->save();
 
@@ -206,8 +255,33 @@ class UserController
         if (!$user) \Flight::redirect('/admin/users');
 
         $data = \Flight::request()->data->getData();
-        $user->name = $data['name'] ?? null;
-        $user->email = $data['email'] ?? $user->email;
+        $username = self::normalizeUsername($data['username'] ?? '');
+        $name = trim((string) ($data['name'] ?? ''));
+        $email = trim((string) ($data['email'] ?? $user->email));
+
+        if ($username === '') {
+            \Flight::redirect("/admin/users/edit/{$id}?error=username_required");
+            return;
+        }
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            \Flight::redirect("/admin/users/edit/{$id}?error=invalid_email");
+            return;
+        }
+
+        if (User::where('username', $username)->where('id', '!=', $user->id)->exists()) {
+            \Flight::redirect("/admin/users/edit/{$id}?error=username_taken");
+            return;
+        }
+
+        if (User::where('email', $email)->where('id', '!=', $user->id)->exists()) {
+            \Flight::redirect("/admin/users/edit/{$id}?error=email_taken");
+            return;
+        }
+
+        $user->username = $username;
+        $user->name = $name !== '' ? $name : null;
+        $user->email = $email;
         if (!empty($data['password'])) {
             $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
         }

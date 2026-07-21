@@ -29,9 +29,14 @@ class Auth
             : null;
     }
 
-    public static function attempt($email, $password)
+    public static function attempt($identifier, $password)
     {
-        $user = User::where('email', $email)->first();
+        $identifier = trim((string) $identifier);
+        $usernameIdentifier = strtolower($identifier);
+
+        $user = User::where('email', $identifier)
+            ->orWhere('username', $usernameIdentifier)
+            ->first();
 
         if ($user && password_verify($password, $user->password)) {
             session_init();

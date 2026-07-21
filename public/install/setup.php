@@ -25,6 +25,12 @@ function clean($v) {
 function envEscape($v) {
     return '"' . str_replace('"', '\"', trim($v)) . '"';
 }
+function normalizeUsername($value) {
+    $value = strtolower(trim((string) $value));
+    $value = preg_replace('/[^a-z0-9._-]+/', '_', $value) ?? '';
+    $value = trim($value, '._-');
+    return $value !== '' ? $value : 'user';
+}
 function checkWritable($path) {
     return is_writable($path);
 }
@@ -37,11 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $dbDriver   = $_POST['db_driver']   ?? 'sqlite';
         $appUrl     = trim($_POST['app_url'] ?? '');
+        $adminUsername = normalizeUsername($_POST['admin_username'] ?? '');
         $adminEmail = trim($_POST['admin_email'] ?? '');
         $adminPass  = $_POST['admin_password'] ?? '';
 
-        if (!$adminEmail || !$adminPass) {
-            die('Admin email and password are required.');
+        if (!$adminUsername || !$adminEmail || !$adminPass) {
+            die('Admin username, email and password are required.');
         }
 
         // ── 1. Build .env content ──────────────────────────────────────
@@ -151,6 +158,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $t->integer('parent_id')->nullable();
                 $t->string('type')->nullable()->default('category');
             });
+        } elseif (!$schema->hasColumn('categories', 'type')) {
+            $schema->table('categories', function ($t) {
+                $t->string('type')->nullable()->default('category');
+            });
+
+            Capsule::table('categories')
+                ->whereNull('type')
+                ->update(['type' => 'category']);
         }
 
         if (!$schema->hasTable('tags')) {
@@ -173,11 +188,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$schema->hasTable('users')) {
             $schema->create('users', function ($t) {
                 $t->increments('id');
+                $t->string('username')->unique();
                 $t->string('name')->nullable();
                 $t->string('email')->unique();
                 $t->string('password');
                 $t->timestamps();
             });
+        } elseif (!$schema->hasColumn('users', 'username')) {
+            $schema->table('users', function ($t) {
+                $t->string('username')->nullable();
+            });
+
+            $existingUsers = Capsule::table('users')->orderBy('id')->get();
+            $seenUsernames = [];
+
+            foreach ($existingUsers as $existingUser) {
+                $candidate = $existingUser->name;
+
+                if (!$candidate && !empty($existingUser->email) && strpos((string) $existingUser->email, '@') !== false) {
+                    $candidate = strstr((string) $existingUser->email, '@', true);
+                }
+
+                $baseUsername = normalizeUsername($candidate);
+                $username = $baseUsername;
+                $suffix = 2;
+
+                while (isset($seenUsernames[$username])) {
+                    $username = $baseUsername . $suffix;
+                    $suffix++;
+                }
+
+                Capsule::table('users')
+                    ->where('id', $existingUser->id)
+                    ->update(['username' => $username]);
+
+                $seenUsernames[$username] = true;
+            }
+
+            if ($dbDriver === 'sqlite') {
+                Capsule::statement('CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique ON users (username)');
+            }
         }
 
         if (!$schema->hasTable('content_types')) {
@@ -289,6 +339,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $t->integer('user_id');
                 $t->integer('role_id');
                 $t->primary(['user_id', 'role_id']);
+            });
+        }
+
+        if (!$schema->hasTable('password_resets')) {
+            $schema->create('password_resets', function ($t) {
+                $t->increments('id');
+                $t->integer('user_id')->unsigned();
+                $t->string('token', 64)->unique();
+                $t->timestamp('expires_at');
+                $t->timestamps();
             });
         }
 
@@ -448,7 +508,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (['admin', 'editor', 'author', 'viewer'] as $role) {
             Capsule::table('roles')->insertOrIgnore(['name' => $role]);
         }
-        foreach (['manage_users', 'manage_pages', 'edit_pages', 'create_pages', 'delete_pages', 'view_admin'] as $perm) {
+        foreach ([
+            'manage_settings',
+            'manage_pages',
+            'manage_taxonomies',
+            'manage_menus',
+            'manage_media',
+            'manage_content_types',
+            'manage_blocks',
+            'manage_templates',
+            'manage_themes',
+            'manage_plugins',
+            'manage_users',
+        ] as $perm) {
             Capsule::table('permissions')->insertOrIgnore(['name' => $perm]);
         }
         // Grant all permissions to admin role
@@ -464,13 +536,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'site_name'               => $appName,
             'site_title'              => $appName,
             'site_tagline'            => 'A lightweight CMS',
+            'header_cta_label'        => 'Get Quote',
+            'header_cta_url'          => '/contact-us',
+            'hero_intro_text'         => 'Transforming ideas into powerful digital solutions with cutting-edge technology.',
+            'hero_primary_cta_label'  => 'Get Started',
+            'hero_primary_cta_url'    => '/contact-us',
+            'hero_secondary_cta_label'=> 'View Projects',
+            'hero_secondary_cta_url'  => '/projects',
             'tagline'                 => 'Lightweight PHP CMS',
             'site_url'                => $appUrl,
             'default_meta_description'=> 'Modern CMS for fast websites',
             'default_meta_keywords'   => 'cms, php, website',
             'favicon'                 => '/uploads/favicon.ico',
             'og_image'                => '/uploads/og.jpg',
-            'active_theme'            => 'default',
+            'active_theme'            => 'pankhcmsstarter',
             'breadcrumbs_enabled'     => '1',
             'breadcrumbs_type'        => 'auto',
             'breadcrumbs_show_home'   => '1',
@@ -490,6 +569,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $existingUser = Capsule::table('users')->where('email', $adminEmail)->first();
         if (!$existingUser) {
             $userId = Capsule::table('users')->insertGetId([
+                'username'   => $adminUsername,
                 'email'      => $adminEmail,
                 'password'   => password_hash($adminPass, PASSWORD_DEFAULT),
                 'name'       => 'Administrator',
@@ -639,6 +719,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (Throwable $e) {
         // Clean up .env if it was written but something went wrong
+        if (file_exists($envFile)) {
+            @unlink($envFile);
+        }
+
         echo '<!DOCTYPE html><html><head><title>Installation Error</title>'
             . '<style>body{font-family:Arial;background:#f5f5f5}.box{max-width:600px;margin:60px auto;background:#fff;padding:25px;border-radius:8px}'
             . 'pre{background:#f8d7da;padding:15px;border-radius:4px;white-space:pre-wrap;word-break:break-all}'
@@ -706,6 +790,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <h3>Admin Account</h3>
+    <label>Username</label>
+    <input name="admin_username" required>
+
     <label>Email</label>
     <input name="admin_email" required>
 

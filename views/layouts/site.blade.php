@@ -8,12 +8,21 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
+    @php
+        $menuHtml = (string) render_menu('topbar');
+        if (trim($menuHtml) === '') {
+            $menuHtml = (string) render_menu('main');
+        }
+        if (trim($menuHtml) === '') {
+            $menuHtml = (string) render_menu('header');
+        }
+    @endphp
 
     <nav class="bg-white shadow p-4">
         <div class="container mx-auto flex items-center justify-between gap-4">
             <div class="flex items-center space-x-8">
             <a href="/" class="font-bold text-lg">PankhCMS</a>
-            {!! render_menu('header') !!}
+            {!! $menuHtml !!}
             </div>
 
             <form action="/search" method="GET" class="flex gap-2">

@@ -9,7 +9,15 @@
             <input type="file" name="image" required class="border rounded w-full p-2">
         </div>
         <div class="mb-4">
-            <label class="block mb-1 font-semibold">Caption</label>
+            <label class="block mb-1 font-semibold">Title</label>
+            <input type="text" name="title" class="border rounded w-full p-2">
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Description</label>
+            <textarea name="description" class="border rounded w-full p-2" rows="3"></textarea>
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Caption / Legacy Short Text</label>
             <input type="text" name="caption" class="border rounded w-full p-2">
         </div>
         <div class="mb-4">
@@ -25,6 +33,7 @@
                 <input type="checkbox" name="active" value="1" checked class="mr-2">
                 Active
             </label>
+            <p class="mt-1 text-sm text-gray-500">Theme homepage uses title and description when available, and falls back to caption for older records.</p>
         </div>
         <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
         <a href="/admin/slider" class="ml-4 text-gray-600">Cancel</a>

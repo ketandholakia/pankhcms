@@ -7,12 +7,35 @@
         <a href="/admin/users" class="text-gray-600 hover:underline">Back to Users</a>
     </div>
 
+    @php $error = $_GET['error'] ?? null; @endphp
+    @if($error)
+        <div class="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded">
+            @if($error === 'username_required')
+                Username is required.
+            @elseif($error === 'username_taken')
+                This username is already in use.
+            @elseif($error === 'invalid_email')
+                Please provide a valid email address.
+            @elseif($error === 'email_taken')
+                This email address is already in use.
+            @elseif($error === 'password_required')
+                Password is required for new users.
+            @endif
+        </div>
+    @endif
+
     <form action="{{ $action }}" method="POST" class="bg-white border rounded shadow p-6 space-y-4">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
-            <input type="text" name="name" value="{{ $user->name }}" class="w-full border-gray-300 rounded p-2 border" required>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+            <input type="text" name="username" value="{{ $user->username }}" class="w-full border-gray-300 rounded p-2 border" required>
+            <p class="mt-1 text-xs text-gray-500">This value can be used to sign in.</p>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Display Name</label>
+            <input type="text" name="name" value="{{ $user->name }}" class="w-full border-gray-300 rounded p-2 border">
         </div>
 
         <div>

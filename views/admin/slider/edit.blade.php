@@ -11,8 +11,16 @@
             <small class="text-gray-500">Leave blank to keep current image.</small>
         </div>
         <div class="mb-4">
-            <label class="block mb-1 font-semibold">Caption</label>
-            <input type="text" name="caption" value="{{ $slider->caption }}" class="border rounded w-full p-2">
+            <label class="block mb-1 font-semibold">Title</label>
+            <input type="text" name="title" value="{{ $slider->title ?? $slider->caption ?? '' }}" class="border rounded w-full p-2">
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Description</label>
+            <textarea name="description" class="border rounded w-full p-2" rows="3">{{ $slider->description ?? '' }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label class="block mb-1 font-semibold">Caption / Legacy Short Text</label>
+            <input type="text" name="caption" value="{{ $slider->caption ?? '' }}" class="border rounded w-full p-2">
         </div>
         <div class="mb-4">
             <label class="block mb-1 font-semibold">Link (optional)</label>

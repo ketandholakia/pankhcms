@@ -19,7 +19,7 @@ class ApiTokensTest extends TestCase
         
         $this->user = User::firstOrCreate(
             ['email' => 'api-admin@example.com'],
-            ['name' => 'API Admin', 'password' => password_hash('password', PASSWORD_DEFAULT)]
+            ['username' => 'apiadmin', 'name' => 'API Admin', 'password' => password_hash('password', PASSWORD_DEFAULT)]
         );
 
         $this->plainTextToken = 'test-token-' . bin2hex(random_bytes(10));

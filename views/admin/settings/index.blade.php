@@ -72,6 +72,42 @@
 			</div>
 
 			<div>
+				<label for="header_cta_label" class="block text-sm font-semibold mb-2">Header CTA Label</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="header_cta_label" name="header_cta_label" value="{{ $settings['header_cta_label'] ?? 'Get Quote' }}">
+			</div>
+
+			<div>
+				<label for="header_cta_url" class="block text-sm font-semibold mb-2">Header CTA URL</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="header_cta_url" name="header_cta_url" value="{{ $settings['header_cta_url'] ?? '/contact-us' }}">
+			</div>
+
+			<div class="md:col-span-2">
+				<label for="hero_intro_text" class="block text-sm font-semibold mb-2">Homepage Hero Intro Text</label>
+				<textarea class="w-full border rounded px-3 py-2" id="hero_intro_text" name="hero_intro_text" rows="3">{{ $settings['hero_intro_text'] ?? 'Transforming ideas into powerful digital solutions with cutting-edge technology.' }}</textarea>
+			</div>
+
+			<div>
+				<label for="hero_primary_cta_label" class="block text-sm font-semibold mb-2">Hero Primary Button Label</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="hero_primary_cta_label" name="hero_primary_cta_label" value="{{ $settings['hero_primary_cta_label'] ?? 'Get Started' }}">
+			</div>
+
+			<div>
+				<label for="hero_primary_cta_url" class="block text-sm font-semibold mb-2">Hero Primary Button URL</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="hero_primary_cta_url" name="hero_primary_cta_url" value="{{ $settings['hero_primary_cta_url'] ?? '/contact-us' }}">
+			</div>
+
+			<div>
+				<label for="hero_secondary_cta_label" class="block text-sm font-semibold mb-2">Hero Secondary Button Label</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="hero_secondary_cta_label" name="hero_secondary_cta_label" value="{{ $settings['hero_secondary_cta_label'] ?? 'View Projects' }}">
+			</div>
+
+			<div>
+				<label for="hero_secondary_cta_url" class="block text-sm font-semibold mb-2">Hero Secondary Button URL</label>
+				<input type="text" class="w-full border rounded px-3 py-2" id="hero_secondary_cta_url" name="hero_secondary_cta_url" value="{{ $settings['hero_secondary_cta_url'] ?? '/projects' }}">
+				<p class="mt-1 text-xs text-gray-600">Use <strong>Slider Images</strong> to edit additional homepage slides. The theme will use title and description when available, with caption as legacy fallback.</p>
+			</div>
+
+			<div>
 				<label for="site_url" class="block text-sm font-semibold mb-2">Site URL</label>
 				<input type="text" class="w-full border rounded px-3 py-2 bg-gray-100" id="site_url" name="site_url" value="{{ $settings['site_url'] ?? $app_url }}" readonly>
 			</div>

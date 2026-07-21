@@ -19,6 +19,14 @@
 			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">
 				Please provide a valid email address.
 			</div>
+		@elseif($status === 'username-required')
+			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">
+				Please provide a username.
+			</div>
+		@elseif($status === 'username-taken')
+			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">
+				This username is already in use by another user.
+			</div>
 		@elseif($status === 'email-taken')
 			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">
 				This email address is already in use by another user.
@@ -51,8 +59,13 @@
 				<form method="POST" action="/admin/profile" class="space-y-4">
 					{!! csrf_field() !!}
 					<div>
-						<label for="name" class="block text-sm font-semibold mb-1">Name</label>
-						<input type="text" id="name" name="name" value="{{ $user->name ?? '' }}" class="w-full border rounded px-3 py-2 text-sm" placeholder="Your name">
+						<label for="username" class="block text-sm font-semibold mb-1">Username <span class="text-red-500">*</span></label>
+						<input type="text" id="username" name="username" value="{{ $user->username ?? '' }}" class="w-full border rounded px-3 py-2 text-sm" placeholder="Your username" required>
+						<p class="mt-1 text-xs text-gray-500">You can use this username or your email address to sign in.</p>
+					</div>
+					<div>
+						<label for="name" class="block text-sm font-semibold mb-1">Display Name</label>
+						<input type="text" id="name" name="name" value="{{ $user->name ?? '' }}" class="w-full border rounded px-3 py-2 text-sm" placeholder="Your display name">
 					</div>
 					<div>
 						<label for="email" class="block text-sm font-semibold mb-1">Email <span class="text-red-500">*</span></label>
