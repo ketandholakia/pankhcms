@@ -16,11 +16,17 @@
 {!! blocks_html('after_header') !!}
 
 <!-- ===== MAIN CONTENT ===== -->
-<main id="main-content" class="section">
-    <div class="container">
+@hasSection('no_container')
+    <main id="main-content">
         @yield('content')
-    </div>
-</main>
+    </main>
+@else
+    <main id="main-content" class="section">
+        <div class="container">
+            @yield('content')
+        </div>
+    </main>
+@endif
 
 <!-- ===== BEFORE FOOTER (CTA / Newsletter) ===== -->
 {!! blocks_html('before_footer') !!}

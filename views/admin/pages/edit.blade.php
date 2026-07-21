@@ -60,6 +60,21 @@
           </select>
         </div>
 
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="layout">
+            Layout
+          </label>
+          @php $currentLayout = $page->layout ?: 'default'; @endphp
+          <select id="layout" name="layout" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            @foreach ($layouts as $layoutOption)
+              <option value="{{ $layoutOption }}" {{ $currentLayout === $layoutOption ? 'selected' : '' }}>
+                {{ ucfirst($layoutOption) }}
+              </option>
+            @endforeach
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Controls the page shell (columns, full-width, etc.) from the active theme. Content itself is built below.</p>
+        </div>
+
         <div id="custom-fields-section" class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2">Custom Fields</label>
             <div id="custom-fields-container" class="grid grid-cols-1 gap-4"></div>

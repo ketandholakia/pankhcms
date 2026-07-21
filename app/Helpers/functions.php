@@ -455,6 +455,40 @@ if (!function_exists('render_block')) {
     }
 }
 
+if (!function_exists('render_page_blocks')) {
+    function render_page_blocks($blocks): string
+    {
+        if (!is_array($blocks)) {
+            return '';
+        }
+
+        $html = '';
+        foreach ($blocks as $block) {
+            if (!is_array($block)) {
+                continue;
+            }
+
+            $type = trim((string) ($block['type'] ?? ''));
+            if ($type === '' || $type === '__custom_fields') {
+                continue;
+            }
+
+            $view = theme_view('page-blocks.' . $type);
+            if (!\Flight::get('blade')->exists($view)) {
+                continue;
+            }
+
+            try {
+                $html .= (string) \Flight::get('blade')->render($view, ['block' => $block]);
+            } catch (\Throwable $e) {
+                error_log('render_page_blocks: failed to render block [' . $type . ']: ' . $e->getMessage());
+            }
+        }
+
+        return $html;
+    }
+}
+
 if (!function_exists('seo_setting')) {
     function seo_setting(string $primaryKey, ?string $legacyKey = null, $default = null)
     {

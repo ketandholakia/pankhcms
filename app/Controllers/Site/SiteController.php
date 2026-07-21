@@ -79,6 +79,11 @@ class SiteController
             $candidateViews[] = 'site.home';
         }
 
+        $layout = trim((string) ($page->layout ?? ''));
+        if ($layout !== '' && $layout !== 'default') {
+            $candidateViews[] = 'templates.' . $layout;
+        }
+
         if ($type !== '' && $type !== 'page') {
             $candidateViews[] = 'templates.' . $type;
             $candidateViews[] = 'site.' . $type;

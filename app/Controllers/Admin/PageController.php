@@ -16,7 +16,7 @@ class PageController
      * Everything else in $_POST is silently ignored.
      */
     private const FILLABLE = [
-        'type',
+        'type', 'layout',
         'title', 'slug', 'content_json',
         'featured_image',
         'seo_title', 'seo_description', 'seo_keywords', 'seo_image',
@@ -249,6 +249,7 @@ class PageController
             'tags'       => Tag::orderBy('name')->get(),
             'types'      => $types,
             'contentTypeFieldsBySlug' => $contentTypeFieldsBySlug,
+            'layouts'    => \App\Core\Theme::layouts(),
         ];
     }
 
@@ -306,6 +307,14 @@ class PageController
         // 5. Validate slug format if provided
         if (!empty($data['slug']) && !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $data['slug'])) {
             $errors[] = "'slug' may only contain lowercase letters, numbers, and hyphens.";
+        }
+
+        if (array_key_exists('layout', $data)) {
+            if ($data['layout'] === '') {
+                $data['layout'] = 'default';
+            } elseif (!in_array($data['layout'], \App\Core\Theme::layouts(), true)) {
+                $errors[] = "'layout' is not a layout provided by the active theme.";
+            }
         }
 
         if (empty($errors)) {

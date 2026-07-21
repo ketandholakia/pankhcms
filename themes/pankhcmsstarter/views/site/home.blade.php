@@ -91,6 +91,8 @@
 
 {!! blocks_html('homepage_middle') !!}
 
+{!! render_page_blocks($blocks ?? []) !!}
+
 {!! blocks_html('homepage_bottom') !!}
 
 @endsection

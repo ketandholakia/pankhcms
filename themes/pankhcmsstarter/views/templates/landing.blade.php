@@ -1,13 +1,21 @@
 @extends('layouts.main')
 
+@section('no_container', '1')
+
 @section('content')
 
-<section class="section">
-    <div class="container">
-        <div class="content">
-            {!! $page->content !!}
+@if(!empty($page->content))
+    <section class="section">
+        <div class="container">
+            <div class="content">
+                {!! $page->content !!}
+            </div>
         </div>
-    </div>
-</section>
+    </section>
+@endif
+
+{!! render_page_blocks($blocks ?? []) !!}
+
+{!! blocks_html('after_content') !!}
 
 @endsection

@@ -77,6 +77,23 @@ class Theme
         return is_file(self::viewFile($view, $theme));
     }
 
+    public static function layouts(?string $theme = null): array
+    {
+        $dir = self::path($theme, 'views/templates');
+        $files = is_dir($dir) ? (glob($dir . '/*.blade.php') ?: []) : [];
+
+        $layouts = array_map(function ($file) {
+            return basename($file, '.blade.php');
+        }, $files);
+
+        if (empty($layouts)) {
+            $layouts = ['default'];
+        }
+
+        sort($layouts);
+        return $layouts;
+    }
+
     private static function activeFromDatabase(): ?string
     {
         try {
