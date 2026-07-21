@@ -5,6 +5,8 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 class PluginController
 {
+    private const PLUGIN_UPLOADS_ENV = 'ENABLE_PLUGIN_UPLOADS';
+
     protected static function ensurePluginsTable(): void
     {
         $schema = Capsule::schema();
@@ -77,6 +79,12 @@ class PluginController
     {
         self::ensurePluginsTable();
 
+        if (!self::pluginUploadsEnabled()) {
+            $_SESSION['plugin_flash'] = 'Plugin ZIP uploads are disabled. Deploy plugins via version control or CLI.';
+            \Flight::redirect('/admin/plugins');
+            return;
+        }
+
         if (!isset($_FILES['plugin_zip']) || $_FILES['plugin_zip']['error'] !== UPLOAD_ERR_OK) {
             $_SESSION['plugin_flash'] = 'Upload failed.';
             \Flight::redirect('/admin/plugins');
@@ -94,6 +102,16 @@ class PluginController
             $_SESSION['plugin_flash'] = 'Invalid zip file.';
         }
         \Flight::redirect('/admin/plugins');
+    }
+
+    private static function pluginUploadsEnabled(): bool
+    {
+        $value = $_ENV[self::PLUGIN_UPLOADS_ENV]
+            ?? $_SERVER[self::PLUGIN_UPLOADS_ENV]
+            ?? getenv(self::PLUGIN_UPLOADS_ENV)
+            ?? '';
+
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'on'], true);
     }
 
     public static function uninstall()

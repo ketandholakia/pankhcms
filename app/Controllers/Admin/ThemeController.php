@@ -54,6 +54,8 @@ class ThemeController
             // Ignore errors here; theme change already persisted above
         }
 
+        setting_cache_clear();
+
         // Automatically create symlink for theme assets
         $publicThemesDir = dirname(__DIR__, 3) . '/public/themes';
         $themeAssetsSource = dirname(__DIR__, 3) . '/themes/' . $theme . '/assets';

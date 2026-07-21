@@ -379,15 +379,86 @@ if (!function_exists("unique_slug")) {
 }
 
 if (!function_exists('setting')) {
+    function setting_cache_dir(): string
+    {
+        return dirname(__DIR__, 2) . '/storage/cache/settings/';
+    }
+}
+
+if (!function_exists('setting_cache_path')) {
+    function setting_cache_path(): string
+    {
+        return setting_cache_dir() . 'settings.json';
+    }
+}
+
+if (!function_exists('setting_cache_clear')) {
+    function setting_cache_clear(): void
+    {
+        $file = setting_cache_path();
+        if (is_file($file)) {
+            @unlink($file);
+        }
+    }
+}
+
+if (!function_exists('setting_cache_read')) {
+    function setting_cache_read(): ?array
+    {
+        $file = setting_cache_path();
+        if (!is_file($file)) {
+            return null;
+        }
+
+        $raw = @file_get_contents($file);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+}
+
+if (!function_exists('setting_cache_write')) {
+    function setting_cache_write(array $settings): void
+    {
+        $dir = setting_cache_dir();
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $file = setting_cache_path();
+        $fp = fopen($file, 'c+');
+        if ($fp === false) {
+            return;
+        }
+
+        if (flock($fp, LOCK_EX)) {
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+        }
+
+        fclose($fp);
+    }
+}
+
+if (!function_exists('setting')) {
     function setting(string $key, $default = null)
     {
         static $settings = [];
 
         if (empty($settings)) {
             try {
-                if (\Illuminate\Database\Capsule\Manager::schema()->hasTable('settings')) {
-                    $allSettings = \Illuminate\Database\Capsule\Manager::table('settings')->pluck('value', 'key')->toArray();
-                    $settings = $allSettings;
+                $cached = setting_cache_read();
+                if (is_array($cached)) {
+                    $settings = $cached;
+                } elseif (\Illuminate\Database\Capsule\Manager::schema()->hasTable('settings')) {
+                    $settings = \Illuminate\Database\Capsule\Manager::table('settings')->pluck('value', 'key')->toArray();
+                    setting_cache_write($settings);
                 }
             } catch (\Throwable $e) { /* Settings table not ready */ }
         }

@@ -147,14 +147,6 @@ class PageController
         $input = $this->getValidatedInput(isUpdate: true);
         $raw = $this->rawInput();
 
-        // Debug logging
-        $logFile = dirname(__DIR__, 3) . '/storage/logs/debug_page_update.log';
-        $logData = date('Y-m-d H:i:s') . " Update ID: $id\n" .
-                   "POST: " . print_r($_POST, true) . "\n" .
-                   "RAW: " . print_r($raw, true) . "\n" .
-                   "INPUT: " . print_r($input, true) . "\n";
-        file_put_contents($logFile, $logData, FILE_APPEND);
-
         if (isset($input['errors'])) {
             $this->renderView('admin.pages.edit', array_merge(
                 $this->formData(),
@@ -174,26 +166,13 @@ class PageController
                 ? date('Y-m-d H:i:s', strtotime($raw['published_at']))
                 : ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
 
-            $updateResult = $page->update($input);
-
-            // Debug: log result of update
-            file_put_contents($logFile,
-                date('Y-m-d H:i:s') . " UPDATE RESULT: " . var_export($updateResult, true) . "\n" .
-                "FINAL INPUT passed to update(): " . print_r($input, true) . "\n" .
-                "PAGE after update featured_image=" . $page->fresh()->featured_image . "\n",
-                FILE_APPEND
-            );
+            $page->update($input);
 
             $this->syncRelations($page);
             \Event::dispatch('page.updated', $page);
 
             \Flight::redirect('/admin/pages?saved=1');
         } catch (Exception $e) {
-            file_put_contents($logFile,
-                date('Y-m-d H:i:s') . " EXCEPTION: " . $e->getMessage() . "\n" .
-                $e->getTraceAsString() . "\n",
-                FILE_APPEND
-            );
             $this->renderView('admin.pages.edit', array_merge(
                 $this->formData(),
                 ['errors' => ['An unexpected error occurred: ' . $e->getMessage()], 'old' => $this->rawInput(), 'page' => $page],

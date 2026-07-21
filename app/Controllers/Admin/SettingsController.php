@@ -56,6 +56,8 @@ class SettingsController
             Capsule::table('settings')->updateOrInsert(['key' => $key], ['value' => $value]);
         }
 
+        setting_cache_clear();
+
         \Flight::redirect('/admin/settings/breadcrumbs?status=updated');
     }
 
@@ -217,6 +219,8 @@ class SettingsController
                 );
             }
         });
+
+        setting_cache_clear();
 
         \Flight::redirect('/admin/settings?status=' . $redirectStatus);
     }

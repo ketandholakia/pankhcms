@@ -101,9 +101,8 @@ Plugin class notes:
 - On activation the `PluginManager::activate($slug)` method will call plugin `activate()` and insert/update the `plugins` table with `active = 1`.
 - Plugins should provide migration SQL in `migrations/` and can run DB setup inside `activate()` or rely on the PluginManager to run packaged SQL files when available.
 
-Registries and integration points:
+Integration points:
 - `AdminMenu::add()` — register admin sidebar entries; entries appear under the new "Extensions" group in the admin sidebar.
-- `BlockRegistry`, `ContentTypeRegistry` — register CMS blocks and content types programmatically.
 - `Hooks::add('hook.name', $callable)` and `Hooks::run('hook.name', $args)` — basic hook mechanism for loose coupling between plugins and core.
 
 **Admin UI & plugin management**

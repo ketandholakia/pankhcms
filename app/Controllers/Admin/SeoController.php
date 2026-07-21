@@ -75,6 +75,7 @@ class SeoController
 
         try {
             $this->persistSettings($input);
+            setting_cache_clear();
             \Flight::redirect('/admin/settings/seo?status=updated');
         } catch (Exception $e) {
             $defaults = $this->loadSettings();
