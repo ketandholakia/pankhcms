@@ -12,7 +12,6 @@ class VisitTracker
         try {
             $referrer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
             $source = self::detectSource($referrer);
-            $ip = client_ip();
             $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
 
             $sessionId = '';
@@ -32,7 +31,7 @@ class VisitTracker
                 'path' => $path,
                 'source' => $source,
                 'referrer' => $referrer !== '' ? $referrer : null,
-                'ip' => $ip,
+                'ip' => self::anonymizeIp(client_ip()),
                 'user_agent' => $userAgent,
                 'session_id' => $sessionId !== '' ? $sessionId : null,
                 'created_at' => date('Y-m-d H:i:s'),
@@ -40,6 +39,32 @@ class VisitTracker
         } catch (Throwable $e) {
             // Keep public page rendering resilient.
         }
+    }
+
+    /**
+     * Truncate the last octet (IPv4) or the interface identifier (IPv6)
+     * before storing, so a full IP address is never persisted.
+     */
+    public static function anonymizeIp(string $ip): string
+    {
+        $ip = trim($ip);
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $parts = explode('.', $ip);
+            $parts[3] = 'x';
+            return implode('.', $parts);
+        }
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $bin = @inet_pton($ip);
+            if ($bin === false || strlen($bin) !== 16) {
+                return '';
+            }
+            // Keep the /64 routing prefix, zero the interface identifier.
+            return (string) inet_ntop(substr($bin, 0, 8) . str_repeat("\x00", 8));
+        }
+
+        return '';
     }
 
     private static function detectSource(string $referrer): string
