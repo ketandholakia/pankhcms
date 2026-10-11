@@ -36,7 +36,28 @@ Flight::route('GET /themes/@theme/assets/*', function ($theme) {
         Flight::halt(404);
     }
 
-    $mime = mime_content_type($targetPath) ?: 'application/octet-stream';
+    // MIME by extension first: mime_content_type can misreport css/js.
+    $extension = strtolower(pathinfo($targetPath, PATHINFO_EXTENSION));
+    $mimeByExtension = [
+        'css' => 'text/css; charset=utf-8',
+        'js' => 'text/javascript; charset=utf-8',
+        'mjs' => 'text/javascript; charset=utf-8',
+        'json' => 'application/json; charset=utf-8',
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'ico' => 'image/x-icon',
+        'woff' => 'font/woff',
+        'woff2' => 'font/woff2',
+        'ttf' => 'font/ttf',
+        'otf' => 'font/otf',
+        'txt' => 'text/plain; charset=utf-8',
+    ];
+    $mime = $mimeByExtension[$extension] ?? (mime_content_type($targetPath) ?: 'application/octet-stream');
+
     $mtime = filemtime($targetPath) ?: time();
     $lastModified = gmdate('D, d M Y H:i:s', $mtime) . ' GMT';
 

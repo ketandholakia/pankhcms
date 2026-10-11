@@ -108,6 +108,84 @@ class Theme
         }
     }
 
+    /**
+     * Publish a theme's assets into public/themes/<theme>/assets so the
+     * web server serves them without booting the application. The PHP
+     * route in routes/web.php remains the fallback.
+     */
+    public static function publishAssets(?string $theme = null): bool
+    {
+        $theme = $theme ?: self::active();
+        $source = self::path($theme, 'assets');
+        if (!is_dir($source)) {
+            return false;
+        }
+
+        $targetDir = dirname(__DIR__, 2) . '/public/themes/' . $theme;
+        $target = $targetDir . '/assets';
+
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0775, true);
+        }
+
+        if (is_link($target)) {
+            // Directory symlinks on Windows must be removed with rmdir.
+            @rmdir($target);
+            @unlink($target);
+        }
+        if (is_dir($target)) {
+            self::removeRecursive($target);
+        } elseif (is_file($target)) {
+            @unlink($target);
+        }
+
+        // Publish as a plain recursive copy: deterministic across
+        // platforms (symlink() behaves unpredictably on Windows — it can
+        // fail while still leaving dangling directory links behind).
+        self::copyRecursive($source, $target);
+        return is_dir($target);
+    }
+
+    private static function copyRecursive(string $src, string $dst): void
+    {
+        @mkdir($dst, 0775, true);
+
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($it as $file) {
+            $target = $dst . '/' . $it->getSubPathName();
+            if ($file->isDir()) {
+                @mkdir($target, 0775, true);
+            } else {
+                $targetParent = dirname($target);
+                if (!is_dir($targetParent)) {
+                    @mkdir($targetParent, 0775, true);
+                }
+                @copy($file->getPathname(), $target);
+            }
+        }
+    }
+
+    private static function removeRecursive(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($it as $file) {
+            $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname());
+        }
+        @rmdir($dir);
+    }
+
     private static function normalizeThemeSlug($theme): ?string
     {
         $theme = trim((string) $theme);
