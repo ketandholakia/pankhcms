@@ -165,6 +165,110 @@ class PluginManager
         return true;
     }
 
+    /**
+     * Install a plugin from a ZIP archive. The archive is fully validated
+     * before anything is extracted:
+     *  - entry names must be relative (no absolute paths, no "..", no "\")
+     *  - a plugin.json manifest is required
+     *  - the manifest slug must be a valid slug
+     *  - the target plugins/<slug> directory must not already exist
+     * Files are extracted to a temp directory and moved into place, so an
+     * invalid archive leaves the plugins directory untouched.
+     *
+     * @return string The installed plugin slug.
+     * @throws \RuntimeException on any validation failure.
+     */
+    public static function installFromZip(string $zipPath): string
+    {
+        if (!class_exists('ZipArchive')) {
+            throw new \RuntimeException('The PHP zip extension is required for plugin uploads.');
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            throw new \RuntimeException('Invalid zip file.');
+        }
+
+        $tmpDir = null;
+        try {
+            $numFiles = $zip->numFiles;
+            if ($numFiles < 1) {
+                throw new \RuntimeException('The zip archive is empty.');
+            }
+
+            for ($i = 0; $i < $numFiles; $i++) {
+                $name = (string) $zip->getNameIndex($i);
+                if ($name === '') {
+                    throw new \RuntimeException('The zip archive contains an unnamed entry.');
+                }
+                if (str_contains($name, '\\')) {
+                    throw new \RuntimeException('Invalid entry name in zip archive.');
+                }
+                if (str_starts_with($name, '/') || preg_match('#^[A-Za-z]:#', $name) === 1) {
+                    throw new \RuntimeException('Absolute paths are not allowed in plugin zips.');
+                }
+                foreach (explode('/', $name) as $part) {
+                    if ($part === '..') {
+                        throw new \RuntimeException('Path traversal is not allowed in plugin zips.');
+                    }
+                }
+            }
+
+            $tmpDir = sys_get_temp_dir() . '/pankhcms_plugin_' . uniqid();
+            if (!mkdir($tmpDir, 0755, true)) {
+                throw new \RuntimeException('Failed to create temporary directory.');
+            }
+            if (!$zip->extractTo($tmpDir)) {
+                throw new \RuntimeException('Failed to extract the zip archive.');
+            }
+
+            // The plugin root is the temp dir itself or its single subdir.
+            $entries = array_values(array_filter(scandir($tmpDir) ?: [], static fn ($e) => $e !== '.' && $e !== '..'));
+            if (is_file($tmpDir . '/plugin.json')) {
+                $pluginRoot = $tmpDir;
+            } elseif (count($entries) === 1 && is_dir($tmpDir . '/' . $entries[0]) && is_file($tmpDir . '/' . $entries[0] . '/plugin.json')) {
+                $pluginRoot = $tmpDir . '/' . $entries[0];
+            } else {
+                throw new \RuntimeException('The zip archive must contain a plugin.json manifest.');
+            }
+
+            $meta = json_decode((string) file_get_contents($pluginRoot . '/plugin.json'), true);
+            $slug = is_array($meta) ? (string) ($meta['slug'] ?? '') : '';
+            if (!self::isValidSlug($slug)) {
+                throw new \RuntimeException('The plugin manifest has a missing or invalid slug.');
+            }
+
+            $target = realpath(self::getPluginDir()) . DIRECTORY_SEPARATOR . $slug;
+            if (file_exists($target)) {
+                throw new \RuntimeException('A plugin directory with this slug already exists.');
+            }
+
+            if (!@rename($pluginRoot, $target)) {
+                throw new \RuntimeException('Failed to move the plugin into place.');
+            }
+
+            return $slug;
+        } finally {
+            $zip->close();
+            if ($tmpDir !== null && is_dir($tmpDir)) {
+                self::deleteDirectory($tmpDir);
+            }
+        }
+    }
+
+    private static function deleteDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) return;
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $file) {
+            $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname());
+        }
+        @rmdir($dir);
+    }
+
     public static function instances(): array
     {
         return self::$instances;

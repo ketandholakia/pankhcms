@@ -90,16 +90,11 @@ class PluginController
             \Flight::redirect('/admin/plugins');
             return;
         }
-        $zipPath = $_FILES['plugin_zip']['tmp_name'];
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath) === TRUE) {
-            $pluginDir = __DIR__ . '/../../../plugins';
-            $extractTo = $pluginDir;
-            $zip->extractTo($extractTo);
-            $zip->close();
-            $_SESSION['plugin_flash'] = 'Plugin uploaded.';
-        } else {
-            $_SESSION['plugin_flash'] = 'Invalid zip file.';
+        try {
+            $slug = \PluginManager::installFromZip($_FILES['plugin_zip']['tmp_name']);
+            $_SESSION['plugin_flash'] = 'Plugin uploaded: ' . $slug;
+        } catch (\RuntimeException $e) {
+            $_SESSION['plugin_flash'] = 'Plugin upload rejected: ' . $e->getMessage();
         }
         \Flight::redirect('/admin/plugins');
     }
