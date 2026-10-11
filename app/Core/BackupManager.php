@@ -81,6 +81,165 @@ class BackupManager
     }
 
     /* =========================================================
+       RESTORE (database only)
+       ========================================================= */
+
+    /**
+     * Restore the database from a backup ZIP.
+     *
+     * Every ZIP entry name is validated (no absolute paths, no "..", no
+     * backslashes), backup.json must identify a PankhCMS archive, and the
+     * archive must contain the database file for the configured driver.
+     * Maintenance mode is enabled for the duration of the restore.
+     *
+     * Only the database is restored; uploaded files and themes are left
+     * untouched on purpose.
+     */
+    public function restoreFromZip(string $zipPath): void
+    {
+        if (!class_exists('ZipArchive')) {
+            throw new RuntimeException('The PHP zip extension is required for restore.');
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            throw new RuntimeException('Cannot open backup ZIP.');
+        }
+
+        try {
+            $names = [];
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = (string) $zip->getNameIndex($i);
+                if ($name === '' || str_contains($name, '\\') || str_starts_with($name, '/')
+                    || preg_match('#^[A-Za-z]:#', $name) === 1) {
+                    throw new RuntimeException('Invalid entry name in backup ZIP.');
+                }
+                foreach (explode('/', $name) as $part) {
+                    if ($part === '..') {
+                        throw new RuntimeException('Path traversal in backup ZIP is not allowed.');
+                    }
+                }
+                $names[] = $name;
+            }
+
+            if (!in_array('backup.json', $names, true)) {
+                throw new RuntimeException('backup.json is missing from the backup.');
+            }
+
+            $meta = json_decode((string) $zip->getFromName('backup.json'), true);
+            if (!is_array($meta) || ($meta['cms'] ?? '') !== 'PankhCMS') {
+                throw new RuntimeException('This does not look like a PankhCMS backup.');
+            }
+
+            $driver = $this->dbConfig['driver'] ?? 'sqlite';
+            $entry = $driver === 'sqlite' ? 'database.sqlite' : 'database.sql';
+            if (!in_array($entry, $names, true)) {
+                throw new RuntimeException("The backup does not contain a $entry for the current database driver.");
+            }
+
+            $this->setMaintenance(true);
+
+            try {
+                if ($driver === 'sqlite') {
+                    $this->restoreSqlite((string) $zip->getFromName($entry));
+                } elseif ($driver === 'mysql') {
+                    $this->restoreMysql((string) $zip->getFromName($entry));
+                } else {
+                    throw new RuntimeException('Unsupported database driver: ' . $driver);
+                }
+            } finally {
+                $this->setMaintenance(false);
+            }
+        } finally {
+            $zip->close();
+        }
+    }
+
+    private function restoreSqlite(string $snapshot): void
+    {
+        $path = $this->dbConfig['database'] ?? '';
+        if ($path === '' || $path === ':memory:') {
+            throw new RuntimeException('SQLite restore needs a file-backed database.');
+        }
+
+        // A valid snapshot must start with the SQLite magic header.
+        if (substr($snapshot, 0, 15) !== 'SQLite format 3') {
+            throw new RuntimeException('The database snapshot is not a valid SQLite file.');
+        }
+
+        $dbDir = dirname($path);
+        if (!is_dir($dbDir)) {
+            @mkdir($dbDir, 0775, true);
+        }
+
+        // Release the open handle so the file can be replaced; the next
+        // query reconnects automatically. Only if Capsule is actually
+        // using this database (disconnecting an unrelated connection —
+        // e.g. an in-memory test database — would wipe it).
+        if (class_exists('Illuminate\Database\Capsule\Manager')) {
+            try {
+                $connection = \Illuminate\Database\Capsule\Manager::connection();
+                if ($connection !== null && ($connection->getConfig('database') ?? '') === $path) {
+                    $connection->disconnect();
+                }
+            } catch (\Throwable $e) {
+                // No active connection is fine.
+            }
+        }
+
+        $tmp = $path . '.restore-' . uniqid();
+        if (file_put_contents($tmp, $snapshot) === false || !rename($tmp, $path)) {
+            @unlink($tmp);
+            throw new RuntimeException('Failed to write the restored database file.');
+        }
+    }
+
+    private function restoreMysql(string $dump): void
+    {
+        if (trim($dump) === '') {
+            throw new RuntimeException('The backup contains an empty database dump.');
+        }
+
+        $dsn = sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+            $this->dbConfig['host'] ?? '127.0.0.1',
+            $this->dbConfig['port'] ?? '3306',
+            $this->dbConfig['database'] ?? ''
+        );
+
+        $pdo = new PDO($dsn, (string) ($this->dbConfig['username'] ?? ''), (string) ($this->dbConfig['password'] ?? ''), [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::MYSQL_ATTR_MULTI_STATEMENTS => true,
+        ]);
+
+        // The dump was produced by backupMysql() with FOREIGN_KEY_CHECKS=0.
+        $pdo->exec($dump);
+        $pdo = null;
+    }
+
+    private function setMaintenance(bool $on): void
+    {
+        try {
+            if (!class_exists('Illuminate\Database\Capsule\Manager')) {
+                return;
+            }
+            $capsule = 'Illuminate\Database\Capsule\Manager';
+            if (!$capsule::schema()->hasTable('settings')) {
+                return;
+            }
+            $capsule::table('settings')->updateOrInsert(
+                ['key' => 'maintenance_mode'],
+                ['value' => $on ? '1' : '0']
+            );
+            if (function_exists('setting_cache_clear')) {
+                setting_cache_clear();
+            }
+        } catch (\Throwable $e) {
+            // Maintenance flagging is best-effort; restore continues.
+        }
+    }
+
+    /* =========================================================
        DATABASE
        ========================================================= */
 
@@ -89,7 +248,7 @@ class BackupManager
         $driver = $this->dbConfig['driver'] ?? 'sqlite';
 
         if ($driver === 'sqlite') {
-            $this->backupSqlite($targetDir . '/database.sql');
+            $this->backupSqlite($targetDir . '/database.sqlite');
             return;
         }
 
@@ -102,8 +261,9 @@ class BackupManager
     }
 
     /**
-     * SQLite dump via VACUUM INTO (consistent snapshot, safe while the
-     * database is in use).
+     * SQLite backup via VACUUM INTO (consistent snapshot, safe while the
+     * database is in use). The snapshot is stored verbatim as a binary
+     * SQLite database file — prepending anything would corrupt the header.
      */
     private function backupSqlite(string $targetFile): void
     {
@@ -115,11 +275,6 @@ class BackupManager
         $pdo = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $quoted = str_replace("'", "''", $targetFile);
         $pdo->exec("VACUUM INTO '$quoted'");
-
-        $sql = "-- PankhCMS SQLite backup (" . date('c') . ")\n"
-            . "-- Original file: " . $path . "\n"
-            . "-- Restored by copying this file over the database file.\n";
-        file_put_contents($targetFile, $sql . file_get_contents($targetFile));
         $pdo = null;
     }
 

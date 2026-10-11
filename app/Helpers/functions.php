@@ -546,6 +546,19 @@ if (!function_exists('setting_cache_clear')) {
     }
 }
 
+if (!function_exists('setting_cache_reset')) {
+    /**
+     * Drop the in-memory settings snapshot (and the disk cache) so the
+     * next setting() call re-reads from the database. Long-running CLI
+     * scripts and tests need this after settings change underneath them.
+     */
+    function setting_cache_reset(): void
+    {
+        setting_cache_clear();
+        unset($GLOBALS['_pankhcms_settings_cache']);
+    }
+}
+
 if (!function_exists('setting_cache_read')) {
     function setting_cache_read(): ?array
     {
@@ -593,9 +606,10 @@ if (!function_exists('setting_cache_write')) {
 if (!function_exists('setting')) {
     function setting(string $key, $default = null)
     {
-        static $settings = [];
-
-        if (empty($settings)) {
+        // The snapshot lives in $GLOBALS so setting_cache_reset() can drop
+        // it (a function static cannot be cleared from outside).
+        $settings = $GLOBALS['_pankhcms_settings_cache'] ?? null;
+        if (!is_array($settings) || $settings === []) {
             try {
                 $cached = setting_cache_read();
                 if (is_array($cached)) {
@@ -605,6 +619,7 @@ if (!function_exists('setting')) {
                     setting_cache_write($settings);
                 }
             } catch (\Throwable $e) { /* Settings table not ready */ }
+            $GLOBALS['_pankhcms_settings_cache'] = $settings;
         }
 
         return $settings[$key] ?? $default;

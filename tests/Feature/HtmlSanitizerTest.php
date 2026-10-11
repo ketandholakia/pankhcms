@@ -76,6 +76,7 @@ class HtmlSanitizerTest extends TestCase
             ['key' => 'test_block_setting'],
             ['value' => 'WidgetCorp <b>bold</b>']
         );
+        setting_cache_reset(); // the snapshot may predate this key
 
         $out = render_string_block('<p>Welcome to {{ setting(\'test_block_setting\') }}</p><script>alert(1)</script>');
         // Placeholder substituted, HTML-escaped
@@ -84,6 +85,7 @@ class HtmlSanitizerTest extends TestCase
         $this->assertStringNotContainsString('<script', strtolower($out));
 
         \Illuminate\Database\Capsule\Manager::table('settings')->where('key', 'test_block_setting')->delete();
+        setting_cache_reset();
     }
 
     public function test_render_string_block_does_not_execute_blade_directives()

@@ -79,4 +79,55 @@ class BackupController
 
         Flight::redirect('/admin/backups');
     }
+
+    /**
+     * Confirmation page for restoring a backup (database only).
+     */
+    public function restorePage()
+    {
+        $filename = basename((string) ($_GET['file'] ?? ''));
+        $file = $this->backupDir . $filename;
+
+        if ($filename === '' || !is_file($file)) {
+            Flight::redirect('/admin/backups?error=backup_not_found');
+            return;
+        }
+
+        echo Flight::get('blade')->render('admin.backups.restore', ['filename' => $filename]);
+    }
+
+    /**
+     * Restore the database from the given backup after explicit
+     * confirmation. Maintenance mode is enabled by the manager for the
+     * duration of the restore.
+     */
+    public function restore()
+    {
+        $filename = basename((string) ($_POST['file'] ?? ''));
+        $file = $this->backupDir . $filename;
+
+        if ($filename === '' || !is_file($file)) {
+            Flight::redirect('/admin/backups?error=backup_not_found');
+            return;
+        }
+
+        if (($_POST['confirm'] ?? '') !== 'yes') {
+            Flight::redirect('/admin/backups/restore?file=' . urlencode($filename) . '&error=confirm');
+            return;
+        }
+
+        $config = require dirname(__DIR__, 3) . '/config/database.php';
+
+        try {
+            $manager = new BackupManager(
+                $config['connections'][$config['default']]
+            );
+            $manager->restoreFromZip($file);
+
+            Flight::redirect('/admin/backups?status=restored');
+        } catch (\Throwable $e) {
+            error_log('Backup restore failed: ' . $e->getMessage());
+            Flight::redirect('/admin/backups/restore?file=' . urlencode($filename) . '&error=restore_failed');
+        }
+    }
 }
