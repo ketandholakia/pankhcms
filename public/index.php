@@ -58,6 +58,67 @@ if (!$isAdminPath && !$isInstallPath && !$isStaticAssetPath) {
     }
 }
 
+// Security headers on every response.
+\Flight::before('start', function () {
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    if ($isHttps) {
+        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    }
+
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    if (str_contains($path, '/admin')) {
+        // Conservative CSP for the admin panel. 'unsafe-inline' is needed
+        // by the bundled TinyMCE editor and the inline admin views; site
+        // pages are left alone because themes embed third-party assets.
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'");
+    }
+});
+
+// Exceptions: log to storage/logs and show a generic 500 page. Full
+// details are printed only when config/app.php debug (APP_DEBUG) is true.
+\Flight::map('error', function (Throwable $e) {
+    $logDir = dirname(__DIR__) . '/storage/logs';
+    if (!is_dir($logDir)) {
+        @mkdir($logDir, 0775, true);
+    }
+    $entry = sprintf(
+        "[%s] %s: %s in %s:%d\n%s\n\n",
+        date('c'),
+        get_class($e),
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine(),
+        $e->getTraceAsString()
+    );
+    @file_put_contents($logDir . '/error-' . date('Y-m-d') . '.log', $entry, FILE_APPEND | LOCK_EX);
+
+    $config = \Flight::get('config') ?? [];
+    $debug = !empty($config['debug']);
+
+    try {
+        \Flight::response()
+            ->cache(0)
+            ->clearBody()
+            ->status(500)
+            ->write($debug
+                ? '<h1>500 — Server error</h1><pre>' . htmlspecialchars((string) $e, ENT_QUOTES, 'UTF-8') . '</pre>'
+                : '<!DOCTYPE html><html><head><title>Server error</title></head>'
+                    . '<body style="font-family:sans-serif;text-align:center;padding-top:80px">'
+                    . '<h1>Something went wrong</h1>'
+                    . '<p>The server encountered an unexpected error. Please try again later.</p>'
+                    . '</body></html>')
+            ->send();
+    } catch (\Throwable $t) {
+        http_response_code(500);
+        echo $debug ? (string) $e : 'Internal server error.';
+    }
+    exit;
+});
+
 \Flight::before('start', function() { \App\Middleware\PageCache::before(); });
 \Flight::after('start', function() { \App\Middleware\PageCache::after(); });
 \Flight::start();
