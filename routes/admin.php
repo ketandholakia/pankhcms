@@ -47,8 +47,6 @@ Flight::route('GET /admin/backups', ['App\Controllers\Admin\BackupController', '
 Flight::route('POST /admin/backups/create', ['App\Controllers\Admin\BackupController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
 Flight::route('GET /admin/backups/download/@filename', ['App\Controllers\Admin\BackupController', 'download'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
 Flight::route('POST /admin/backups/delete/@filename', ['App\Controllers\Admin\BackupController', 'delete'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
-Flight::route('GET /admin/backups/restore', ['App\Controllers\Admin\BackupController', 'restorePage'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
-Flight::route('POST /admin/backups/restore', ['App\Controllers\Admin\BackupController', 'restore'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
 
 
 // =========================

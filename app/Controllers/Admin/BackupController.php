@@ -79,7 +79,4 @@ class BackupController
 
         Flight::redirect('/admin/backups');
     }
-
-    public function restorePage() {}
-    public function restore() {}
 }
