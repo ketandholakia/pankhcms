@@ -297,10 +297,13 @@ class PageController
         }
 
         if (empty($errors)) {
-            $data['content_json'] = $this->mergeCustomFieldsIntoContentJson(
+            $contentJson = $this->mergeCustomFieldsIntoContentJson(
                 (string) ($data['content_json'] ?? '[]'),
                 (array) ($raw['custom_fields'] ?? [])
             );
+
+            // Strip unsafe HTML from block content before it is stored.
+            $data['content_json'] = \App\Core\HtmlSanitizer::sanitizeBlocksJson($contentJson);
         }
 
         return $errors ? ['errors' => $errors] : $data;
@@ -346,7 +349,9 @@ class PageController
             $blocks = array_values($blocks);
         }
 
-        return json_encode($blocks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
+        // JSON_UNESCAPED_SLASHES is deliberately NOT used: escaped forward
+        // slashes keep "</script>" sequences from surviving into output.
+        return json_encode($blocks, JSON_UNESCAPED_UNICODE) ?: '[]';
     }
 
     /**

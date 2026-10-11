@@ -92,6 +92,34 @@ class HtmlSanitizer
         return trim($out);
     }
 
+    /**
+     * Sanitize the rich-text fields ('html', 'text') of a content_blocks
+     * JSON document. Non-string values and other keys pass through.
+     * The JSON is re-encoded WITHOUT JSON_UNESCAPED_SLASHES so forward
+     * slashes (e.g. "</script>") are emitted as "<\/script>".
+     */
+    public static function sanitizeBlocksJson(string $json): string
+    {
+        $blocks = json_decode($json, true);
+        if (!is_array($blocks)) {
+            return '[]';
+        }
+
+        $walk = function (array &$arr) use (&$walk): void {
+            foreach ($arr as $key => &$value) {
+                if (is_array($value)) {
+                    $walk($value);
+                } elseif (is_string($value) && in_array($key, ['html', 'text'], true)) {
+                    $value = self::sanitize($value);
+                }
+            }
+            unset($value);
+        };
+        $walk($blocks);
+
+        return json_encode($blocks, JSON_UNESCAPED_UNICODE) ?: '[]';
+    }
+
     private static function sanitizeNode(\DOMNode $node): void
     {
         if ($node->nodeType === XML_COMMENT_NODE) {

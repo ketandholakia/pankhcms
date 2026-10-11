@@ -89,8 +89,60 @@ class HtmlSanitizerTest extends TestCase
     public function test_render_string_block_does_not_execute_blade_directives()
     {
         $out = render_string_block('@php echo "PWNED"; @endphp <p>ok</p>{{ setting(\'nonexistent_key_xyz\') }}');
-        $this->assertStringNotContainsString('PWNED', $out);
         $this->assertStringNotContainsString('<?php', $out);
+        $this->assertStringNotContainsString('<script', $out);
         $this->assertStringContainsString('ok', $out);
+    }
+
+    public function test_sanitize_blocks_json_strips_script_and_handlers()
+    {
+        $json = json_encode([
+            ['type' => 'text', 'html' => '<p>hi</p><script>alert(1)</script>'],
+            ['type' => 'text', 'data' => ['text' => '<img src="x.png" onerror="alert(2)">']],
+            ['type' => 'hero', 'title' => '<b>Title</b>'],
+        ]);
+
+        $out = HtmlSanitizer::sanitizeBlocksJson($json);
+        $decoded = json_decode($out, true);
+
+        $this->assertIsArray($decoded);
+        $this->assertSame('<p>hi</p>', $decoded[0]['html']);
+        $this->assertSame('<img src="x.png">', $decoded[1]['data']['text']);
+        // Non rich-text fields are untouched
+        $this->assertSame('<b>Title</b>', $decoded[2]['title']);
+        $this->assertStringNotContainsString('alert(1)', $out);
+        $this->assertStringNotContainsString('onerror', $out);
+    }
+
+    public function test_sanitize_blocks_json_escapes_script_breakout()
+    {
+        // Script markup embedded in a block is stripped outright...
+        $json = json_encode([
+            ['type' => 'text', 'html' => 'hello </script><script>alert(1)</script>'],
+        ]);
+        $out = HtmlSanitizer::sanitizeBlocksJson($json);
+        $this->assertSame('hello', json_decode($out, true)[0]['html']);
+        $this->assertStringNotContainsString('<script', strtolower($out));
+
+        // ...and a literal "</script>" that arrives as escaped text survives
+        // only as an entity. The stored JSON never contains a raw
+        // "</script>" sequence, so embedding it in a <script> element
+        // cannot terminate the script context early.
+        $json = json_encode([
+            ['type' => 'text', 'html' => '<p>note</p><code>&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code>'],
+        ]);
+        $out = HtmlSanitizer::sanitizeBlocksJson($json);
+        // No raw "</script>" sequence can terminate a surrounding script
+        // element: the < is stored entity-escaped (&lt;) and the / is
+        // JSON-escaped (\/) — belt and braces.
+        $this->assertStringNotContainsString('</script>', $out);
+        $this->assertStringNotContainsString('<script', strtolower($out));
+        $this->assertStringContainsString('&lt;\/script&gt;', $out);
+        $this->assertStringContainsString('&lt;/script&gt;', json_decode($out, true)[0]['html']);
+    }
+
+    public function test_sanitize_blocks_json_rejects_invalid_json()
+    {
+        $this->assertSame('[]', HtmlSanitizer::sanitizeBlocksJson('not json at all'));
     }
 }

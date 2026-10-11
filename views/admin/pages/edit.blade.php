@@ -717,7 +717,14 @@ function saveTemplate() {
   });
 }
 
-blocks = sanitizeBlocks({!! $page->content_json ?: '[]' !!});
+// content_json is emitted as a JSON-encoded JS string with <, >, &, ' and "
+// hex-escaped so a "</script>" sequence inside page data cannot terminate
+// this script element. JSON.parse returns the block array.
+try {
+    blocks = sanitizeBlocks(JSON.parse({!! json_encode($page->content_json ?: '[]', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}));
+} catch (e) {
+    blocks = [];
+}
 render();
 renderCustomFields();
 </script>
