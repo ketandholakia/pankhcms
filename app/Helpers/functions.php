@@ -91,6 +91,17 @@ if (!function_exists("generate_slug")) {
     }
 }
 
+if (!function_exists('sanitize_html')) {
+    /**
+     * Sanitize untrusted HTML with an allowlist (no scripts, no event
+     * handlers, only http/https/mailto/tel URLs).
+     */
+    function sanitize_html(string $html): string
+    {
+        return \App\Core\HtmlSanitizer::sanitize($html);
+    }
+}
+
 if (!function_exists('client_ip')) {
     function client_ip(): string
     {

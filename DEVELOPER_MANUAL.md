@@ -115,6 +115,8 @@ PankhCMS is heavily focused on security. Any code you write (core or plugin) mus
 - **Session Hardening:** Rely on the core `session_init()` helper to enforce secure session settings (e.g., `SameSite=Lax`, strict mode).
 - **Rate Limiting:** Protect sensitive endpoints (like login forms) with rate limiting and exponential backoff mechanisms.
 - **Input/Output:** Validate all incoming input. Escape output in Blade templates using `{{ $var }}` (which runs `htmlspecialchars`). Use `{!! $var !!}` ONLY when you are absolutely certain the HTML is safe and sanitized.
+- **HTML Sanitization:** All untrusted rich-text HTML (page blocks, global blocks, contact fields that render as HTML) must pass through `sanitize_html()` / `App\Core\HtmlSanitizer` — an allowlist sanitizer that strips scripts, event handlers, and unsafe URL schemes (only `http`, `https`, `mailto`, `tel` and relative URLs survive). It runs automatically when page and global-block content is saved in the admin.
+- **No eval():** Global blocks are NOT compiled as Blade. Block content stored as a string is rendered through `render_string_block()`, which supports a small placeholder whitelist — `{{ setting('key') }}` — and sanitizes the result. Raw PHP, `@php` blocks, `@include` and other Blade directives in block content are never executed.
 
 ---
 

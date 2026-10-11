@@ -26,6 +26,32 @@ if (!function_exists('blocks')) {
     }
 }
 
+if (!function_exists('render_string_block')) {
+    /**
+     * Render a string block without Blade/eval. Supports a small whitelist
+     * of placeholders — {{ setting('key') }} — and returns sanitized HTML.
+     * Raw PHP, @php blocks, @include and other Blade directives are NOT
+     * executed; they are stripped by the sanitizer.
+     */
+    function render_string_block(string $content): string
+    {
+        // Strip Blade directives and raw PHP — block content is never compiled.
+        $content = preg_replace('/@php\b.*?@endphp/s', '', $content) ?? $content;
+        $content = preg_replace('/@php\b/', '', $content) ?? $content;
+        $content = preg_replace('/@include\([^)]*\)/', '', $content) ?? $content;
+
+        $html = preg_replace_callback(
+            '/\{\{\s*setting\(\s*([\'"])([a-zA-Z0-9_.\-]+)\1\s*\)\s*\}\}/',
+            static function ($m) {
+                return htmlspecialchars((string) setting($m[2], ''), ENT_QUOTES, 'UTF-8');
+            },
+            $content
+        ) ?? $content;
+
+        return sanitize_html($html);
+    }
+}
+
 if (!function_exists('blocks_html')) {
     /**
      * Render active global blocks for a location into HTML.
@@ -42,29 +68,11 @@ if (!function_exists('blocks_html')) {
 
             $content = $block->content ?? [];
             if (!is_array($content)) {
-                // Many installs store raw HTML/Blade in `content` as a string.
-                // Compile any Blade tags in the content so helpers like `setting()`
-                // and `menu()` are executed. Fall back to raw content on error.
-                $compiledContent = $content;
-                try {
-                    $blade = \Flight::get('blade');
-                    $compiler = $blade->getContainer()['blade.compiler'];
-                    $php = $compiler->compileString($content);
-                    $__env = $blade->getContainer()['view'];
-                    ob_start();
-                    try {
-                        eval('?>' . $php);
-                        $compiledContent = ob_get_clean();
-                    } catch (Throwable $e) {
-                        ob_end_clean();
-                        throw $e;
-                    }
-                } catch (Throwable $e) {
-                    // keep original content
-                }
-
+                // Many installs store raw HTML in `content` as a string.
+                // It is rendered through the placeholder whitelist and the
+                // allowlist sanitizer — never compiled as Blade.
                 $renderData = [
-                    'text' => $compiledContent,
+                    'text' => render_string_block((string) $content),
                     'title' => $block->title ?? '',
                     'show_title' => $block->show_title ?? true,
                     'block' => $block
@@ -76,6 +84,13 @@ if (!function_exists('blocks_html')) {
                     $content['data']['show_title'] = $block->show_title ?? true;
                 } else {
                     $content['data']['show_title'] = $content['data']['show_title'] ?? ($block->show_title ?? true);
+                }
+                // Rich-text fields stored as arrays are sanitized at render
+                // time as well (blocks may predate the save-time sanitizer).
+                foreach (['text', 'html'] as $field) {
+                    if (isset($content['data'][$field]) && is_string($content['data'][$field])) {
+                        $content['data'][$field] = sanitize_html($content['data'][$field]);
+                    }
                 }
                 $html .= render_block($type, $content);
             }
