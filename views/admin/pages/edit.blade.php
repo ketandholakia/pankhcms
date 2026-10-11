@@ -474,6 +474,7 @@ function initTinyMCEEditors() {
 
   document.querySelectorAll('.wysiwyg-text-block').forEach((textarea) => {
     tinymce.init({
+      license_key: 'gpl', // GPL-licensed self-hosted build
       target: textarea,
       menubar: false,
       branding: false,
