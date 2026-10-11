@@ -67,6 +67,49 @@ PHP;
         $this->assertEquals('Test', $plugins['test-plugin']['name']);
     }
 
+    public function test_uninstall_rejects_path_traversal_and_deletes_nothing()
+    {
+        // A directory outside plugins/ that a traversal attempt would target
+        $outsideDir = dirname($this->pluginDir, 2) . '/storage/outside-target';
+        if (!is_dir($outsideDir)) {
+            mkdir($outsideDir, 0777, true);
+        }
+        file_put_contents($outsideDir . '/keep.txt', 'must survive');
+
+        $this->assertFalse(PluginManager::uninstall('../storage/outside-target'));
+        $this->assertFalse(PluginManager::uninstall('..%2F..%2Fetc'));
+        $this->assertFalse(PluginManager::uninstall('TestPlugin')); // valid dir name, not a discovered slug
+        $this->assertFalse(PluginManager::uninstall('nonexistent-plugin'));
+
+        $this->assertFileExists($outsideDir . '/keep.txt');
+        $this->assertTrue(is_dir($outsideDir));
+
+        // The real test plugin must be untouched too
+        $this->assertFileExists($this->pluginDir . '/plugin.json');
+
+        @unlink($outsideDir . '/keep.txt');
+        @rmdir($outsideDir);
+    }
+
+    public function test_uninstall_removes_discovered_plugin()
+    {
+        $this->assertTrue(PluginManager::activate('test-plugin'));
+        $this->assertTrue(PluginManager::uninstall('test-plugin'));
+        $this->assertFileDoesNotExist($this->pluginDir . '/plugin.json');
+        $this->assertFileDoesNotExist($this->pluginDir . '/Plugin.php');
+        $this->assertFalse(is_dir($this->pluginDir));
+    }
+
+    public function test_slug_validation()
+    {
+        $this->assertTrue(PluginManager::isValidSlug('test-plugin'));
+        $this->assertTrue(PluginManager::isValidSlug('a_1'));
+        $this->assertFalse(PluginManager::isValidSlug('../evil'));
+        $this->assertFalse(PluginManager::isValidSlug('Evil'));
+        $this->assertFalse(PluginManager::isValidSlug(''));
+        $this->assertFalse(PluginManager::isValidSlug('a/b'));
+    }
+
     public function test_activate_and_deactivate_plugin()
     {
         $this->assertTrue(PluginManager::activate('test-plugin'));

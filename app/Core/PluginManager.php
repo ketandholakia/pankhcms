@@ -9,6 +9,42 @@ class PluginManager
         return __DIR__ . '/../../plugins';
     }
 
+    /**
+     * Slugs are used as directory names; only allow a safe subset.
+     */
+    public static function isValidSlug(string $slug): bool
+    {
+        return $slug !== '' && preg_match('/^[a-z0-9_-]+$/', $slug) === 1;
+    }
+
+    /**
+     * Resolve the real directory for a slug, refusing anything that is not
+     * a discovered plugin or that resolves outside the plugins directory.
+     */
+    public static function getPluginDirForSlug(string $slug): ?string
+    {
+        if (!self::isValidSlug($slug)) {
+            return null;
+        }
+
+        $all = self::discoverAll();
+        if (!isset($all[$slug]['__dir'])) {
+            return null;
+        }
+
+        $realTarget = realpath($all[$slug]['__dir']);
+        $realRoot = realpath(self::getPluginDir());
+        if ($realTarget === false || $realRoot === false) {
+            return null;
+        }
+
+        if ($realTarget !== $realRoot && !str_starts_with($realTarget . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
+            return null;
+        }
+
+        return $realTarget;
+    }
+
     public static function discoverAll(): array
     {
         $pluginDir = self::getPluginDir();
@@ -67,6 +103,7 @@ class PluginManager
 
     public static function activate(string $slug)
     {
+        if (!self::isValidSlug($slug)) return false;
         $all = self::discoverAll();
         if (!isset($all[$slug])) return false;
         $meta = $all[$slug];
@@ -89,6 +126,7 @@ class PluginManager
 
     public static function deactivate(string $slug)
     {
+        if (!self::isValidSlug($slug)) return false;
         if (isset(self::$instances[$slug]) && method_exists(self::$instances[$slug], 'deactivate')) {
             self::$instances[$slug]->deactivate();
         }
@@ -102,17 +140,22 @@ class PluginManager
 
     public static function uninstall(string $slug)
     {
+        if (!self::isValidSlug($slug)) return false;
+
+        $pluginDir = self::getPluginDirForSlug($slug);
+        if ($pluginDir === null) return false;
+
         if (isset(self::$instances[$slug]) && method_exists(self::$instances[$slug], 'uninstall')) {
             self::$instances[$slug]->uninstall();
         }
-        $pluginDir = self::getPluginDir() . '/' . $slug;
+
         if (is_dir($pluginDir)) {
             $it = new RecursiveDirectoryIterator($pluginDir, FilesystemIterator::SKIP_DOTS);
             $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($files as $file) {
-                if ($file->isDir()) rmdir($file->getRealPath()); else unlink($file->getRealPath());
+                if ($file->isDir()) @rmdir($file->getRealPath()); else @unlink($file->getRealPath());
             }
-            rmdir($pluginDir);
+            @rmdir($pluginDir);
         }
         try {
             if (class_exists('Illuminate\\Database\\Capsule\\Manager') && \Illuminate\Database\Capsule\Manager::schema()->hasTable('plugins')) {

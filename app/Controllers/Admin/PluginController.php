@@ -55,7 +55,7 @@ class PluginController
         self::ensurePluginsTable();
 
         $slug = $_POST['slug'] ?? '';
-        if (!$slug) {
+        if (!\PluginManager::isValidSlug((string) $slug)) {
             $_SESSION['plugin_flash'] = 'Invalid plugin request.';
             \Flight::redirect('/admin/plugins');
             return;
@@ -119,7 +119,7 @@ class PluginController
         self::ensurePluginsTable();
 
         $slug = $_POST['slug'] ?? '';
-        if (!$slug) {
+        if (!\PluginManager::isValidSlug((string) $slug)) {
             $_SESSION['plugin_flash'] = 'Invalid plugin request.';
             \Flight::redirect('/admin/plugins');
             return;
