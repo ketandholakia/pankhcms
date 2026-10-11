@@ -1,4 +1,16 @@
 <?php
+if (!function_exists('base_path')) {
+    /**
+     * Return the base path of the project. Illuminate's SQLiteConnector
+     * may call this helper when resolving relative paths.
+     */
+    function base_path(string $path = ''): string
+    {
+        $base = dirname(__DIR__, 2);
+        return $path !== '' ? $base . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR) : $base;
+    }
+}
+
 if (!function_exists('build_menu_tree')) {
     function build_menu_tree($items, $parent = null)
     {

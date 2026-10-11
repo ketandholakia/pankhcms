@@ -199,7 +199,6 @@ class Bootstrap
         require_once dirname(__DIR__) . "/Helpers/functions.php";
         require_once dirname(__DIR__) . "/Helpers/menu.php";
         require_once dirname(__DIR__) . "/Helpers/breadcrumbs.php"; // New helper file
-        require_once dirname(__DIR__) . "/helpers.php";
         require_once dirname(__DIR__) . "/Helpers/global_blocks.php";
     }
 }
