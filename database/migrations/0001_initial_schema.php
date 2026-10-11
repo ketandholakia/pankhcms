@@ -90,11 +90,11 @@ if (!$schema->hasTable('content_types')) {
 if (!$schema->hasTable('menu_items')) {
     $schema->create('menu_items', function ($t) {
         $t->increments('id');
-        $t->integer('menu_id')->nullable();
+        $t->unsignedInteger('menu_id')->nullable();
         $t->integer('parent_id')->nullable();
         $t->string('title')->nullable();
         $t->string('url')->nullable();
-        $t->integer('page_id')->nullable();
+        $t->unsignedInteger('page_id')->nullable();
         $t->integer('sort_order')->default(0);
         $t->foreign('menu_id')->references('id')->on('menus')->onDelete('cascade');
         $t->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
@@ -103,8 +103,8 @@ if (!$schema->hasTable('menu_items')) {
 
 if (!$schema->hasTable('page_categories')) {
     $schema->create('page_categories', function ($t) {
-        $t->integer('page_id');
-        $t->integer('category_id');
+        $t->unsignedInteger('page_id');
+        $t->unsignedInteger('category_id');
         $t->primary(['page_id', 'category_id']);
         $t->foreign('page_id')->references('id')->on('pages')->onDelete('cascade');
         $t->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
@@ -113,8 +113,8 @@ if (!$schema->hasTable('page_categories')) {
 
 if (!$schema->hasTable('page_tags')) {
     $schema->create('page_tags', function ($t) {
-        $t->integer('page_id');
-        $t->integer('tag_id');
+        $t->unsignedInteger('page_id');
+        $t->unsignedInteger('tag_id');
         $t->primary(['page_id', 'tag_id']);
         $t->foreign('page_id')->references('id')->on('pages')->onDelete('cascade');
         $t->foreign('tag_id')->references('id')->on('tags')->onDelete('cascade');
@@ -146,8 +146,8 @@ if (!$schema->hasTable('permissions')) {
 
 if (!$schema->hasTable('role_permissions')) {
     $schema->create('role_permissions', function ($t) {
-        $t->integer('role_id');
-        $t->integer('permission_id');
+        $t->unsignedInteger('role_id');
+        $t->unsignedInteger('permission_id');
         $t->primary(['role_id', 'permission_id']);
         $t->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
         $t->foreign('permission_id')->references('id')->on('permissions')->onDelete('cascade');
@@ -156,8 +156,8 @@ if (!$schema->hasTable('role_permissions')) {
 
 if (!$schema->hasTable('user_roles')) {
     $schema->create('user_roles', function ($t) {
-        $t->integer('user_id');
-        $t->integer('role_id');
+        $t->unsignedInteger('user_id');
+        $t->unsignedInteger('role_id');
         $t->primary(['user_id', 'role_id']);
         $t->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         $t->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
@@ -174,7 +174,7 @@ if (!$schema->hasTable('settings')) {
 if (!$schema->hasTable('media')) {
     $schema->create('media', function ($t) {
         $t->increments('id');
-        $t->integer('page_id')->nullable();
+        $t->unsignedInteger('page_id')->nullable();
         $t->string('filename')->nullable();
         $t->text('path')->nullable();
         $t->string('mime')->nullable();
@@ -196,7 +196,7 @@ if (!$schema->hasTable('redirects')) {
 if (!$schema->hasTable('logs')) {
     $schema->create('logs', function ($t) {
         $t->increments('id');
-        $t->integer('user_id')->nullable();
+        $t->unsignedInteger('user_id')->nullable();
         $t->text('action')->nullable();
         $t->dateTime('created_at')->nullable();
         $t->foreign('user_id')->references('id')->on('users')->onDelete('set null');
@@ -242,7 +242,7 @@ if (!$schema->hasTable('global_blocks')) {
 if (!$schema->hasTable('block_placements')) {
     $schema->create('block_placements', function($t) {
         $t->increments('id');
-        $t->integer('global_block_id');
+        $t->unsignedInteger('global_block_id');
         $t->string('location');
         $t->integer('sort_order')->default(0);
         $t->boolean('active')->default(true);
@@ -253,7 +253,7 @@ if (!$schema->hasTable('block_placements')) {
 if (!$schema->hasTable('content_type_fields')) {
     $schema->create('content_type_fields', function ($t) {
         $t->increments('id');
-        $t->integer('content_type_id');
+        $t->unsignedInteger('content_type_id');
         $t->string('name');
         $t->string('slug');
         $t->string('type')->default('text'); // text, textarea, image, date, boolean
@@ -279,7 +279,7 @@ if (!$schema->hasTable('plugins')) {
 if (!$schema->hasTable('page_views')) {
     $schema->create('page_views', function($t) {
         $t->bigIncrements('id');
-        $t->integer('page_id')->nullable();
+        $t->unsignedInteger('page_id')->nullable();
         $t->string('path')->nullable();
         $t->string('source')->nullable();
         $t->text('referrer')->nullable();
