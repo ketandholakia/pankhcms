@@ -7,29 +7,8 @@ class PluginController
 {
     private const PLUGIN_UPLOADS_ENV = 'ENABLE_PLUGIN_UPLOADS';
 
-    protected static function ensurePluginsTable(): void
-    {
-        $schema = Capsule::schema();
-
-        if ($schema->hasTable('plugins')) {
-            return;
-        }
-
-        $schema->create('plugins', function ($t) {
-            $t->increments('id');
-            $t->string('slug')->unique();
-            $t->string('name');
-            $t->string('version')->default('1.0.0');
-            $t->integer('active')->default(0);
-            $t->dateTime('installed_at')->nullable();
-            $t->timestamps();
-        });
-    }
-
     public static function index()
     {
-        self::ensurePluginsTable();
-
         $plugins = [];
         $pluginDir = __DIR__ . '/../../../plugins';
         foreach (glob($pluginDir . '/*', GLOB_ONLYDIR) as $dir) {
@@ -52,8 +31,6 @@ class PluginController
 
     public static function toggle()
     {
-        self::ensurePluginsTable();
-
         $slug = $_POST['slug'] ?? '';
         if (!\PluginManager::isValidSlug((string) $slug)) {
             $_SESSION['plugin_flash'] = 'Invalid plugin request.';
@@ -77,8 +54,6 @@ class PluginController
 
     public static function upload()
     {
-        self::ensurePluginsTable();
-
         if (!self::pluginUploadsEnabled()) {
             $_SESSION['plugin_flash'] = 'Plugin ZIP uploads are disabled. Deploy plugins via version control or CLI.';
             \Flight::redirect('/admin/plugins');
@@ -111,8 +86,6 @@ class PluginController
 
     public static function uninstall()
     {
-        self::ensurePluginsTable();
-
         $slug = $_POST['slug'] ?? '';
         if (!\PluginManager::isValidSlug((string) $slug)) {
             $_SESSION['plugin_flash'] = 'Invalid plugin request.';

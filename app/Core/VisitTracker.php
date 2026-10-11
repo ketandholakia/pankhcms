@@ -7,22 +7,25 @@ use Throwable;
 
 class VisitTracker
 {
-    private static bool $tableChecked = false;
-
     public static function track(?int $pageId, string $path): void
     {
-        if (!self::ensureTable()) {
-            return;
-        }
-
         try {
             $referrer = (string) ($_SERVER['HTTP_REFERER'] ?? '');
             $source = self::detectSource($referrer);
             $ip = client_ip();
             $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
 
-            session_init();
-            $sessionId = session_id();
+            $sessionId = '';
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                $sessionId = session_id();
+            } else {
+                // Only read the session when a cookie is present; anonymous
+                // visitors without a session keep responses cacheable.
+                if (isset($_COOKIE[session_name()])) {
+                    session_init();
+                    $sessionId = session_id();
+                }
+            }
 
             DB::table('page_views')->insert([
                 'page_id' => $pageId,
@@ -36,54 +39,6 @@ class VisitTracker
             ]);
         } catch (Throwable $e) {
             // Keep public page rendering resilient.
-        }
-    }
-
-    private static function ensureTable(): bool
-    {
-        if (self::$tableChecked) {
-            return true;
-        }
-
-        try {
-            $schema = DB::schema();
-
-            if (!$schema->hasTable('page_views')) {
-                $schema->create('page_views', function ($table) {
-                    $table->bigIncrements('id');
-                    $table->integer('page_id')->nullable();
-                    $table->string('path')->nullable();
-                    $table->string('source')->nullable();
-                    $table->text('referrer')->nullable();
-                    $table->string('ip', 45)->nullable();
-                    $table->text('user_agent')->nullable();
-                    $table->string('session_id')->nullable();
-                    $table->dateTime('created_at')->nullable();
-                });
-
-                if ($schema->hasTable('pages')) {
-                    try {
-                        $schema->table('page_views', function ($table) {
-                            $table->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
-                        });
-                    } catch (Throwable $e) {
-                        // FK is optional; keep tracker working across DB engines.
-                    }
-                }
-
-                try {
-                    DB::connection()->statement('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at)');
-                    DB::connection()->statement('CREATE INDEX IF NOT EXISTS idx_page_views_page_id ON page_views(page_id)');
-                    DB::connection()->statement('CREATE INDEX IF NOT EXISTS idx_page_views_source ON page_views(source)');
-                } catch (Throwable $e) {
-                    // Index creation best effort.
-                }
-            }
-
-            self::$tableChecked = true;
-            return true;
-        } catch (Throwable $e) {
-            return false;
         }
     }
 

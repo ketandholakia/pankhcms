@@ -278,14 +278,40 @@ if (!$schema->hasTable('plugins')) {
 
 if (!$schema->hasTable('page_views')) {
     $schema->create('page_views', function($t) {
-        $t->increments('id');
-        $t->integer('page_id');
-        $t->string('ip_address')->nullable();
-        $t->string('user_agent')->nullable();
+        $t->bigIncrements('id');
+        $t->integer('page_id')->nullable();
+        $t->string('path')->nullable();
+        $t->string('source')->nullable();
+        $t->text('referrer')->nullable();
+        $t->string('ip', 45)->nullable();
+        $t->text('user_agent')->nullable();
         $t->string('session_id')->nullable();
-        $t->date('view_date');
+        $t->dateTime('created_at')->nullable();
+        $t->index(['page_id', 'created_at']);
+        $t->index(['created_at']);
+        $t->index(['source']);
+    });
+}
+
+// Tables used by the installer's demo content seeds.
+if (!$schema->hasTable('testimonials')) {
+    $schema->create('testimonials', function ($t) {
+        $t->increments('id');
+        $t->string('name')->nullable();
+        $t->string('company')->nullable();
+        $t->text('content')->nullable();
+        $t->string('status')->default('active');
         $t->timestamps();
-        $t->index(['page_id', 'view_date']);
+    });
+}
+
+if (!$schema->hasTable('product_gallery')) {
+    $schema->create('product_gallery', function ($t) {
+        $t->increments('id');
+        $t->integer('product_id');
+        $t->string('image_path')->nullable();
+        $t->string('caption')->nullable();
+        $t->integer('sort_order')->default(0);
     });
 }
 

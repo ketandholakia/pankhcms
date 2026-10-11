@@ -157,8 +157,6 @@ class AuthController
 
     protected static function issuePasswordResetToken(int $userId): string
     {
-        self::ensurePasswordResetTable();
-
         $plainToken = bin2hex(random_bytes(32));
 
         Capsule::table('password_resets')->where('user_id', $userId)->delete();
@@ -175,8 +173,6 @@ class AuthController
 
     protected static function findValidPasswordReset(string $email, string $plainToken): ?object
     {
-        self::ensurePasswordResetTable();
-
         $hashedToken = hash('sha256', $plainToken);
 
         return Capsule::table('password_resets')
@@ -186,25 +182,6 @@ class AuthController
             ->where('password_resets.expires_at', '>', date('Y-m-d H:i:s'))
             ->select('password_resets.*')
             ->first();
-    }
-
-    protected static function ensurePasswordResetTable(): void
-    {
-        $schema = Capsule::schema();
-
-        if ($schema->hasTable('password_resets')) {
-            return;
-        }
-
-        $schema->create('password_resets', function ($t) {
-            $t->increments('id');
-            $t->integer('user_id')->unsigned();
-            $t->string('token', 64)->unique();
-            $t->timestamp('expires_at');
-            $t->timestamps();
-
-            $t->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-        });
     }
 
     protected static function sendPasswordResetEmail(User $user, string $plainToken): void
