@@ -66,6 +66,7 @@ Flight::route('POST /admin/pages', ['App\Controllers\Admin\PageController', 'sto
 Flight::route('GET /admin/pages/@id/edit', ['App\Controllers\Admin\PageController', 'edit'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
 Flight::route('POST /admin/pages/@id', ['App\Controllers\Admin\PageController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
 Flight::route('POST /admin/pages/@id/update', ['App\Controllers\Admin\PageController', 'update'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
+Flight::route('POST /admin/pages/@id/delete', ['App\Controllers\Admin\PageController', 'destroy'])->addMiddleware([new \App\Middleware\RequirePermission('manage_pages')]);
 
 
 // Content Types

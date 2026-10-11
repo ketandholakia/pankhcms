@@ -25,16 +25,9 @@
       ];
   }
 
-  foreach (($categories ?? []) as $category) {
-      $loc = $base !== ''
-          ? $base . '/category/' . ltrim((string) ($category->slug ?? ''), '/')
-          : '/category/' . ltrim((string) ($category->slug ?? ''), '/');
-
-      $urls[] = [
-          'loc' => $loc,
-          'lastmod' => $category->updated_at ?? $category->created_at ?? null,
-      ];
-  }
+  // Category/tag archive URLs are intentionally NOT emitted: there are
+  // no /category/@slug or /tag/@slug public routes, so those URLs would
+  // return 404 to crawlers.
 @endphp
 @foreach($urls as $entry)
   @if(!empty($entry['loc']))
