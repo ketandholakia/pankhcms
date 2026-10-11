@@ -43,9 +43,9 @@
 			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">
 				Your current password is incorrect.
 			</div>
-		@elseif($status === 'password-too-short')
+		@elseif($status === 'password-policy')
 			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">
-				New password must be at least 8 characters long.
+				{{ urldecode($_GET['errors'] ?? 'New password does not meet the password policy.') }}
 			</div>
 		@elseif($status === 'password-mismatch')
 			<div class="rounded border border-red-300 bg-red-50 text-red-800 px-4 py-2 text-sm">

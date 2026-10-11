@@ -116,8 +116,11 @@ class UserController
             return;
         }
 
-        if (strlen($new) < 8) {
-            \Flight::redirect('/admin/profile?status=password-too-short');
+        // Same policy as the reset flow: 10+ chars with upper, lower,
+        // number and symbol.
+        $policyErrors = password_policy_errors($new);
+        if (!empty($policyErrors)) {
+            \Flight::redirect('/admin/profile?status=password-policy&errors=' . urlencode(implode(' ', $policyErrors)));
             return;
         }
 
