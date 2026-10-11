@@ -67,6 +67,38 @@ PankhCMS is a lightweight, simple, and extensible PHP Content Management System 
    ```
    Access the site at `http://127.0.0.1:8000` and the admin panel at `/admin`.
 
+## ⬆️ Upgrading an Existing Installation
+
+1. **Back up first.** Create a database backup in *Admin > Backups* (or via the CLI) and keep a copy of your `.env` and any custom theme files.
+2. Replace the application files (keep `.env`, `storage/`, `public/uploads/`, `themes/`, and `plugins/`).
+3. Run the migrations — they are idempotent and bring the schema and default roles/permissions up to date:
+   ```bash
+   php scripts/migrate.php
+   ```
+4. Clear the caches if views behave oddly:
+   ```bash
+   find storage/cache -type f ! -name '.gitignore' -delete
+   ```
+5. Log in and confirm the site and admin panel work. Never restore a backup into a newer schema without running `php scripts/migrate.php` afterwards.
+
+## 💾 Backups & Recovery
+
+- **Create:** *Admin > Backups* (full = database + uploads + themes; database-only) or `Admin\Core\BackupManager` via code. Backups are stored in `storage/backups/` as ZIP archives.
+- **Restore:** *Admin > Backups > Restore* restores the **database only** (uploads/themes are untouched) after explicit confirmation. A **recovery backup of the live database is taken automatically first**; if the restore fails, the database is returned to its pre-restore state. If the recovery itself fails, maintenance mode is switched on and `storage/backups/RESTORE-FAILED-*.txt` contains step-by-step operator instructions.
+- **Retention:** backups are kept until deleted in the admin UI — no automatic pruning. Delete old archives regularly, and exclude `storage/backups/` from your own backup jobs to avoid recursion.
+- **Analytics pruning:** `php scripts/prune-page-views.php` deletes page-view tracking rows older than 90 days (`--days=N` to override). Schedule it daily via cron.
+
+## 🚀 Deployment Checklist
+
+- **PHP 8.2+** with `pdo_sqlite` *or* `pdo_mysql`, `zip`, `fileinfo`, `mbstring`, `dom`, `openssl`; the web installer verifies all of these.
+- Run `composer install --no-dev --optimize-autoloader` on production.
+- `.env`: set `APP_DEBUG=false`, a correct `APP_URL`, and database credentials. Set `TRUSTED_PROXIES` (comma-separated IPs/CIDRs) only if PHP sits behind a reverse proxy — otherwise leave it empty.
+- Web-server-writable directories: `storage/` (cache, logs, backups) and `public/uploads/`.
+- Ensure `public/install/lock` exists after installation (the installer creates it) so the installer cannot be re-run.
+- Point the web server's document root at `public/`. Subdirectory deployments are supported — set `APP_URL` including the subdirectory path.
+- Error pages show a generic 500 in production; full exception details are written to `storage/logs/` (and only rendered when `APP_DEBUG=true`).
+- There are **no default admin credentials** — the administrator account is created by you during installation.
+
 ## 🔒 Security
 
 PankhCMS is built with security in mind, incorporating several protections:
