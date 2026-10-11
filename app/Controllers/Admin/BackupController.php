@@ -98,8 +98,10 @@ class BackupController
 
     /**
      * Restore the database from the given backup after explicit
-     * confirmation. Maintenance mode is enabled by the manager for the
-     * duration of the restore.
+     * confirmation. A verified recovery backup of the live database is
+     * taken first; if the restore fails, the database is automatically
+     * returned to its pre-restore state. Maintenance mode is enabled for
+     * the duration.
      */
     public function restore()
     {
@@ -122,7 +124,7 @@ class BackupController
             $manager = new BackupManager(
                 $config['connections'][$config['default']]
             );
-            $manager->restoreFromZip($file);
+            $manager->restoreFromZipWithRecovery($file);
 
             Flight::redirect('/admin/backups?status=restored');
         } catch (\Throwable $e) {

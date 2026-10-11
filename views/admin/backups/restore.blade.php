@@ -20,7 +20,9 @@
                 <code>{{ $filename }}</code>.</p>
             <p>All pages, users, settings and messages created after this backup will be lost.
                 Uploaded files and themes are not touched. Maintenance mode is enabled while
-                the restore runs.</p>
+                the restore runs. A recovery backup of the current database is taken first;
+                if the restore fails, the database is automatically returned to its
+                pre-restore state.</p>
         </div>
 
         <form method="POST" action="/admin/backups/restore">

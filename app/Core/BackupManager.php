@@ -107,6 +107,35 @@ class BackupManager
             throw new RuntimeException('The PHP zip extension is required for restore.');
         }
 
+        $validated = $this->validateBackupZip($zipPath);
+
+        $this->setMaintenance(true);
+
+        try {
+            if ($this->dbConfig['driver'] === 'sqlite') {
+                $this->restoreSqlite($validated['content']);
+            } elseif ($this->dbConfig['driver'] === 'mysql') {
+                $this->restoreMysql($validated['content']);
+            } else {
+                throw new RuntimeException('Unsupported database driver: ' . $this->dbConfig['driver']);
+            }
+        } finally {
+            $this->setMaintenance(false);
+        }
+    }
+
+    /**
+     * Validate a backup ZIP without touching any database. Returns the
+     * validated database entry name and its content.
+     *
+     * @return array{entry: string, content: string}
+     */
+    public function validateBackupZip(string $zipPath): array
+    {
+        if (!class_exists('ZipArchive')) {
+            throw new RuntimeException('The PHP zip extension is required for restore.');
+        }
+
         $zip = new ZipArchive();
         if ($zip->open($zipPath) !== true) {
             throw new RuntimeException('Cannot open backup ZIP.');
@@ -114,7 +143,6 @@ class BackupManager
 
         try {
             $names = [];
-            $entryIndex = false;
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $name = (string) $zip->getNameIndex($i);
                 if ($name === '' || str_contains($name, '\\') || str_starts_with($name, '/')
@@ -156,22 +184,130 @@ class BackupManager
                 throw new RuntimeException('The database entry in the backup is too large to restore.');
             }
 
-            $this->setMaintenance(true);
-
-            try {
-                if ($driver === 'sqlite') {
-                    $this->restoreSqlite((string) $zip->getFromName($entry));
-                } elseif ($driver === 'mysql') {
-                    $this->restoreMysql((string) $zip->getFromName($entry));
-                } else {
-                    throw new RuntimeException('Unsupported database driver: ' . $driver);
-                }
-            } finally {
-                $this->setMaintenance(false);
-            }
+            return ['entry' => $entry, 'content' => (string) $zip->getFromName($entry)];
         } finally {
             $zip->close();
         }
+    }
+
+    /**
+     * Restore with automatic recovery: immediately before restoring, a
+     * verified backup of the live database is taken; if the requested
+     * restore fails, that backup is restored to return the database to
+     * its pre-restore state.
+     *
+     * If the recovery attempt itself fails, maintenance mode is forced ON,
+     * an operator-instructions file is written next to the recovery archive
+     * (which is always kept), and both errors are logged and re-thrown.
+     *
+     * The restore is aborted up front — without touching the database —
+     * when a recovery backup cannot be created or verified.
+     */
+    public function restoreFromZipWithRecovery(string $zipPath): void
+    {
+        $label = basename($zipPath);
+
+        // The safety net must exist and be restorable BEFORE anything is
+        // modified. Both steps throw without database side effects.
+        try {
+            $recoveryPath = $this->createDatabaseBackup('Pre-restore recovery backup before restoring ' . $label);
+        } catch (\Throwable $e) {
+            throw new RuntimeException(
+                'Restore aborted: could not create a recovery backup of the current database ('
+                . $e->getMessage() . '). The database was not modified. Fix the database state or restore '
+                . 'manually by importing the database dump from the archive.',
+                0,
+                $e
+            );
+        }
+
+        try {
+            $this->validateBackupZip($recoveryPath);
+        } catch (\Throwable $e) {
+            throw new RuntimeException(
+                'Restore aborted: the recovery backup failed validation ('
+                . $e->getMessage() . '). The database was not modified. The recovery backup is kept at '
+                . basename($recoveryPath) . ' for manual inspection.',
+                0,
+                $e
+            );
+        }
+
+        try {
+            $this->restoreFromZip($zipPath);
+            return;
+        } catch (\Throwable $restoreError) {
+            error_log("BackupManager: restore of $label failed: " . $restoreError->getMessage()
+                . ' — attempting recovery from ' . basename($recoveryPath));
+
+            try {
+                $this->restoreFromZip($recoveryPath);
+            } catch (\Throwable $recoveryError) {
+                error_log("BackupManager: RECOVERY FAILED from " . basename($recoveryPath) . ': '
+                    . $recoveryError->getMessage() . ' — the database may be left in the partially '
+                    . 'restored state. Operator action required.');
+                $this->enableMaintenanceMode();
+                $this->writeRestoreFailureInstructions($zipPath, $recoveryPath, $restoreError, $recoveryError);
+
+                throw new RuntimeException(
+                    'Restore failed AND automatic recovery failed. The site is in maintenance mode. '
+                    . 'Recovery backup: ' . basename($recoveryPath)
+                    . ' (kept in storage/backups — download it and import the database dump manually). '
+                    . 'Original restore error: ' . $restoreError->getMessage()
+                    . ' | Recovery error: ' . $recoveryError->getMessage(),
+                    0,
+                    $recoveryError
+                );
+            }
+
+            error_log("BackupManager: database recovered to its pre-restore state from "
+                . basename($recoveryPath));
+            throw new RuntimeException(
+                'Restore failed; the database was recovered to its pre-restore state. '
+                . 'Original restore error: ' . $restoreError->getMessage(),
+                0,
+                $restoreError
+            );
+        }
+    }
+
+    /**
+     * Force maintenance mode on regardless of any previous state. Used
+     * when a restore fails and recovery fails: the site must not serve
+     * traffic against a partially restored database.
+     */
+    public function enableMaintenanceMode(): void
+    {
+        $this->setMaintenance(true);
+    }
+
+    private function writeRestoreFailureInstructions(string $requestedPath, string $recoveryPath, \Throwable $restoreError, \Throwable $recoveryError): void
+    {
+        $lines = [
+            'PankhCMS restore failure — operator action required',
+            'Date: ' . date('c'),
+            '',
+            'The requested restore failed AND the automatic recovery failed.',
+            'The database may be left in a partially restored state.',
+            'Maintenance mode is ON; the site is not serving traffic.',
+            '',
+            'Requested archive : ' . basename($requestedPath),
+            'Recovery archive  : ' . basename($recoveryPath) . ' (kept in storage/backups/)',
+            'Restore error     : ' . $restoreError->getMessage(),
+            'Recovery error    : ' . $recoveryError->getMessage(),
+            '',
+            'Recovery options:',
+            '1. Download the recovery archive from Admin > Backups and import the',
+            '   database dump manually (phpMyAdmin / mysql CLI for database.sql,',
+            '   or copy database.sqlite over the database file for SQLite).',
+            '2. When the database is healthy again, exit maintenance mode:',
+            '   UPDATE settings SET value = \'0\' WHERE `key` = \'maintenance_mode\';',
+            '   (or Admin > Settings) and delete this file.',
+        ];
+        @file_put_contents(
+            $this->backupDir . 'RESTORE-FAILED-' . date('Ymd-His') . '.txt',
+            implode("\n", $lines)
+        );
     }
 
     private function restoreSqlite(string $snapshot): void
