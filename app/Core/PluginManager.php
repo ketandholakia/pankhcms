@@ -244,7 +244,14 @@ class PluginManager
             }
 
             if (!@rename($pluginRoot, $target)) {
-                throw new \RuntimeException('Failed to move the plugin into place.');
+                // rename() cannot move between filesystems (e.g. /tmp on a
+                // different device than the project directory — EXDEV).
+                // Fall back to a recursive copy + delete of the source.
+                if (!@mkdir($target, 0755, true) && !is_dir($target)) {
+                    throw new \RuntimeException('Failed to move the plugin into place.');
+                }
+                self::copyDirectoryRecursive($pluginRoot, $target);
+                self::deleteDirectory($pluginRoot);
             }
 
             return $slug;
@@ -252,6 +259,28 @@ class PluginManager
             $zip->close();
             if ($tmpDir !== null && is_dir($tmpDir)) {
                 self::deleteDirectory($tmpDir);
+            }
+        }
+    }
+
+    private static function copyDirectoryRecursive(string $src, string $dst): void
+    {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($src, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($it as $file) {
+            $target = $dst . '/' . $it->getSubPathName();
+            if ($file->isDir()) {
+                @mkdir($target, 0755, true);
+            } else {
+                $parent = dirname($target);
+                if (!is_dir($parent)) {
+                    @mkdir($parent, 0755, true);
+                }
+                if (!@copy($file->getPathname(), $target)) {
+                    throw new \RuntimeException('Failed to move the plugin into place.');
+                }
             }
         }
     }
