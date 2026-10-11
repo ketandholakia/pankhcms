@@ -55,12 +55,11 @@ PankhCMS is a lightweight, simple, and extensible PHP Content Management System 
    ```
 
 5. **Database Migration:**
-   Run the migration scripts to set up your database schema. If using SQLite, run:
+   Run the migrations to set up your database schema (works for both SQLite and MySQL):
    ```bash
-   php database/sqlite-php-scripts/create-tables.php
-   php database/sqlite-php-scripts/seed.php
+   php scripts/migrate.php
    ```
-   *Alternatively, you can use `php scripts/run_migrations.php`.*
+   The web installer (`/install`) runs the same migrations for you.
 
 6. **Start the Development Server:**
    ```bash

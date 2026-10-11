@@ -1,6 +1,7 @@
 {
   "name": "admin/pankhcms",
   "description": "Light CMS",
+  "license": "MIT",
   "authors": [
     {
       "name": "Ketan Dholakia",
