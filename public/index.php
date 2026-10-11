@@ -1,7 +1,11 @@
 <?php
 $root = dirname(__DIR__);
 
-if (!file_exists($root . '/.env') && !file_exists(__DIR__ . '/install/lock')) {
+// Redirect to the installer whenever the application is not configured.
+// (A stale install/lock without .env still lands on the installer, which
+// refuses to run while it is locked — consistent with Bootstrap and
+// the installer itself.)
+if (!file_exists($root . '/.env')) {
     header('Location: /install');
     exit;
 }

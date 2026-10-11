@@ -116,3 +116,4 @@ storage/logs/
 # =========================
 docker-data/
 .docker/
+/public/install/lock

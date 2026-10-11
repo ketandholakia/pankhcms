@@ -51,7 +51,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die('Admin username, email and password are required.');
         }
 
+        // The composer autoloader also loads app/Helpers/functions.php,
+        // which provides password_policy_errors().
+        require_once $root . '/vendor/autoload.php';
+
+        $passwordErrors = password_policy_errors($adminPass);
+        if (!empty($passwordErrors)) {
+            die('Password does not meet the policy: ' . implode(' ', $passwordErrors));
+        }
+
         // ── 1. Build .env content ──────────────────────────────────────
+        // Admin credentials are never written to .env; the admin user is
+        // created directly in the database during installation.
         if ($dbDriver === 'mysql') {
             $dbHost     = trim($_POST['db_host']     ?? '127.0.0.1');
             $dbPort     = trim($_POST['db_port']     ?? '3306');
@@ -69,29 +80,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . "DB_PORT=" . envEscape($dbPort) . "\n"
                 . "DB_DATABASE=" . envEscape($dbDatabase) . "\n"
                 . "DB_USERNAME=" . envEscape($dbUsername) . "\n"
-                . "DB_PASSWORD=" . envEscape($dbPassword) . "\n"
-                . "\n"
-                . "ADMIN_EMAIL=" . envEscape($adminEmail) . "\n"
-                . "ADMIN_PASSWORD=" . envEscape($adminPass) . "\n";
+                . "DB_PASSWORD=" . envEscape($dbPassword) . "\n";
         } else {
             $envContent = "APP_NAME=\"PankhCMS\"\n"
                 . "APP_ENV=production\n"
                 . "APP_DEBUG=false\n"
                 . "APP_URL=" . envEscape($appUrl) . "\n"
                 . "\n"
-                . "DB_CONNECTION=sqlite\n"
-                . "\n"
-                . "ADMIN_EMAIL=" . envEscape($adminEmail) . "\n"
-                . "ADMIN_PASSWORD=" . envEscape($adminPass) . "\n";
+                . "DB_CONNECTION=sqlite\n";
         }
 
         // ── 2. Write .env ──────────────────────────────────────────────
         if (file_put_contents($envFile, $envContent) === false) {
             die('Failed to write .env file. Check folder permissions.');
         }
-
-        // ── 3. Bootstrap the database directly (no full Bootstrap::init) ──
-        require_once $root . '/vendor/autoload.php';
 
         // Populate $_ENV so env() helpers work
         $lines = explode("\n", $envContent);

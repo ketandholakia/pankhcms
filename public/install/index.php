@@ -15,9 +15,9 @@ if (file_exists($lockFile) || file_exists($root . '/.env')) {
 $requirements = [
     'php' => [
         'title' => 'PHP Version',
-        'required' => '8.1.0',
+        'required' => '8.2.0',
         'current' => PHP_VERSION,
-        'status' => version_compare(PHP_VERSION, '8.1.0', '>=')
+        'status' => version_compare(PHP_VERSION, '8.2.0', '>=')
     ],
     'extensions' => [
         'title' => 'Required PHP Extensions',
