@@ -17,6 +17,12 @@ class BackupManager
     private string $backupDir;
     private array $dbConfig;
 
+    /** Maximum uncompressed size of the database entry we will load for restore. */
+    private static int $maxDatabaseEntryBytes = 1073741824; // 1 GiB
+
+    /** Whether maintenance mode was already on when a restore started. */
+    private bool $maintenanceWasEnabled = false;
+
     public function __construct(array $dbConfig)
     {
         $this->dbConfig = $dbConfig;
@@ -108,6 +114,7 @@ class BackupManager
 
         try {
             $names = [];
+            $entryIndex = false;
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $name = (string) $zip->getNameIndex($i);
                 if ($name === '' || str_contains($name, '\\') || str_starts_with($name, '/')
@@ -118,6 +125,11 @@ class BackupManager
                     if ($part === '..') {
                         throw new RuntimeException('Path traversal in backup ZIP is not allowed.');
                     }
+                }
+                if (in_array($name, $names, true)) {
+                    // Duplicate names are ambiguous: getFromName() would
+                    // silently restore whichever copy comes first.
+                    throw new RuntimeException('The backup ZIP contains duplicate entry names.');
                 }
                 $names[] = $name;
             }
@@ -135,6 +147,13 @@ class BackupManager
             $entry = $driver === 'sqlite' ? 'database.sqlite' : 'database.sql';
             if (!in_array($entry, $names, true)) {
                 throw new RuntimeException("The backup does not contain a $entry for the current database driver.");
+            }
+
+            // Refuse to load an oversized database entry into memory.
+            $entryIndex = (int) array_search($entry, $names, true);
+            $entrySize = (int) ($zip->statIndex($entryIndex)['size'] ?? 0);
+            if ($entrySize > self::$maxDatabaseEntryBytes) {
+                throw new RuntimeException('The database entry in the backup is too large to restore.');
             }
 
             $this->setMaintenance(true);
@@ -187,8 +206,42 @@ class BackupManager
             }
         }
 
+        // Write to a sibling temp file first, then validate it as a WORKING
+        // database before anything is replaced. A snapshot with a valid
+        // header but garbage content must never reach the live path.
         $tmp = $path . '.restore-' . uniqid();
-        if (file_put_contents($tmp, $snapshot) === false || !rename($tmp, $path)) {
+        if (file_put_contents($tmp, $snapshot) === false) {
+            @unlink($tmp);
+            throw new RuntimeException('Failed to write the restored database file.');
+        }
+
+        try {
+            $check = new PDO('sqlite:' . $tmp, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            $result = (string) $check->query('PRAGMA integrity_check')->fetchColumn();
+            $check = null;
+            if ($result !== 'ok') {
+                throw new RuntimeException('The database snapshot failed the SQLite integrity check.');
+            }
+        } catch (\PDOException $e) {
+            // NB: PDOException extends RuntimeException, so this must be
+            // caught before the RuntimeException re-throw below — a corrupt
+            // snapshot surfaces as a PDOException on first read.
+            @unlink($tmp);
+            throw new RuntimeException('The database snapshot is not a readable SQLite database.');
+        } catch (RuntimeException $e) {
+            @unlink($tmp);
+            throw $e;
+        } catch (\Throwable $e) {
+            @unlink($tmp);
+            throw new RuntimeException('The database snapshot is not a readable SQLite database.');
+        }
+
+        // Keep the permissions of the database being replaced (POSIX).
+        if (is_file($path)) {
+            @chmod($tmp, fileperms($path) & 0777);
+        }
+
+        if (!rename($tmp, $path)) {
             @unlink($tmp);
             throw new RuntimeException('Failed to write the restored database file.');
         }
@@ -227,15 +280,31 @@ class BackupManager
             if (!$capsule::schema()->hasTable('settings')) {
                 return;
             }
-            $capsule::table('settings')->updateOrInsert(
-                ['key' => 'maintenance_mode'],
-                ['value' => $on ? '1' : '0']
-            );
+            if ($on) {
+                // Remember whether the site was already in maintenance so
+                // the cleanup below restores that state instead of blindly
+                // switching it off over the admin's head.
+                $previous = $capsule::table('settings')->where('key', 'maintenance_mode')->value('value');
+                $this->maintenanceWasEnabled = (string) $previous === '1';
+                $capsule::table('settings')->updateOrInsert(
+                    ['key' => 'maintenance_mode'],
+                    ['value' => '1']
+                );
+            } else {
+                $capsule::table('settings')->updateOrInsert(
+                    ['key' => 'maintenance_mode'],
+                    ['value' => $this->maintenanceWasEnabled ? '1' : '0']
+                );
+            }
             if (function_exists('setting_cache_clear')) {
                 setting_cache_clear();
             }
         } catch (\Throwable $e) {
-            // Maintenance flagging is best-effort; restore continues.
+            // Maintenance flagging is best-effort; restore continues. Log
+            // loudly: a failure on the OFF path leaves the site in
+            // maintenance mode and needs a human.
+            error_log('BackupManager: could not ' . ($on ? 'enable' : 'disable')
+                . ' maintenance mode: ' . $e->getMessage());
         }
     }
 

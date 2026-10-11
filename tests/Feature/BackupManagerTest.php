@@ -257,6 +257,97 @@ class BackupManagerTest extends TestCase
         @unlink($zip);
     }
 
+    public function test_restore_rejects_header_valid_but_corrupt_snapshot_and_keeps_live_db()
+    {
+        // A snapshot with the correct magic header but garbage content
+        // must be rejected by the integrity check — not swapped into place.
+        $zip = $this->makeZip([
+            'backup.json' => $this->validBackupJson(),
+            'database.sqlite' => 'SQLite format 3' . str_repeat('A', 4096),
+        ]);
+
+        try {
+            $this->manager()->restoreFromZip($zip);
+            $this->fail('Expected RuntimeException for header-valid garbage snapshot');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('not a readable SQLite', $e->getMessage());
+        }
+        @unlink($zip);
+
+        // The live database must be untouched and still readable.
+        $pdo = new \PDO('sqlite:' . $this->dbFile);
+        $names = $pdo->query('SELECT name FROM backup_demo')->fetchAll(\PDO::FETCH_COLUMN);
+        $pdo = null;
+        $this->assertContains('alpha', $names);
+    }
+
+    // NOTE: duplicate ZIP entry names are untestable end to end — libzip
+    // (bundled with every modern PHP) merges same-name central-directory
+    // records at read time, so ZipArchive never reports a duplicate.
+    // BackupManager::restoreFromZip() still rejects duplicates defensively
+    // for non-libzip builds; verified by code review only.
+
+    public function test_restore_rejects_oversized_database_entry()
+    {
+        $prop = new \ReflectionProperty(BackupManager::class, 'maxDatabaseEntryBytes');
+        $prop->setAccessible(true);
+        $original = $prop->getValue();
+
+        // 2 KiB entry against a 1 KiB cap — proves the size guard without
+        // materializing gigabytes.
+        $prop->setValue(null, 1024);
+        $zip = $this->makeZip([
+            'backup.json' => $this->validBackupJson(),
+            'database.sqlite' => 'SQLite format 3' . str_repeat('A', 2048),
+        ]);
+
+        try {
+            $this->manager()->restoreFromZip($zip);
+            $this->fail('Expected RuntimeException for oversized entry');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('too large', $e->getMessage());
+        } finally {
+            $prop->setValue(null, $original);
+            @unlink($zip);
+        }
+    }
+
+    public function test_restore_preserves_database_file_permissions()
+    {
+        if (str_starts_with(PHP_OS_FAMILY, 'Windows')) {
+            $this->markTestSkipped('POSIX file permissions do not apply on Windows.');
+        }
+
+        chmod($this->dbFile, 0660);
+        $zipPath = $this->manager()->createDatabaseBackup('perms');
+        $this->createdZips[] = $zipPath;
+
+        $this->manager()->restoreFromZip($zipPath);
+
+        $this->assertSame(0660, fileperms($this->dbFile) & 0777);
+    }
+
+    public function test_restore_rejects_absolute_and_backslash_entry_names()
+    {
+        foreach (['/etc/database.sqlite', 'C:\\database.sqlite', 'dir\\database.sqlite'] as $badName) {
+            $zipPath = tempnam(sys_get_temp_dir(), 'bakabs') . '.zip';
+            $zip = new \ZipArchive();
+            $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+            $zip->addFromString('backup.json', $this->validBackupJson());
+            $zip->addFromString($badName, 'SQLite format 3');
+            $zip->close();
+
+            try {
+                $this->manager()->restoreFromZip($zipPath);
+                $this->fail("Expected RuntimeException for entry name: $badName");
+            } catch (\RuntimeException $e) {
+                $this->assertStringContainsString('Invalid entry name', $e->getMessage());
+            } finally {
+                @unlink($zipPath);
+            }
+        }
+    }
+
     public function test_restore_toggles_maintenance_mode_off_afterwards()
     {
         $zipPath = $this->manager()->createDatabaseBackup('maintenance check');
@@ -267,5 +358,47 @@ class BackupManagerTest extends TestCase
         $value = \Illuminate\Database\Capsule\Manager::table('settings')
             ->where('key', 'maintenance_mode')->value('value');
         $this->assertSame('0', (string) $value, 'maintenance mode must be switched off after restore');
+    }
+
+    public function test_failed_restore_leaves_maintenance_mode_off()
+    {
+        $zip = $this->makeZip([
+            'backup.json' => $this->validBackupJson(),
+            'database.sqlite' => 'SQLite format 3' . str_repeat('A', 4096), // fails integrity
+        ]);
+
+        try {
+            $this->manager()->restoreFromZip($zip);
+            $this->fail('Expected RuntimeException');
+        } catch (\RuntimeException $e) {
+            // expected
+        }
+        @unlink($zip);
+
+        $value = \Illuminate\Database\Capsule\Manager::table('settings')
+            ->where('key', 'maintenance_mode')->value('value');
+        $this->assertSame('0', (string) $value, 'maintenance mode must be cleaned up on the failure path');
+    }
+
+    public function test_restore_preserves_pre_existing_maintenance_mode()
+    {
+        \Illuminate\Database\Capsule\Manager::table('settings')->updateOrInsert(
+            ['key' => 'maintenance_mode'],
+            ['value' => '1']
+        );
+
+        $zipPath = $this->manager()->createDatabaseBackup('maintenance was on');
+        $this->createdZips[] = $zipPath;
+
+        try {
+            $this->manager()->restoreFromZip($zipPath);
+        } finally {
+            $value = \Illuminate\Database\Capsule\Manager::table('settings')
+                ->where('key', 'maintenance_mode')->value('value');
+            \Illuminate\Database\Capsule\Manager::table('settings')
+                ->where('key', 'maintenance_mode')->update(['value' => '0']);
+
+            $this->assertSame('1', (string) $value, 'restore cleanup must not override pre-existing maintenance mode');
+        }
     }
 }
