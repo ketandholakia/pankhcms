@@ -14,8 +14,6 @@ require $root . '/vendor/autoload.php';
 
 \App\Core\Bootstrap::init();
 
-session_init();
-
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $isAdminPath = str_starts_with($requestPath, '/admin');
 $isInstallPath = str_starts_with($requestPath, '/install');
@@ -25,6 +23,17 @@ $isStaticAssetPath = str_starts_with($requestPath, '/assets/')
     || $requestPath === '/favicon.ico'
     || $requestPath === '/robots.txt'
     || $requestPath === '/sitemap.xml';
+
+// Only start a session when it is actually needed: an existing session
+// cookie, an admin request, or the contact form (captcha). Anonymous
+// visitors keep session-less responses so full-page caching works.
+$needsSession = $isAdminPath
+    || isset($_COOKIE[session_name()])
+    || ($requestPath === '/contact' && strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST');
+
+if ($needsSession) {
+    session_init();
+}
 
 if (!$isAdminPath && !$isInstallPath && !$isStaticAssetPath) {
     $maintenanceMode = false;
@@ -120,5 +129,4 @@ if (!$isAdminPath && !$isInstallPath && !$isStaticAssetPath) {
 });
 
 \Flight::before('start', function() { \App\Middleware\PageCache::before(); });
-\Flight::after('start', function() { \App\Middleware\PageCache::after(); });
 \Flight::start();

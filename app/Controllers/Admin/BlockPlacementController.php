@@ -30,6 +30,7 @@ class BlockPlacementController {
             'section' => $data['location'] ?? $data['section'] ?? null,
             'order' => isset($data['sort_order']) ? (int)$data['sort_order'] : (isset($data['order']) ? (int)$data['order'] : 0),
         ]);
+        \App\Middleware\PageCache::clear();
         Flight::json(['success' => true, 'id' => $placement->id]);
     }
 
@@ -51,12 +52,14 @@ class BlockPlacementController {
             'section' => $data['location'] ?? $data['section'] ?? null,
             'order' => isset($data['sort_order']) ? (int)$data['sort_order'] : (isset($data['order']) ? (int)$data['order'] : $placement->order),
         ]);
+        \App\Middleware\PageCache::clear();
         Flight::json(['success' => true]);
     }
 
     public function destroy($id) {
         $placement = BlockPlacement::findOrFail($id);
         $placement->delete();
+        \App\Middleware\PageCache::clear();
         Flight::json(['success' => true]);
     }
 }

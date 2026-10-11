@@ -183,6 +183,15 @@ class Bootstrap
         require dirname(__DIR__, 2) . "/routes/admin.php";
         require dirname(__DIR__, 2) . "/routes/api.php";
         require dirname(__DIR__, 2) . "/routes/web.php";
+
+        // Invalidate the full-page cache whenever content that can appear
+        // on rendered pages changes.
+        $clearPageCache = function () {
+            \App\Middleware\PageCache::clear();
+        };
+        \Event::listen('page.created', $clearPageCache);
+        \Event::listen('page.updated', $clearPageCache);
+        \Event::listen('page.deleted', $clearPageCache);
     }
 
     private static function loadHelpers()

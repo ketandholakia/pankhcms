@@ -63,6 +63,7 @@ class MenuController
 
         try {
             $menu = Menu::create($input);
+            \App\Middleware\PageCache::clear();
             if ($this->isAjax()) {
                 $this->jsonResponse(['success' => true, 'id' => $menu->id], 201);
             } else {
@@ -89,6 +90,7 @@ class MenuController
 
         try {
             $menu->update($input);
+            \App\Middleware\PageCache::clear();
             if ($this->isAjax()) {
                 $this->jsonResponse(['success' => true]);
             } else {
@@ -112,6 +114,7 @@ class MenuController
             MenuItem::where('menu_id', $menu->id)->delete();
             $menu->delete();
 
+            \App\Middleware\PageCache::clear();
             \Flight::redirect('/admin/menus?deleted=1');
         } catch (Exception $e) {
             \Flight::redirect('/admin/menus?error=delete_failed');

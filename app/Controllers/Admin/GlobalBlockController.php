@@ -32,6 +32,7 @@ class GlobalBlockController
             'status' => isset($data['status']) ? (int)$data['status'] : 1,
             'show_title' => isset($data['show_title']) ? (bool)$data['show_title'] : true,
         ]);
+        \App\Middleware\PageCache::clear();
         Flight::json(['success' => true, 'id' => $block->id]);
     }
 
@@ -57,6 +58,7 @@ class GlobalBlockController
             'status' => isset($data['status']) ? (int)$data['status'] : $block->status,
             'show_title' => isset($data['show_title']) ? (bool)$data['show_title'] : $block->show_title,
         ]);
+        \App\Middleware\PageCache::clear();
         Flight::json(['success' => true]);
     }
     /**
@@ -83,6 +85,7 @@ class GlobalBlockController
     {
         $block = GlobalBlock::findOrFail($id);
         $block->delete();
+        \App\Middleware\PageCache::clear();
         Flight::json(['success' => true]);
     }
 }

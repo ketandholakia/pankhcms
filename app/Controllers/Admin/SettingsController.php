@@ -221,6 +221,7 @@ class SettingsController
         });
 
         setting_cache_clear();
+        \App\Middleware\PageCache::clear();
 
         \Flight::redirect('/admin/settings?status=' . $redirectStatus);
     }

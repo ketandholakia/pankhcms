@@ -49,6 +49,8 @@ class MenuItemController
                 'sort_order' => is_null($maxOrder) ? 0 : $maxOrder + 1,
             ]));
 
+            \App\Middleware\PageCache::clear();
+
             // If AJAX, return JSON; otherwise redirect back to menus view
             $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
                 || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
@@ -80,6 +82,8 @@ class MenuItemController
                 'page_id' => $pageId,
                 'url'     => $url,
             ]));
+
+            \App\Middleware\PageCache::clear();
 
             $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
                 || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
@@ -118,6 +122,7 @@ class MenuItemController
                 $this->swapSortOrder($item, $siblings[$index + 1]);
             }
 
+            \App\Middleware\PageCache::clear();
             $this->jsonResponse(['success' => true]);
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to move menu item.'], 500);
@@ -135,6 +140,7 @@ class MenuItemController
 
             $item->delete();
 
+            \App\Middleware\PageCache::clear();
             $this->jsonResponse(['success' => true]);
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to delete menu item.'], 500);
