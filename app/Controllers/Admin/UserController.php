@@ -157,9 +157,16 @@ class UserController
         $plainTextToken = bin2hex(random_bytes(30));
         $hashedToken = hash('sha256', $plainTextToken);
 
+        // Optional expiry in days (blank = never expires)
+        $expiresInDays = (int) ($data['expires_in_days'] ?? 0);
+        $expiresAt = $expiresInDays > 0
+            ? \Illuminate\Support\Carbon::now()->addDays(min($expiresInDays, 3650))
+            : null;
+
         $user->apiTokens()->create([
             'name' => $name,
             'token' => $hashedToken,
+            'expires_at' => $expiresAt,
         ]);
 
         if (session_status() === PHP_SESSION_NONE) {

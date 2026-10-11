@@ -149,9 +149,10 @@
 					<p class="text-sm text-gray-500 mb-4">You have not created any API tokens yet.</p>
 				@endif
 
-				<form method="POST" action="/admin/profile/api-tokens" class="flex gap-2 max-w-sm">
+				<form method="POST" action="/admin/profile/api-tokens" class="flex flex-wrap gap-2 max-w-lg">
 					{!! csrf_field() !!}
 					<input type="text" name="name" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="Token name (e.g. Mobile App)" required>
+					<input type="number" name="expires_in_days" min="1" max="3650" class="w-36 border rounded px-3 py-2 text-sm" placeholder="Expires in days (optional)">
 					<button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded">
 						Generate Token
 					</button>
