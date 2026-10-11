@@ -214,15 +214,16 @@ class AuthController
             return;
         }
 
+        // Reset links must use the configured APP_URL only — the Host
+        // header is client-controlled and could produce poisoned links.
         $baseUrl = rtrim((string) env('APP_URL', ''), '/');
         if ($baseUrl === '') {
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $baseUrl = $scheme . '://' . $host;
+            error_log('Cannot send password reset email: APP_URL is not configured.');
+            return;
         }
 
         $link = $baseUrl . '/admin/password/reset?token=' . urlencode($plainToken) . '&email=' . urlencode($recipient);
-        $siteName = (string) setting('site_name', 'PankhCMS');
+        $siteName = str_replace(["\r", "\n"], ' ', (string) setting('site_name', 'PankhCMS'));
         $subject = '[' . $siteName . '] Password Reset';
         $body = implode("\n", [
             'A password reset was requested for your account.',

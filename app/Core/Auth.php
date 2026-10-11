@@ -15,7 +15,30 @@ class Auth
 
     public static function check()
     {
-        return self::$statelessUser !== null || isset($_SESSION['user_id']);
+        if (self::$statelessUser !== null) {
+            return true;
+        }
+
+        if (!isset($_SESSION['user_id'])) {
+            return false;
+        }
+
+        // A session whose user row no longer exists is not authenticated.
+        $user = User::find($_SESSION['user_id']);
+        if (!$user) {
+            return false;
+        }
+
+        // Bind the session to the password hash: once the password is
+        // changed or reset, every other session for that account dies.
+        if (!isset($_SESSION['password_hash'])) {
+            $_SESSION['password_hash'] = $user->password;
+        } elseif (!is_string($_SESSION['password_hash']) || !hash_equals($user->password, $_SESSION['password_hash'])) {
+            self::logout();
+            return false;
+        }
+
+        return true;
     }
 
     public static function user()
@@ -48,6 +71,7 @@ class Auth
 
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user->id;
+            $_SESSION['password_hash'] = $user->password;
             return true;
         }
 

@@ -129,6 +129,10 @@ class UserController
         $user->password = password_hash($new, PASSWORD_DEFAULT);
         $user->save();
 
+        // Re-bind the current session to the new hash so the user stays
+        // logged in here; every OTHER session for this account becomes
+        // invalid on its next request (see Auth::check()).
+        $_SESSION['password_hash'] = $user->password;
         session_regenerate_id(true);
 
         \Flight::redirect('/admin/profile?status=password-updated');

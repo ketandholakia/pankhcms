@@ -90,4 +90,48 @@ class AuthTest extends TestCase
 
         $this->assertNull($result);
     }
+
+    public function test_check_fails_for_session_of_deleted_user()
+    {
+        $user = User::create([
+            'username' => 'ghostuser',
+            'name' => 'Ghost',
+            'email' => 'ghost@example.com',
+            'password' => password_hash('password', PASSWORD_DEFAULT),
+        ]);
+
+        $_SESSION['user_id'] = $user->id;
+        $_SESSION['password_hash'] = $user->password;
+        $this->assertTrue(Auth::check());
+
+        $user->delete();
+
+        // Session still points at the deleted user id
+        $this->assertFalse(Auth::check());
+        $this->assertNull(Auth::user());
+
+        unset($_SESSION['user_id'], $_SESSION['password_hash']);
+    }
+
+    public function test_other_sessions_die_after_password_change()
+    {
+        $user = User::create([
+            'username' => 'changepw',
+            'name' => 'Change PW',
+            'email' => 'changepw@example.com',
+            'password' => password_hash('old-password', PASSWORD_DEFAULT),
+        ]);
+
+        // "Other" browser session bound to the old hash
+        $_SESSION['user_id'] = $user->id;
+        $_SESSION['password_hash'] = $user->password;
+        $this->assertTrue(Auth::check());
+
+        // The user changes their password from another session
+        $user->password = password_hash('N3w-Secret!pass', PASSWORD_DEFAULT);
+        $user->save();
+
+        $this->assertFalse(Auth::check(), 'session bound to the old hash must be invalid');
+        unset($_SESSION['user_id'], $_SESSION['password_hash']);
+    }
 }

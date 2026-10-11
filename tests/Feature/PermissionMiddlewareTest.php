@@ -36,7 +36,7 @@ class PermissionMiddlewareTest extends TestCase
         $this->limitedUser->roles()->detach();
         $this->limitedUser->delete();
         Role::where('name', 'Visitor')->delete();
-        unset($_SESSION['user_id']);
+        unset($_SESSION['user_id'], $_SESSION['password_hash']);
         putenv('PHPUNIT_TEST');
         parent::tearDown();
     }

@@ -92,9 +92,13 @@ class ContactController
         $safeName = str_replace(["\r", "\n"], ' ', $name);
         $safeEmail = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : 'no-reply@localhost';
         $siteName = (string) setting('site_name', 'PankhCMS');
-        $mailSubject = '[' . $siteName . '] New Contact Message';
-        if ($subject !== '') {
-            $mailSubject .= ': ' . $subject;
+        // Subject and site name end up in mail headers; strip CR/LF to
+        // prevent header injection.
+        $safeSubject = str_replace(["\r", "\n"], ' ', $subject);
+        $safeSiteName = str_replace(["\r", "\n"], ' ', $siteName);
+        $mailSubject = '[' . $safeSiteName . '] New Contact Message';
+        if ($safeSubject !== '') {
+            $mailSubject .= ': ' . $safeSubject;
         }
 
         $bodyLines = [
