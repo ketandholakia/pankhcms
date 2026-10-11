@@ -506,33 +506,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ['name' => 'Product', 'description' => 'Sellable product', 'icon' => 'shopping-cart', 'has_categories' => 1, 'has_tags' => 1, 'is_system' => 0, 'created_at' => $now, 'updated_at' => $now]
         );
 
-        // ── 6. Seed roles & permissions ───────────────────────────────
-        foreach (['admin', 'editor', 'author', 'viewer'] as $role) {
-            Capsule::table('roles')->insertOrIgnore(['name' => $role]);
-        }
-        foreach ([
-            'manage_settings',
-            'manage_pages',
-            'manage_taxonomies',
-            'manage_menus',
-            'manage_media',
-            'manage_content_types',
-            'manage_blocks',
-            'manage_templates',
-            'manage_themes',
-            'manage_plugins',
-            'manage_users',
-            'manage_backups',
-            'manage_messages',
-        ] as $perm) {
-            Capsule::table('permissions')->insertOrIgnore(['name' => $perm]);
-        }
-        // Grant all permissions to admin role
-        $adminRoleId = Capsule::table('roles')->where('name', 'admin')->value('id');
-        $allPermIds  = Capsule::table('permissions')->pluck('id');
-        foreach ($allPermIds as $permId) {
-            Capsule::table('role_permissions')->insertOrIgnore(['role_id' => $adminRoleId, 'permission_id' => $permId]);
-        }
+        // ── 6. Seed roles & permissions (canonical shared seeder) ─────
+        require_once $root . '/database/seeds/roles.php';
+        seed_default_roles_and_permissions();
+        $adminRoleId = Capsule::table('roles')->where('name', 'Administrator')->value('id');
 
         // ── 7. Seed default settings ──────────────────────────────────
         $appName = 'PankhCMS';

@@ -300,9 +300,29 @@ class UserController
 
     public static function destroy($id)
     {
-        if ($id != Auth::user()->id) {
-            User::destroy($id);
+        $actor = Auth::user();
+
+        if ($actor && $id != $actor->id) {
+            $target = User::with('roles')->find($id);
+
+            if ($target) {
+                // Never delete the last user whose roles can manage users.
+                if ($target->hasPermission('manage_users')) {
+                    $adminCount = User::whereHas('roles.permissions', function ($q) {
+                        $q->where('name', 'manage_users');
+                    })->count();
+
+                    if ($adminCount <= 1) {
+                        \Flight::redirect('/admin/users?status=last_admin');
+                        return;
+                    }
+                }
+
+                $target->roles()->detach();
+                $target->delete();
+            }
         }
+
         \Flight::redirect('/admin/users?status=deleted');
     }
 }

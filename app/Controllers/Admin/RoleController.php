@@ -87,10 +87,29 @@ class RoleController
 
     public static function destroy($id)
     {
-        $role = Role::find($id);
-        if ($role && $role->name !== 'Administrator') {
+        $role = Role::with('permissions')->find($id);
+
+        if ($role) {
+            if ($role->name === 'Administrator') {
+                \Flight::redirect('/admin/roles?status=role_protected');
+                return;
+            }
+
+            // Never leave the system without a role that can manage users.
+            if ($role->permissions->contains('name', 'manage_users')) {
+                $holders = Role::whereHas('permissions', function ($q) {
+                    $q->where('name', 'manage_users');
+                })->count();
+
+                if ($holders <= 1) {
+                    \Flight::redirect('/admin/roles?status=last_manage_users_role');
+                    return;
+                }
+            }
+
             $role->delete();
         }
+
         \Flight::redirect('/admin/roles?status=deleted');
     }
 }

@@ -300,41 +300,10 @@ try {
     Capsule::connection()->statement("CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(title, content, slug, content='pages', content_rowid='id')");
 } catch (\Throwable $e) {}
 
-// Seed RBAC Roles
-Capsule::table('roles')->updateOrInsert(['name' => 'Administrator']);
-Capsule::table('roles')->updateOrInsert(['name' => 'Editor']);
-
-// Seed Permissions
-$permissions = [
-    'manage_settings', 'manage_pages', 'manage_taxonomies', 'manage_menus',
-    'manage_media', 'manage_content_types', 'manage_blocks', 'manage_templates',
-    'manage_themes', 'manage_plugins', 'manage_users'
-];
-
-foreach ($permissions as $perm) {
-    Capsule::table('permissions')->updateOrInsert(['name' => $perm]);
-}
-
-// Assign all permissions to Administrator
-$adminRole = Capsule::table('roles')->where('name', 'Administrator')->first();
-if ($adminRole) {
-    $permIds = Capsule::table('permissions')->pluck('id')->toArray();
-    foreach ($permIds as $pid) {
-        Capsule::table('role_permissions')->updateOrInsert([
-            'role_id' => $adminRole->id,
-            'permission_id' => $pid
-        ]);
-    }
-    
-    // Auto-assign Administrator role to user #1 to prevent lockout on existing sites
-    $firstUser = Capsule::table('users')->orderBy('id')->first();
-    if ($firstUser) {
-        Capsule::table('user_roles')->updateOrInsert([
-            'user_id' => $firstUser->id,
-            'role_id' => $adminRole->id
-        ]);
-    }
-}
+// Seed RBAC roles & permissions via the canonical shared seeder so the
+// installer and migrations always produce the same set.
+require_once __DIR__ . '/../seeds/roles.php';
+seed_default_roles_and_permissions();
 
 // Settings
 Capsule::table('settings')->updateOrInsert(['key' => 'site_name'], ['value' => 'PankhCMS']);
