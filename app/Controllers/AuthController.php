@@ -96,25 +96,39 @@ class AuthController
         $password = isset($_POST["password"]) ? (string) $_POST["password"] : '';
 
         $ip = client_ip();
-        $key = login_throttle_key($identifier ?: 'unknown', $ip);
-        $check = login_throttle_check($key);
-        if (!$check['allowed']) {
+        $account = $identifier !== '' ? $identifier : 'unknown';
+
+        // Two independent throttles: one per (identifier, IP), one per
+        // account alone with a higher threshold — so rotating IPs cannot
+        // bypass the account-level lockout.
+        $ipKey = login_throttle_key($account, $ip);
+        $accountKey = login_throttle_key_account($account);
+
+        $ipCheck = login_throttle_check($ipKey);
+        $accountCheck = login_throttle_check($accountKey);
+        if (!$ipCheck['allowed'] || !$accountCheck['allowed']) {
+            $retry = (int) max($ipCheck['retry_after'], $accountCheck['retry_after']);
             \Flight::response()->status(429);
-            $retry = (int) $check['retry_after'];
             echo 'Too many login attempts. Try again in ' . $retry . ' seconds.';
             return;
         }
 
         if (Auth::attempt($identifier, $password)) {
-            login_throttle_clear($key);
+            login_throttle_clear($ipKey);
+            login_throttle_clear($accountKey);
             \Flight::redirect("/admin");
             return;
         }
 
-        $failure = login_throttle_register_failure($key);
-        if (!empty($failure['locked']) && !empty($failure['retry_after'])) {
+        $ipFailure = login_throttle_register_failure($ipKey);
+        // Account-level lockout: 20 failures in the window before the
+        // exponential backoff kicks in.
+        $accountFailure = login_throttle_register_failure($accountKey, 20);
+
+        $retryAfter = (int) max($ipFailure['retry_after'], $accountFailure['retry_after']);
+        if (!empty($ipFailure['locked']) || !empty($accountFailure['locked'])) {
             \Flight::response()->status(429);
-            echo 'Too many login attempts. Try again in ' . (int) $failure['retry_after'] . ' seconds.';
+            echo 'Too many login attempts. Try again in ' . $retryAfter . ' seconds.';
             return;
         }
 

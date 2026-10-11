@@ -102,26 +102,111 @@ if (!function_exists('sanitize_html')) {
     }
 }
 
+if (!function_exists('cidr_match')) {
+    function cidr_match(string $ip, string $cidr): bool
+    {
+        $parts = explode('/', $cidr, 2);
+        if (count($parts) !== 2) {
+            return false;
+        }
+
+        [$subnet, $bits] = $parts;
+        $ipBin = @inet_pton($ip);
+        $subnetBin = @inet_pton($subnet);
+        if ($ipBin === false || $subnetBin === false || strlen($ipBin) !== strlen($subnetBin)) {
+            return false;
+        }
+
+        $bits = (int) $bits;
+        $maxBits = strlen($ipBin) * 8;
+        if ($bits < 0 || $bits > $maxBits) {
+            return false;
+        }
+
+        $bytes = intdiv($bits, 8);
+        $remainder = $bits % 8;
+
+        if ($bytes > 0 && substr($ipBin, 0, $bytes) !== substr($subnetBin, 0, $bytes)) {
+            return false;
+        }
+
+        if ($remainder > 0) {
+            $mask = (0xFF << (8 - $remainder)) & 0xFF;
+            return ((ord($ipBin[$bytes]) ^ ord($subnetBin[$bytes])) & $mask) === 0;
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('ip_in_list')) {
+    /**
+     * Match an IP against a list of literal IPs and CIDR ranges.
+     */
+    function ip_in_list(string $ip, array $list): bool
+    {
+        foreach ($list as $entry) {
+            $entry = trim((string) $entry);
+            if ($entry === '') {
+                continue;
+            }
+            if (str_contains($entry, '/')) {
+                if (cidr_match($ip, $entry)) {
+                    return true;
+                }
+            } elseif (strcasecmp($ip, $entry) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 if (!function_exists('client_ip')) {
+    /**
+     * Resolve the client IP. Forwarded headers (X-Forwarded-For,
+     * X-Real-IP) are only honored when REMOTE_ADDR itself is a trusted
+     * proxy (TRUSTED_PROXIES, comma-separated IPs/CIDRs). In that case
+     * the rightmost untrusted address in the chain is returned, so a
+     * client cannot spoof an arbitrary IP.
+     */
     function client_ip(): string
     {
-        $trustProxy = (bool) env('TRUST_PROXY', false);
-        if ($trustProxy) {
-            $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
-            if ($forwarded) {
-                $parts = array_map('trim', explode(',', $forwarded));
-                if (!empty($parts[0])) {
-                    return $parts[0];
-                }
-            }
+        $remote = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
-            $realIp = $_SERVER['HTTP_X_REAL_IP'] ?? '';
-            if ($realIp) {
-                return $realIp;
+        $trustedRaw = trim((string) env('TRUSTED_PROXIES', ''));
+        if ($trustedRaw === '') {
+            return $remote;
+        }
+
+        $trusted = array_map('trim', explode(',', $trustedRaw));
+        if (!ip_in_list($remote, $trusted)) {
+            return $remote;
+        }
+
+        $chain = [];
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            foreach (explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']) as $part) {
+                $chain[] = trim($part);
+            }
+        }
+        if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+            $chain[] = trim((string) $_SERVER['HTTP_X_REAL_IP']);
+        }
+
+        // Walk from the rightmost (closest to our proxy) backwards; the
+        // first address that is not itself a trusted proxy is the client.
+        for ($i = count($chain) - 1; $i >= 0; $i--) {
+            $candidate = $chain[$i];
+            if (!filter_var($candidate, FILTER_VALIDATE_IP)) {
+                continue;
+            }
+            if (!ip_in_list($candidate, $trusted)) {
+                return $candidate;
             }
         }
 
-        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        return $remote;
     }
 }
 
@@ -130,7 +215,39 @@ if (!function_exists('login_throttle_key')) {
     {
         $identifier = strtolower(trim($identifier));
         $ip = trim($ip);
-        return hash('sha256', $identifier . '|' . $ip);
+        return hash('sha256', 'ip|' . $identifier . '|' . $ip);
+    }
+}
+
+if (!function_exists('login_throttle_key_account')) {
+    /**
+     * Per-account throttle key — deliberately independent of the client
+     * IP so an attacker rotating IPs cannot bypass per-account lockouts.
+     */
+    function login_throttle_key_account(string $identifier): string
+    {
+        return hash('sha256', 'acct|' . strtolower(trim($identifier)));
+    }
+}
+
+if (!function_exists('login_throttle_prune')) {
+    /**
+     * Remove throttle files untouched for more than a day. Cheap enough
+     * to call opportunistically (e.g. on failed logins).
+     */
+    function login_throttle_prune(int $maxAgeSeconds = 86400): void
+    {
+        $path = dirname(__DIR__, 2) . '/storage/cache/login_throttle/';
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $cutoff = time() - $maxAgeSeconds;
+        foreach (glob($path . '*.json') ?: [] as $file) {
+            if (is_file($file) && filemtime($file) < $cutoff) {
+                @unlink($file);
+            }
+        }
     }
 }
 
@@ -205,10 +322,9 @@ if (!function_exists('login_throttle_check')) {
 }
 
 if (!function_exists('login_throttle_register_failure')) {
-    function login_throttle_register_failure(string $key): array
+    function login_throttle_register_failure(string $key, int $maxAttempts = 5, int $window = 900): array
     {
         $now = time();
-        $window = 15 * 60; // 15 minutes
 
         $data = login_throttle_read($key);
         $first = (int) ($data['first'] ?? $now);
@@ -222,8 +338,8 @@ if (!function_exists('login_throttle_register_failure')) {
         $count++;
 
         $lockUntil = 0;
-        if ($count > 5) {
-            $delay = (int) min(1800, pow(2, $count - 5));
+        if ($count > $maxAttempts) {
+            $delay = (int) min(1800, pow(2, $count - $maxAttempts));
             $lockUntil = $now + $delay;
         }
 
@@ -235,6 +351,11 @@ if (!function_exists('login_throttle_register_failure')) {
         ];
 
         login_throttle_write($key, $data);
+
+        // Opportunistic cleanup of stale throttle files.
+        if (random_int(1, 50) === 1) {
+            login_throttle_prune();
+        }
 
         return ['locked' => $lockUntil > $now, 'retry_after' => max(0, $lockUntil - $now)];
     }
