@@ -29,6 +29,14 @@ PankhCMS is a lightweight, simple, and extensible PHP Content Management System 
    ```bash
    composer install
    ```
+   For production servers, skip development packages (phpunit etc.):
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   ```
+
+   > Note: `composer.json` pins `config.platform.php` to 8.2.0, so
+   > dependency resolution targets PHP 8.2 even when you run composer
+   > from a newer PHP.
 
 3. **Configuration:**
    - Copy the environment example file:
