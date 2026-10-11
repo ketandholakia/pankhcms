@@ -43,12 +43,18 @@ Flight::route('GET /admin', ['App\Controllers\Admin\DashboardController', 'index
 // =========================
 // Admin - Backups
 // =========================
-Flight::route('GET /admin/backups', ['App\Controllers\Admin\BackupController', 'index']);
-Flight::route('POST /admin/backups/create', ['App\Controllers\Admin\BackupController', 'create']);
-Flight::route('GET /admin/backups/download/@filename', ['App\Controllers\Admin\BackupController', 'download']);
-Flight::route('POST /admin/backups/delete/@filename', ['App\Controllers\Admin\BackupController', 'delete']);
-Flight::route('GET /admin/backups/restore', ['App\Controllers\Admin\BackupController', 'restorePage']);
-Flight::route('POST /admin/backups/restore', ['App\Controllers\Admin\BackupController', 'restore']);
+Flight::route('GET /admin/backups', ['App\Controllers\Admin\BackupController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
+Flight::route('POST /admin/backups/create', ['App\Controllers\Admin\BackupController', 'create'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
+Flight::route('GET /admin/backups/download/@filename', ['App\Controllers\Admin\BackupController', 'download'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
+Flight::route('POST /admin/backups/delete/@filename', ['App\Controllers\Admin\BackupController', 'delete'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
+Flight::route('GET /admin/backups/restore', ['App\Controllers\Admin\BackupController', 'restorePage'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
+Flight::route('POST /admin/backups/restore', ['App\Controllers\Admin\BackupController', 'restore'])->addMiddleware([new \App\Middleware\RequirePermission('manage_backups')]);
+
+
+// =========================
+// Admin - Messages
+// =========================
+Flight::route('GET /admin/messages', ['App\Controllers\Admin\MessageController', 'index'])->addMiddleware([new \App\Middleware\RequirePermission('manage_messages')]);
 
 
 // =========================

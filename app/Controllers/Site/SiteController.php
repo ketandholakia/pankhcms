@@ -15,7 +15,16 @@ class SiteController
     private static function getPageQuery()
     {
         $query = Page::with('categories');
-        if (!(\App\Core\Auth::check() && isset(\Flight::request()->query->preview) && \Flight::request()->query->preview)) {
+
+        // Draft preview requires an authenticated user with manage_pages;
+        // everyone else only sees published/scheduled-visible pages.
+        $canPreview = false;
+        if (isset(\Flight::request()->query->preview) && \Flight::request()->query->preview) {
+            $user = \App\Core\Auth::user();
+            $canPreview = $user !== null && $user->hasPermission('manage_pages');
+        }
+
+        if (!$canPreview) {
             $query->visible();
         }
         return $query;

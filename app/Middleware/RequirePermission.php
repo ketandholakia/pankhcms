@@ -21,9 +21,14 @@ class RequirePermission
         }
 
         $user = Auth::user();
-        if (!$user->hasPermission($this->permission)) {
-            \Flight::halt(403, 'Forbidden. You do not have the required permission: ' . $this->permission);
-            exit;
+        if (!$user || !$user->hasPermission($this->permission)) {
+            // The third arg mirrors Flight's own convention: halt() only
+            // exits for real outside of PHPUnit runs.
+            $actuallyExit = empty(getenv('PHPUNIT_TEST'));
+            \Flight::halt(403, 'Forbidden. You do not have the required permission: ' . $this->permission, $actuallyExit);
+            if ($actuallyExit) {
+                exit;
+            }
         }
     }
 }

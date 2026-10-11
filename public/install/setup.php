@@ -520,6 +520,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'manage_themes',
             'manage_plugins',
             'manage_users',
+            'manage_backups',
+            'manage_messages',
         ] as $perm) {
             Capsule::table('permissions')->insertOrIgnore(['name' => $perm]);
         }
