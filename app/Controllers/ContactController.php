@@ -12,7 +12,14 @@ class ContactController
      */
     public static function show()
     {
-        echo Flight::get('blade')->render('site.contact');
+        session_init();
+
+        // Math captcha; the expected answer lives only in the session.
+        $a = random_int(1, 9);
+        $b = random_int(1, 9);
+        $_SESSION['contact_captcha_expected'] = (string) ($a + $b);
+
+        echo Flight::get('blade')->render('site.contact', ['captcha_a' => $a, 'captcha_b' => $b]);
     }
 
     /**
@@ -27,7 +34,17 @@ class ContactController
 
         $errors = [];
 
+        $ip = client_ip();
+
+        // Per-IP rate limiting before any expensive work.
+        if (!self::checkRateLimit($ip)) {
+            Flight::json(['error' => 'Too many messages submitted. Please try again later.'], 429);
+            return;
+        }
+
         if (!empty($data->website)) {
+            // Honeypot filled in — treat as spam but stay silent about it.
+            self::registerHit($ip);
             Flight::json(['error' => 'Invalid submission.'], 422);
             return;
         }
@@ -49,16 +66,19 @@ class ContactController
         }
 
         if (!empty($errors)) {
+            self::registerHit($ip);
             Flight::json(['error' => implode(' ', $errors)], 422);
             return;
         }
+
+        self::registerHit($ip);
 
         ContactMessage::create([
             'name'       => trim($data->name),
             'email'      => trim($data->email),
             'subject'    => trim($data->subject ?? ''),
             'message'    => trim($data->message),
-            'ip'         => $request->ip,
+            'ip'         => $ip,
             'user_agent' => $request->user_agent,
         ]);
 
@@ -74,6 +94,57 @@ class ContactController
         unset($_SESSION['contact_captcha_expected']);
 
         Flight::json(['success' => true]);
+    }
+
+    /**
+     * Simple per-IP file rate limit: max 5 submissions per 10 minutes.
+     */
+    private static function checkRateLimit(string $ip): bool
+    {
+        $data = self::readRateLimit($ip);
+        return (int) $data['count'] < 5;
+    }
+
+    private static function registerHit(string $ip): void
+    {
+        $now = time();
+        $window = 600; // 10 minutes
+
+        $data = self::readRateLimit($ip);
+        if ($now - (int) $data['first'] > $window) {
+            $data = ['first' => $now, 'count' => 0];
+        }
+        $data['count'] = (int) $data['count'] + 1;
+
+        $path = dirname(__DIR__, 2) . '/storage/cache/contact_rate/';
+        if (!is_dir($path)) {
+            @mkdir($path, 0755, true);
+        }
+
+        $file = $path . hash('sha256', 'contact|' . $ip) . '.json';
+        $fp = fopen($file, 'c+');
+        if ($fp === false) {
+            return;
+        }
+        if (flock($fp, LOCK_EX)) {
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, json_encode($data));
+            fflush($fp);
+            flock($fp, LOCK_UN);
+        }
+        fclose($fp);
+    }
+
+    private static function readRateLimit(string $ip): array
+    {
+        $file = dirname(__DIR__, 2) . '/storage/cache/contact_rate/' . hash('sha256', 'contact|' . $ip) . '.json';
+        if (!is_file($file)) {
+            return ['first' => time(), 'count' => 0];
+        }
+
+        $decoded = json_decode((string) @file_get_contents($file), true);
+        return is_array($decoded) ? $decoded : ['first' => time(), 'count' => 0];
     }
 
     private static function sendContactNotificationEmail(

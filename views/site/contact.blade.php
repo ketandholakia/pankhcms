@@ -9,6 +9,12 @@
 
     <form id="contactForm">
 
+      <!-- Honeypot: hidden from humans, bots tend to fill every field -->
+      <div style="display:none" aria-hidden="true">
+        <label class="label" for="website">Website</label>
+        <input class="input" type="text" name="website" id="website" tabindex="-1" autocomplete="off">
+      </div>
+
       <div class="field">
         <label class="label">Name</label>
         <div class="control">
@@ -34,6 +40,13 @@
         <label class="label">Message</label>
         <div class="control">
           <textarea class="textarea" name="message" required></textarea>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Spam check: what is {{ $captcha_a }} + {{ $captcha_b }}?</label>
+        <div class="control">
+          <input class="input" type="text" name="captcha" inputmode="numeric" pattern="[0-9]*" required>
         </div>
       </div>
 
