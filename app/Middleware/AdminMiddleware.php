@@ -15,7 +15,12 @@ class AdminMiddleware
     {
         if (!Auth::check()) {
             \Flight::redirect("/admin/login");
-            exit;
+            // Mirror Flight's own convention: don't exit under PHPUnit so
+            // tests can assert on the redirect response.
+            if (empty(getenv('PHPUNIT_TEST'))) {
+                exit;
+            }
+            return false;
         }
         return true;
     }

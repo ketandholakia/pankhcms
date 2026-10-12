@@ -487,19 +487,32 @@ if (!function_exists('csrf_require')) {
         $isJson = str_contains($accept, 'application/json')
             || (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest');
 
+        // Mirror Flight's own convention: don't exit under PHPUnit so
+        // tests can assert on the 403 response.
+        $actuallyExit = empty(getenv('PHPUNIT_TEST'));
+
         if (class_exists('Flight')) {
             if ($isJson) {
                 \Flight::response()->status(403);
                 \Flight::json(['error' => 'CSRF token mismatch'], 403);
-                exit;
+                if ($actuallyExit) {
+                    exit;
+                }
+                return;
             }
 
-            \Flight::halt(403, 'CSRF token mismatch');
+            \Flight::halt(403, 'CSRF token mismatch', $actuallyExit);
+            if ($actuallyExit) {
+                exit;
+            }
+            return;
         }
 
         http_response_code(403);
         echo 'CSRF token mismatch';
-        exit;
+        if ($actuallyExit) {
+            exit;
+        }
     }
 }
 

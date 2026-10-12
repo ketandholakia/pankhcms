@@ -1,8 +1,8 @@
 <?php
 
 // Public Contact Form Routes
-Flight::route('GET /contact', ['App\Controllers\ContactController', 'show']);
-Flight::route('POST /contact', ['App\Controllers\ContactController', 'submit']);
+Flight::route('GET /contact', [\App\Controllers\ContactController::class, 'show']);
+Flight::route('POST /contact', [\App\Controllers\ContactController::class, 'submit']);
 
 // Theme assets (supports themes stored outside public/)
 Flight::route('GET /themes/@theme/assets/*', function ($theme) {
@@ -121,7 +121,7 @@ Flight::route('GET /robots.txt', function () {
 });
 
 // Homepage
-Flight::route('GET /', ['App\Controllers\Site\SiteController', 'home']);
+Flight::route('GET /', [\App\Controllers\Site\SiteController::class, 'home']);
 
 
 // Public pages by slug — SAFE VERSION
