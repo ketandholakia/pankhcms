@@ -240,13 +240,18 @@ if (!$schema->hasTable('global_blocks')) {
 }
 
 if (!$schema->hasTable('block_placements')) {
+    // Column names MUST match the code that reads and writes this table:
+    // BlockPlacementController and GlobalBlock::placements() use
+    // block_id/page_id/section/order (the model's location/sort_order
+    // accessors map onto section/order). Renaming the columns here breaks
+    // every public page render (blocks_html() is called from the layout)
+    // and the whole block-placement admin.
     $schema->create('block_placements', function($t) {
         $t->increments('id');
-        $t->unsignedInteger('global_block_id');
-        $t->string('location');
-        $t->integer('sort_order')->default(0);
-        $t->boolean('active')->default(true);
-        $t->timestamps();
+        $t->unsignedInteger('block_id');
+        $t->unsignedInteger('page_id')->nullable();
+        $t->string('section')->nullable();
+        $t->integer('order')->default(0);
     });
 }
 
