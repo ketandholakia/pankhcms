@@ -10,7 +10,7 @@
 
 		@if(!empty($page->content))
 			<div class="content">
-				{!! $page->content !!}
+				{!! sanitize_html((string) $page->content) !!}
 			</div>
 		@endif
 
