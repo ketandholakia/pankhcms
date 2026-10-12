@@ -230,6 +230,12 @@ class UserController
             return;
         }
 
+        $passwordErrors = password_policy_errors((string) $data['password']);
+        if (!empty($passwordErrors)) {
+            \Flight::redirect('/admin/users/create?error=password_policy&errors=' . urlencode(implode(' ', $passwordErrors)));
+            return;
+        }
+
         if (User::where('username', $username)->exists()) {
             \Flight::redirect('/admin/users/create?error=username_taken');
             return;
@@ -297,6 +303,14 @@ class UserController
         $user->name = $name !== '' ? $name : null;
         $user->email = $email;
         if (!empty($data['password'])) {
+            // Blank password on update means "keep the current one"; a
+            // supplied password must satisfy the same policy as the
+            // profile self-service change and the reset flow.
+            $passwordErrors = password_policy_errors((string) $data['password']);
+            if (!empty($passwordErrors)) {
+                \Flight::redirect("/admin/users/edit/{$id}?error=password_policy&errors=" . urlencode(implode(' ', $passwordErrors)));
+                return;
+            }
             $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
         }
         $user->save();

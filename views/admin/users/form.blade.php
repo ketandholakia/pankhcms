@@ -20,6 +20,8 @@
                 This email address is already in use.
             @elseif($error === 'password_required')
                 Password is required for new users.
+            @elseif($error === 'password_policy')
+                {{ urldecode($_GET['errors'] ?? 'Password does not meet the policy: at least 10 characters with an uppercase letter, a lowercase letter, a number and a symbol.') }}
             @endif
         </div>
     @endif
