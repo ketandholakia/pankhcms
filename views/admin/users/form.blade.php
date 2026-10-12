@@ -22,6 +22,8 @@
                 Password is required for new users.
             @elseif($error === 'password_policy')
                 {{ urldecode($_GET['errors'] ?? 'Password does not meet the policy: at least 10 characters with an uppercase letter, a lowercase letter, a number and a symbol.') }}
+            @elseif($error === 'invalid_role')
+                The selected role does not exist. Pick a role from the list.
             @endif
         </div>
     @endif

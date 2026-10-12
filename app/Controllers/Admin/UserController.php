@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Core\Auth;
+use App\Models\Role;
 use App\Models\User;
 
 class UserController
@@ -246,6 +247,12 @@ class UserController
             return;
         }
 
+        // The role selector must reference a real role.
+        if (!empty($data['role_id']) && !Role::find((int) $data['role_id'])) {
+            \Flight::redirect('/admin/users/create?error=invalid_role');
+            return;
+        }
+
         $user = new User();
         $user->username = $username;
         $user->name = $name !== '' ? $name : null;
@@ -254,7 +261,7 @@ class UserController
         $user->save();
 
         if (!empty($data['role_id'])) {
-            $user->roles()->attach($data['role_id']);
+            $user->roles()->attach((int) $data['role_id']);
         }
 
         \Flight::redirect('/admin/users?status=created');
@@ -299,6 +306,25 @@ class UserController
             return;
         }
 
+        // The role selector must reference a real role.
+        if (isset($data['role_id']) && $data['role_id'] !== '' && !Role::find((int) $data['role_id'])) {
+            \Flight::redirect("/admin/users/edit/{$id}?error=invalid_role");
+            return;
+        }
+
+        // Never let a role change remove the last user holding manage_users
+        // (e.g. an admin demoting themselves out of the Administrator role).
+        if (isset($data['role_id']) && $user->hasPermission('manage_users')) {
+            $newRole = $data['role_id'] !== '' ? Role::find((int) $data['role_id']) : null;
+            $newRoleGrantsManageUsers = $newRole !== null
+                && $newRole->permissions->contains('name', 'manage_users');
+
+            if (!$newRoleGrantsManageUsers && self::countManageUsersUsers() <= 1) {
+                \Flight::redirect('/admin/users?status=last_admin');
+                return;
+            }
+        }
+
         $user->username = $username;
         $user->name = $name !== '' ? $name : null;
         $user->email = $email;
@@ -331,15 +357,9 @@ class UserController
 
             if ($target) {
                 // Never delete the last user whose roles can manage users.
-                if ($target->hasPermission('manage_users')) {
-                    $adminCount = User::whereHas('roles.permissions', function ($q) {
-                        $q->where('name', 'manage_users');
-                    })->count();
-
-                    if ($adminCount <= 1) {
-                        \Flight::redirect('/admin/users?status=last_admin');
-                        return;
-                    }
+                if ($target->hasPermission('manage_users') && self::countManageUsersUsers() <= 1) {
+                    \Flight::redirect('/admin/users?status=last_admin');
+                    return;
                 }
 
                 $target->roles()->detach();
@@ -348,5 +368,17 @@ class UserController
         }
 
         \Flight::redirect('/admin/users?status=deleted');
+    }
+
+    /**
+     * Number of users whose roles grant manage_users. Shared by the
+     * delete and role-change guards so "last admin" means the same thing
+     * everywhere.
+     */
+    private static function countManageUsersUsers(): int
+    {
+        return User::whereHas('roles.permissions', function ($q) {
+            $q->where('name', 'manage_users');
+        })->count();
     }
 }
