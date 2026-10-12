@@ -1,4 +1,9 @@
 <?php
+// The Event dispatcher is a global (non-namespaced) class, so composer's
+// PSR-4 autoloader cannot find it; load it alongside these helpers, which
+// are pulled in via composer's "files" autoload on every entry point.
+require_once __DIR__ . '/../Core/Event.php';
+
 if (!function_exists('base_path')) {
     /**
      * Return the base path of the project. Illuminate's SQLiteConnector

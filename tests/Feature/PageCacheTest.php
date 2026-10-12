@@ -101,6 +101,23 @@ class PageCacheTest extends TestCase
         $this->assertSame('/admin/pages', $method->invoke(null));
     }
 
+    public function test_page_published_event_clears_page_cache()
+    {
+        // Register the production listeners exactly as Bootstrap does
+        // (loadRoutes is private).
+        $method = new \ReflectionMethod(\App\Core\Bootstrap::class, 'loadRoutes');
+        $method->setAccessible(true);
+        $method->invoke(null);
+
+        $file = $this->cacheDir . '/published-page.html';
+        file_put_contents($file, '<html>x</html>');
+        $this->assertFileExists($file);
+
+        \Event::dispatch('page.published', new \App\Models\Page());
+
+        $this->assertFileDoesNotExist($file, 'page.published must invalidate the page cache');
+    }
+
     public function test_whitelisted_query_params()
     {
         $method = new \ReflectionMethod(PageCache::class, 'whitelistedQueryParams');

@@ -192,6 +192,7 @@ class Bootstrap
         \Event::listen('page.created', $clearPageCache);
         \Event::listen('page.updated', $clearPageCache);
         \Event::listen('page.deleted', $clearPageCache);
+        \Event::listen('page.published', $clearPageCache);
     }
 
     private static function loadHelpers()
