@@ -621,26 +621,38 @@ if (!function_exists('setting_cache_write')) {
     }
 }
 
+if (!function_exists('settings_all')) {
+    function settings_all(): array
+    {
+        // One snapshot per request, shared with setting()/setting_cache_reset().
+        $settings = $GLOBALS['_pankhcms_settings_cache'] ?? null;
+        if (is_array($settings)) {
+            return $settings;
+        }
+
+        try {
+            $cached = setting_cache_read();
+            if (is_array($cached)) {
+                $settings = $cached;
+            } elseif (\Illuminate\Database\Capsule\Manager::schema()->hasTable('settings')) {
+                $settings = \Illuminate\Database\Capsule\Manager::table('settings')->pluck('value', 'key')->toArray();
+                setting_cache_write($settings);
+            } else {
+                $settings = [];
+            }
+        } catch (\Throwable $e) {
+            $settings = []; // settings table not ready
+        }
+
+        $GLOBALS['_pankhcms_settings_cache'] = $settings;
+        return $settings;
+    }
+}
+
 if (!function_exists('setting')) {
     function setting(string $key, $default = null)
     {
-        // The snapshot lives in $GLOBALS so setting_cache_reset() can drop
-        // it (a function static cannot be cleared from outside).
-        $settings = $GLOBALS['_pankhcms_settings_cache'] ?? null;
-        if (!is_array($settings) || $settings === []) {
-            try {
-                $cached = setting_cache_read();
-                if (is_array($cached)) {
-                    $settings = $cached;
-                } elseif (\Illuminate\Database\Capsule\Manager::schema()->hasTable('settings')) {
-                    $settings = \Illuminate\Database\Capsule\Manager::table('settings')->pluck('value', 'key')->toArray();
-                    setting_cache_write($settings);
-                }
-            } catch (\Throwable $e) { /* Settings table not ready */ }
-            $GLOBALS['_pankhcms_settings_cache'] = $settings;
-        }
-
-        return $settings[$key] ?? $default;
+        return settings_all()[$key] ?? $default;
     }
 }
 

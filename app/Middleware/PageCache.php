@@ -6,9 +6,12 @@ namespace App\Middleware;
  * Full-page cache for anonymous GET traffic.
  *
  * Only 200 responses without CSRF tokens or captcha fields are stored.
- * The cache key is the base-path-aware request path plus whitelisted
- * query parameters; requests with any other query string are not cached
- * at all. Cleared via PageCache::clear() from content change events.
+ * The cache key is the Host header plus the base-path-aware request path
+ * plus whitelisted query parameters; requests with any other query
+ * string are not cached at all. Cleared via PageCache::clear() from
+ * content change events AND whenever maintenance mode is toggled, so
+ * anonymous hits served before bootstrap can never be stale relative to
+ * maintenance state.
  */
 class PageCache
 {
@@ -19,11 +22,97 @@ class PageCache
     /** Query parameters that may vary between cached variants of a path. */
     private const CACHEABLE_QUERY_PARAMS = ['page'];
 
+    /** Path prefixes never cached. */
+    private const EXCLUDED_PREFIXES = ['/admin', '/install', '/api', '/contact', '/themes/'];
+
     /** Maximum number of cached pages kept on disk. */
     private const MAX_CACHE_FILES = 500;
 
     /** Seconds a cached page stays fresh. */
     private const TTL = 3600;
+
+    /**
+     * Serve a cache hit for anonymous GET/HEAD traffic without session
+     * cookie before the application bootstraps (no DB, no plugins, no
+     * Blade). Called from public/index.php right after the environment
+     * is loaded. Maintenance mode is authoritative because the whole
+     * page cache is emptied on every maintenance toggle.
+     */
+    public static function serveEarlyIfPossible(): void
+    {
+        if (!self::$cacheEnabled) {
+            return;
+        }
+
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        if ($method !== 'GET' && $method !== 'HEAD') {
+            return;
+        }
+
+        // A session cookie means the visitor may be authenticated; leave
+        // those requests to the normal (DB-aware) flow.
+        if (isset($_COOKIE[session_name()])) {
+            return;
+        }
+
+        $path = self::requestPath();
+        foreach (self::EXCLUDED_PREFIXES as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return;
+            }
+        }
+
+        $params = self::whitelistedQueryParams();
+        if ($params === null) {
+            return;
+        }
+
+        $file = self::cacheDir() . '/' . self::cacheKey($path, $params) . '.html';
+        if (!is_file($file) || (time() - filemtime($file) >= self::TTL)) {
+            return;
+        }
+
+        header('X-Pankh-Cache: HIT');
+        header('Content-Type: text/html; charset=utf-8');
+        readfile($file);
+        exit;
+    }
+
+    /**
+     * The cache file that would serve the current request in the early
+     * (pre-bootstrap) path, or null when that path does not apply.
+     * Exposed for tests; contains no side effects and touches no DB.
+     */
+    public static function earlyCacheFile(): ?string
+    {
+        if (!self::$cacheEnabled) {
+            return null;
+        }
+
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        if ($method !== 'GET' && $method !== 'HEAD') {
+            return null;
+        }
+
+        if (isset($_COOKIE[session_name()])) {
+            return null;
+        }
+
+        $path = self::requestPath();
+        foreach (self::EXCLUDED_PREFIXES as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return null;
+            }
+        }
+
+        $params = self::whitelistedQueryParams();
+        if ($params === null) {
+            return null;
+        }
+
+        $file = self::cacheDir() . '/' . self::cacheKey($path, $params) . '.html';
+        return (is_file($file) && (time() - filemtime($file) < self::TTL)) ? $file : null;
+    }
 
     public static function before()
     {
@@ -39,12 +128,7 @@ class PageCache
             return true;
         }
 
-        self::$cacheDir = dirname(__DIR__, 2) . '/storage/cache/pages';
-        if (!is_dir(self::$cacheDir)) {
-            @mkdir(self::$cacheDir, 0755, true);
-        }
-
-        self::$cacheFile = self::$cacheDir . '/' . md5(self::requestPath() . '?' . http_build_query($params)) . '.html';
+        self::$cacheFile = self::cacheDir() . '/' . self::cacheKey(self::requestPath(), $params) . '.html';
 
         if (is_file(self::$cacheFile) && (time() - filemtime(self::$cacheFile) < self::TTL)) {
             header('X-Pankh-Cache: HIT');
@@ -114,7 +198,7 @@ class PageCache
         if ($method !== 'GET' && $method !== 'HEAD') return false;
 
         $path = self::requestPath();
-        foreach (['/admin', '/install', '/api', '/contact', '/themes/'] as $prefix) {
+        foreach (self::EXCLUDED_PREFIXES as $prefix) {
             if (str_starts_with($path, $prefix)) return false;
         }
 
@@ -122,6 +206,28 @@ class PageCache
         if (\App\Core\Auth::check()) return false;
 
         return true;
+    }
+
+    private static function cacheDir(): string
+    {
+        if (self::$cacheDir === null) {
+            self::$cacheDir = dirname(__DIR__, 2) . '/storage/cache/pages';
+            if (!is_dir(self::$cacheDir)) {
+                @mkdir(self::$cacheDir, 0755, true);
+            }
+        }
+        return self::$cacheDir;
+    }
+
+    /**
+     * Cache key: Host header + base-path-aware path + whitelisted query
+     * params. The Host is included so two sites (or a host-header
+     * variation) can never be served each other's cached pages.
+     */
+    private static function cacheKey(string $path, array $params): string
+    {
+        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+        return md5($host . '|' . $path . '?' . http_build_query($params));
     }
 
     /**
@@ -150,7 +256,7 @@ class PageCache
     private static function whitelistedQueryParams(): ?array
     {
         $out = [];
-        foreach ($_GET as $name => $value) {
+        foreach (($_GET ?? []) as $name => $value) {
             if (!in_array((string) $name, self::CACHEABLE_QUERY_PARAMS, true)) {
                 return null;
             }

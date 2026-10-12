@@ -12,6 +12,16 @@ if (!file_exists($root . '/.env')) {
 
 require $root . '/vendor/autoload.php';
 
+// Load .env only (no DB, no plugins, no Blade) so anonymous page-cache
+// hits below can resolve APP_URL for base-path detection.
+\App\Core\Bootstrap::loadEnv();
+
+// Anonymous GETs without a session cookie are served straight from the
+// page cache before the application bootstraps. Maintenance mode stays
+// authoritative: the cache is emptied whenever maintenance is toggled
+// (SettingsController and BackupManager both call PageCache::clear()).
+\App\Middleware\PageCache::serveEarlyIfPossible();
+
 \App\Core\Bootstrap::init();
 
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
@@ -40,20 +50,16 @@ if (!$isAdminPath && !$isInstallPath && !$isStaticAssetPath) {
     $maintenanceMessage = 'We are upgrading our website. Please check back soon.';
     $maintenanceAllowedIps = ['127.0.0.1', '::1'];
 
-    try {
-        if (\Illuminate\Database\Capsule\Manager::schema()->hasTable('settings')) {
-            $maintenanceMode = (string) (\Illuminate\Database\Capsule\Manager::table('settings')->where('key', 'maintenance_mode')->value('value') ?? '0') === '1';
-            $maintenanceMessage = (string) (\Illuminate\Database\Capsule\Manager::table('settings')->where('key', 'maintenance_message')->value('value') ?: $maintenanceMessage);
-            $allowedIpsRaw = (string) (\Illuminate\Database\Capsule\Manager::table('settings')->where('key', 'maintenance_allowed_ips')->value('value') ?? '');
-            if ($allowedIpsRaw !== '') {
-                $parsedIps = array_filter(array_map('trim', explode(',', $allowedIpsRaw)), static function ($ip) {
-                    return $ip !== '';
-                });
-                $maintenanceAllowedIps = array_values(array_unique(array_merge($maintenanceAllowedIps, $parsedIps)));
-            }
-        }
-    } catch (\Throwable $e) {
-        $maintenanceMode = false;
+    // One query for the whole settings table (cached per request).
+    $settings = \settings_all();
+    $maintenanceMode = (string) ($settings['maintenance_mode'] ?? '0') === '1';
+    $maintenanceMessage = (string) ($settings['maintenance_message'] ?: $maintenanceMessage);
+    $allowedIpsRaw = (string) ($settings['maintenance_allowed_ips'] ?? '');
+    if ($allowedIpsRaw !== '') {
+        $parsedIps = array_filter(array_map('trim', explode(',', $allowedIpsRaw)), static function ($ip) {
+            return $ip !== '';
+        });
+        $maintenanceAllowedIps = array_values(array_unique(array_merge($maintenanceAllowedIps, $parsedIps)));
     }
 
     $clientIp = client_ip();

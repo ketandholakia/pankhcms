@@ -25,7 +25,13 @@ class Bootstrap
         self::loadRoutes();
     }
 
-    private static function loadEnv()
+    /**
+     * Load the .env file. Public so the front controller can load the
+     * environment cheaply before deciding whether an anonymous request
+     * can be served from the page cache (which needs APP_URL for
+     * subdirectory deployments) without bootstrapping the whole app.
+     */
+    public static function loadEnv()
     {
         $root = dirname(__DIR__, 2);
         $envFile = $root . '/.env';
@@ -108,50 +114,37 @@ class Bootstrap
         $seoDefaultKeywords = '';
         $contactMapEmbedUrl = 'https://maps.google.com/maps?q=New%20York,%20USA&output=embed';
 
-        try {
-            if (Capsule::schema()->hasTable('settings')) {
-                $siteTitle = Capsule::table('settings')->where('key', 'site_title')->value('value')
-                    ?: Capsule::table('settings')->where('key', 'site_name')->value('value')
-                    ?: $siteTitle;
-                $siteDescription = Capsule::table('settings')->where('key', 'tagline')->value('value')
-                    ?: Capsule::table('settings')->where('key', 'site_tagline')->value('value')
-                    ?: $siteDescription;
-                $seoDefaultTitle = Capsule::table('settings')->where('key', 'seo_default_title')->value('value')
-                    ?: $seoDefaultTitle;
-                $seoDefaultDescription = Capsule::table('settings')->where('key', 'default_meta_description')->value('value')
-                    ?: Capsule::table('settings')->where('key', 'seo_default_description')->value('value')
-                    ?: $seoDefaultDescription;
-                $ogTitleDefault = Capsule::table('settings')->where('key', 'og_title_default')->value('value')
-                    ?: $ogTitleDefault;
-                $breadcrumbsEnabled = Capsule::table('settings')->where('key', 'breadcrumbs_enabled')->value('value') ?: $breadcrumbsEnabled;
-                $breadcrumbsType = Capsule::table('settings')->where('key', 'breadcrumbs_type')->value('value') ?: $breadcrumbsType;
-                $breadcrumbsShowHome = Capsule::table('settings')->where('key', 'breadcrumbs_show_home')->value('value') ?: $breadcrumbsShowHome;
-                $breadcrumbsHomeLabel = Capsule::table('settings')->where('key', 'breadcrumbs_home_label')->value('value') ?: $breadcrumbsHomeLabel;
-                $breadcrumbsSeparator = Capsule::table('settings')->where('key', 'breadcrumbs_separator')->value('value') ?: $breadcrumbsSeparator;
-                $breadcrumbsSchema = Capsule::table('settings')->where('key', 'breadcrumbs_schema')->value('value') ?: $breadcrumbsSchema;
-                $ogDescriptionDefault = Capsule::table('settings')->where('key', 'og_description_default')->value('value')
-                    ?: $ogDescriptionDefault;
-                $ogImageDefault = Capsule::table('settings')->where('key', 'og_image')->value('value')
-                    ?: Capsule::table('settings')->where('key', 'og_image_default')->value('value')
-                    ?: $ogImageDefault;
-                $canonicalBase = Capsule::table('settings')->where('key', 'site_url')->value('value')
-                    ?: Capsule::table('settings')->where('key', 'canonical_base')->value('value')
-                    ?: $canonicalBase;
-                $robotsDefault = Capsule::table('settings')->where('key', 'robots_default')->value('value')
-                    ?: $robotsDefault;
-                $twitterCard = Capsule::table('settings')->where('key', 'twitter_card')->value('value')
-                    ?: $twitterCard;
-                $twitterSite = Capsule::table('settings')->where('key', 'twitter_site')->value('value')
-                    ?: $twitterSite;
-                $seoDefaultKeywords = Capsule::table('settings')->where('key', 'default_meta_keywords')->value('value')
-                    ?: Capsule::table('settings')->where('key', 'seo_default_keywords')->value('value')
-                    ?: $seoDefaultKeywords;
-                $contactMapEmbedUrl = Capsule::table('settings')->where('key', 'contact_map_embed_url')->value('value')
-                    ?: $contactMapEmbedUrl;
+        // One query for every setting (settings_all() is cached per request
+        // and falls back to built-in defaults when the table is missing).
+        $settings = \settings_all();
+        $pick = static function (array $settings, string ...$keys) {
+            foreach ($keys as $key) {
+                if (!empty($settings[$key])) {
+                    return $settings[$key];
+                }
             }
-        } catch (\Throwable $e) {
-            // Use fallback values when settings table is unavailable.
-        }
+            return null;
+        };
+
+        $siteTitle = $pick($settings, 'site_title', 'site_name') ?: $siteTitle;
+        $siteDescription = $pick($settings, 'tagline', 'site_tagline') ?: $siteDescription;
+        $seoDefaultTitle = $pick($settings, 'seo_default_title') ?: $seoDefaultTitle;
+        $seoDefaultDescription = $pick($settings, 'default_meta_description', 'seo_default_description') ?: $seoDefaultDescription;
+        $ogTitleDefault = $pick($settings, 'og_title_default') ?: $ogTitleDefault;
+        $breadcrumbsEnabled = $pick($settings, 'breadcrumbs_enabled') ?: $breadcrumbsEnabled;
+        $breadcrumbsType = $pick($settings, 'breadcrumbs_type') ?: $breadcrumbsType;
+        $breadcrumbsShowHome = $pick($settings, 'breadcrumbs_show_home') ?: $breadcrumbsShowHome;
+        $breadcrumbsHomeLabel = $pick($settings, 'breadcrumbs_home_label') ?: $breadcrumbsHomeLabel;
+        $breadcrumbsSeparator = $pick($settings, 'breadcrumbs_separator') ?: $breadcrumbsSeparator;
+        $breadcrumbsSchema = $pick($settings, 'breadcrumbs_schema') ?: $breadcrumbsSchema;
+        $ogDescriptionDefault = $pick($settings, 'og_description_default') ?: $ogDescriptionDefault;
+        $ogImageDefault = $pick($settings, 'og_image', 'og_image_default') ?: $ogImageDefault;
+        $canonicalBase = $pick($settings, 'site_url', 'canonical_base') ?: $canonicalBase;
+        $robotsDefault = $pick($settings, 'robots_default') ?: $robotsDefault;
+        $twitterCard = $pick($settings, 'twitter_card') ?: $twitterCard;
+        $twitterSite = $pick($settings, 'twitter_site') ?: $twitterSite;
+        $seoDefaultKeywords = $pick($settings, 'default_meta_keywords', 'seo_default_keywords') ?: $seoDefaultKeywords;
+        $contactMapEmbedUrl = $pick($settings, 'contact_map_embed_url') ?: $contactMapEmbedUrl;
 
         $blade->share('site_title', $siteTitle);
         $blade->share('site_description', $siteDescription);

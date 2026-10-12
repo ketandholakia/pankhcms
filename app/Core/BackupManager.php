@@ -435,6 +435,12 @@ class BackupManager
             if (function_exists('setting_cache_clear')) {
                 setting_cache_clear();
             }
+            // Maintenance state changed: anonymous page-cache hits are
+            // served before bootstrap, so they must never outlive a
+            // maintenance toggle.
+            if (class_exists(\App\Middleware\PageCache::class)) {
+                \App\Middleware\PageCache::clear();
+            }
         } catch (\Throwable $e) {
             // Maintenance flagging is best-effort; restore continues. Log
             // loudly: a failure on the OFF path leaves the site in
