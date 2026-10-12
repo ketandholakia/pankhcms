@@ -131,12 +131,12 @@ class MediaController
                 echo '<div class="col-6 col-md-3 col-lg-2 mb-3">';
                 echo '<div class="card">';
                 if (strpos($item->mime_type, 'image/') === 0) {
-                    echo '<img src="' . $item->url . '" class="card-img-top" style="height:120px;object-fit:cover">';
+                    echo '<img src="' . htmlspecialchars((string) $item->url, ENT_QUOTES, 'UTF-8') . '" class="card-img-top" style="height:120px;object-fit:cover">';
                 } else {
                     echo '<div class="card-body text-center"><span class="text-muted">' . htmlspecialchars($item->mime_type) . '</span></div>';
                 }
                 echo '<div class="card-body p-2 text-center">';
-                echo '<button type="button" class="btn btn-sm btn-success media-picker-select-btn" data-id="' . $item->id . '" data-url="' . $item->url . '">Select</button>';
+                echo '<button type="button" class="btn btn-sm btn-success media-picker-select-btn" data-id="' . (int) $item->id . '" data-url="' . htmlspecialchars((string) $item->url, ENT_QUOTES, 'UTF-8') . '">Select</button>';
                 echo '</div></div></div>';
             }
             exit;
