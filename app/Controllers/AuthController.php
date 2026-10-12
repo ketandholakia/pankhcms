@@ -18,11 +18,31 @@ class AuthController
         echo \Flight::get("blade")->render("admin.forgot-password");
     }
 
+    /**
+     * Reset-link throttle. Deliberately more permissive than login (10
+     * requests per window) and keyed on identifier + IP: it exists to
+     * stop mass mail-out, not to leak whether an account exists — the
+     * endpoint always answers with status=sent either way.
+     */
+    public static function resetLinkThrottled(string $identifier): bool
+    {
+        $key = login_throttle_key('password-reset', client_ip() . '|' . strtolower($identifier));
+        if (!login_throttle_check($key)['allowed']) {
+            return true;
+        }
+
+        // Count this request; the lock it may trigger applies to it too,
+        // so exactly 10 requests per window are answered.
+        $result = login_throttle_register_failure($key, 10);
+        return !empty($result['locked']);
+    }
+
     public static function sendResetLink()
     {
         $identifier = isset($_POST["identifier"]) ? trim((string) $_POST["identifier"]) : '';
 
-        if ($identifier !== '') {
+        // Always answer identically; when throttled, just skip the work.
+        if ($identifier !== '' && !self::resetLinkThrottled($identifier)) {
             $user = self::findUserByIdentifier($identifier);
             if ($user && filter_var((string) $user->email, FILTER_VALIDATE_EMAIL)) {
                 $plainToken = self::issuePasswordResetToken((int) $user->id);
@@ -120,6 +140,10 @@ class AuthController
             return;
         }
 
+        // For unknown accounts, burn the same bcrypt cost as a real check
+        // so response timing does not reveal whether the identifier exists.
+        self::dummyPasswordVerify($password);
+
         $ipFailure = login_throttle_register_failure($ipKey);
         // Account-level lockout: 20 failures in the window before the
         // exponential backoff kicks in.
@@ -134,6 +158,20 @@ class AuthController
 
         \Flight::response()->status(401);
         echo "Invalid login";
+    }
+
+    /**
+     * A bcrypt hash of an unrelated random string, verified once per
+     * failed login against an unknown identifier so the CPU cost (and
+     * therefore response time) matches a real credential check.
+     */
+    private static function dummyPasswordVerify(string $password): void
+    {
+        static $dummyHash = null;
+        if ($dummyHash === null) {
+            $dummyHash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+        }
+        password_verify($password, $dummyHash);
     }
 
     public static function logout()
