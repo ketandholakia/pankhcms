@@ -342,7 +342,11 @@ class UserController
         $user->save();
 
         if (isset($data['role_id'])) {
-            $user->roles()->sync([$data['role_id']]);
+            // "-- No Role --" submits an empty string; sync([]) detaches
+            // every role. sync(['']) would insert a bogus role_id='' pivot
+            // row (a strict-mode SQL error on MySQL/MariaDB, and a corrupt
+            // row elsewhere).
+            $user->roles()->sync($data['role_id'] === '' ? [] : [$data['role_id']]);
         }
 
         \Flight::redirect('/admin/users?status=updated');

@@ -170,6 +170,40 @@ class UserRoleChangeGuardTest extends TestCase
         $this->assertSame(0, $user->roles()->count(), 'no role may be attached for an invalid role_id');
     }
 
+    public function test_update_with_empty_role_id_detaches_all_roles_cleanly()
+    {
+        // The edit form's "-- No Role --" option submits role_id=''. That
+        // must detach every role; historically it ran sync(['']), which
+        // inserts a bogus role_id='' pivot row (a strict-mode SQL error on
+        // MySQL/MariaDB and a corrupt row elsewhere).
+        $suffix = bin2hex(random_bytes(2));
+        $user = User::create([
+            'username' => 'norole' . $suffix,
+            'email' => 'norole' . $suffix . '@example.com',
+            'password' => password_hash('Sup3r-Secret!Pass', PASSWORD_DEFAULT),
+        ]);
+        $this->createdUserIds[] = $user->id;
+        $viewerRole = Role::where('name', 'Viewer')->first();
+        $user->roles()->attach($viewerRole->id);
+
+        $this->submitRequest([
+            'username' => $user->username,
+            'email' => $user->email,
+            'role_id' => '', // "-- No Role --"
+        ]);
+
+        UserController::update((int) $user->id);
+
+        $this->assertStringContainsString('status=updated', $this->location());
+        $this->assertSame(
+            0,
+            \Illuminate\Database\Capsule\Manager::table('user_roles')->where('user_id', $user->id)->count(),
+            'no pivot row (not even a role_id="" one) may remain'
+        );
+        $user->refresh();
+        $this->assertSame(0, $user->roles()->count());
+    }
+
     public function test_store_refuses_invalid_role_id()
     {
         $suffix = bin2hex(random_bytes(2));
