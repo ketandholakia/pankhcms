@@ -1,9 +1,10 @@
 <?php
 use Illuminate\Database\Capsule\Manager as Capsule;
 
-// Enable error reporting before any output
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Log everything, but never print errors to the browser: the installer
+// renders its own friendly failure page in the catch block below.
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 // --- Secure session-based auto-login installer ---
@@ -23,7 +24,9 @@ function clean($v) {
     return trim(htmlspecialchars($v ?? '', ENT_QUOTES));
 }
 function envEscape($v) {
-    return '"' . str_replace('"', '\"', trim($v)) . '"';
+    // The real escaping lives in app/Helpers/functions.php so it can be
+    // unit tested; see env_escape().
+    return env_escape($v);
 }
 function normalizeUsername($value) {
     $value = strtolower(trim((string) $value));

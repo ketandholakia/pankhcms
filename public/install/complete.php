@@ -24,6 +24,12 @@ a{color:#007bff;text-decoration:none;font-weight:bold}
 <p>You are now logged in as administrator.</p>
 <p>Redirecting to dashboard...</p>
 <a href="/admin">Go to Dashboard Now</a>
+<div style="margin-top:25px;padding:12px;background:#fff3cd;border:1px solid #ffec99;border-radius:6px;text-align:left;font-size:.95em;color:#664d03">
+<strong>Important security step:</strong> the installer is now locked,
+but you should still <strong>delete the <code>public/install</code>
+directory</strong> (or block web access to it in your web server
+configuration) before going live.
+</div>
 </div>
 </body>
 </html>

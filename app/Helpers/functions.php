@@ -621,6 +621,23 @@ if (!function_exists('setting_cache_write')) {
     }
 }
 
+if (!function_exists('env_escape')) {
+    /**
+     * Escape a value for a double-quoted phpdotenv entry: backslashes
+     * first, then quotes, then $ (variable interpolation), then newlines
+     * as \n escape sequences. Used by the web installer.
+     */
+    function env_escape(string $value): string
+    {
+        $value = str_replace('\\', '\\\\', trim($value));
+        $value = str_replace('"', '\"', $value);
+        $value = str_replace('$', '\\$', $value);
+        $value = str_replace("\r\n", '\n', $value);
+        $value = str_replace(["\r", "\n"], '\n', $value);
+        return '"' . $value . '"';
+    }
+}
+
 if (!function_exists('settings_all')) {
     function settings_all(): array
     {
