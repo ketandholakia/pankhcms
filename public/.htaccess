@@ -1,4 +1,16 @@
+# Do not list directory contents when no index file exists.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
 RewriteEngine On
+
+# Uploaded files are static content only: refuse (403) anything that
+# looks like a PHP script under public/uploads/. The pattern has no
+# trailing anchor on purpose so path-info tricks (/x.php/foo.txt) and
+# case variants are covered too.
+RewriteRule ^uploads/.+\.php - [NC,F,L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>

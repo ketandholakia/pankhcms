@@ -47,4 +47,20 @@ class OutputEscapingSitesTest extends TestCase
             'both picker output sites (img src and data-url) must escape $item->url'
         );
     }
+
+    /**
+     * Apache configuration cannot be executed in unit tests; pin the
+     * security directives so they cannot silently disappear.
+     */
+    public function test_htaccess_disables_indexes_and_php_in_uploads()
+    {
+        $htaccess = file_get_contents(dirname(__DIR__, 2) . '/public/.htaccess');
+
+        $this->assertStringContainsString('Options -Indexes', $htaccess);
+        $this->assertMatchesRegularExpression(
+            '/RewriteRule \^uploads\/\.\+\\\\\.php - \[NC,F,L\]/',
+            $htaccess,
+            'uploads PHP requests must be denied (403) by rewrite rule'
+        );
+    }
 }
