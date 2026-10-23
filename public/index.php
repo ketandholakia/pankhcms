@@ -22,6 +22,16 @@ require $root . '/vendor/autoload.php';
 // (SettingsController and BackupManager both call PageCache::clear()).
 \App\Middleware\PageCache::serveEarlyIfPossible();
 
+// Lightweight view beacon (POST /_v): records a page view DB-only,
+// before the framework boots, so cached pages still count views. The
+// handler follows the PHPUNIT_TEST no-exit convention; in production
+// it exits right after answering.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
+    && rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/') === '/_v') {
+    \App\Core\VisitTracker::handleBeacon();
+    exit;
+}
+
 \App\Core\Bootstrap::init();
 
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';

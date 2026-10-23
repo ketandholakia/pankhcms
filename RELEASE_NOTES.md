@@ -98,8 +98,11 @@ version label is proposed and may change before the actual tag.
 - **Cache freshness.** Rescheduling a page re-arms
   `published_notified_at`; sliders, SEO, taxonomies, content types and
   media deletes now clear the page cache.
-- **Cache-hit analytics.** Pre-bootstrap cache hits count page views
-  (DB-only, post-send, anonymized IP, bot-free, session-less).
+- **Cache-hit analytics.** Cached pages count views through a
+  lightweight POST /_v beacon (sendBeacon injected by the public
+  layouts, handled pre-bootstrap DB-only in VisitTracker::handleBeacon:
+  anonymized IP, bot-free, session-less). The early cache path itself
+  never touches the database.
 - **client_ip hardening.** Exactly one configured forwarding header is
   trusted (`TRUSTED_PROXY_HEADER`: X-Forwarded-For / X-Real-IP /
   CF-Connecting-IP); mixing headers is no longer spoofable.
