@@ -61,7 +61,11 @@ class SecurityHeadersOnCacheHitTest extends TestCase
             $root . '/public/index.php',
         ];
         $spec = [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']];
-        $server = proc_open($cmd, $spec, $pipes, $root);
+        // The cache host allowlist (item: APP_URL/ALLOWED_HOSTS) must admit
+        // the child server's host; phpdotenv's immutable loader keeps
+        // existing process env, so this wins over any .env value.
+        $env = array_merge(getenv(), ['ALLOWED_HOSTS' => '127.0.0.1,localhost']);
+        $server = proc_open($cmd, $spec, $pipes, $root, $env);
         if (!is_resource($server)) {
             return false;
         }

@@ -67,6 +67,11 @@ class PageCache
             return;
         }
 
+        // Unknown/forged Host: never serve from cache.
+        if (self::cacheHost() === null) {
+            return;
+        }
+
         $file = self::cacheDir() . '/' . self::cacheKey($path, $params) . '.html';
         if (!is_file($file) || (time() - filemtime($file) >= self::TTL)) {
             return;
@@ -167,6 +172,10 @@ class PageCache
             return null;
         }
 
+        if (self::cacheHost() === null) {
+            return null;
+        }
+
         $file = self::cacheDir() . '/' . self::cacheKey($path, $params) . '.html';
         return (is_file($file) && (time() - filemtime($file) < self::TTL)) ? $file : null;
     }
@@ -259,6 +268,9 @@ class PageCache
             if (str_starts_with($path, $prefix)) return false;
         }
 
+        // Unknown/forged Host: never create cache files.
+        if (self::cacheHost() === null) return false;
+
         // Disable cache if logged in
         if (\App\Core\Auth::check()) return false;
 
@@ -277,14 +289,63 @@ class PageCache
     }
 
     /**
-     * Cache key: Host header + base-path-aware path + whitelisted query
-     * params. The Host is included so two sites (or a host-header
-     * variation) can never be served each other's cached pages.
+     * Cache key: allowlisted host + base-path-aware path + whitelisted
+     * query params. The host is part of the key (and must pass the
+     * ALLOWED_HOSTS/APP_URL allowlist) so two sites can never be served
+     * each other's cached pages and a forged Host can never poison one.
      */
     private static function cacheKey(string $path, array $params): string
     {
-        $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
-        return md5($host . '|' . $path . '?' . http_build_query($params));
+        return md5((self::cacheHost() ?? '') . '|' . $path . '?' . http_build_query($params));
+    }
+
+    /**
+     * The hostname this request may be cached under: the port-stripped,
+     * lowercased Host, but ONLY when it is allowlisted. The allowlist is
+     * ALLOWED_HOSTS (comma-separated) plus the host of APP_URL; with
+     * neither configured (only possible in tests) any host is accepted,
+     * preserving the previous behavior.
+     */
+    private static function cacheHost(): ?string
+    {
+        $raw = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? '')));
+        if ($raw === '') {
+            return null;
+        }
+        $host = preg_replace('/:\d+$/', '', $raw) ?: $raw;
+
+        $allowed = self::allowedHosts();
+        if ($allowed === []) {
+            return $host;
+        }
+
+        return in_array($host, $allowed, true) ? $host : null;
+    }
+
+    /** @return string[] lowercased hostnames allowed to use the cache */
+    private static function allowedHosts(): array
+    {
+        $hosts = [];
+
+        $raw = trim((string) env('ALLOWED_HOSTS', ''));
+        if ($raw !== '') {
+            foreach (explode(',', $raw) as $candidate) {
+                $candidate = strtolower(trim((string) preg_replace('/:\d+$/', '', $candidate)));
+                if ($candidate !== '') {
+                    $hosts[] = $candidate;
+                }
+            }
+        }
+
+        $appUrl = trim((string) env('APP_URL', ''));
+        if ($appUrl !== '') {
+            $fromAppUrl = strtolower((string) (parse_url($appUrl, PHP_URL_HOST) ?? ''));
+            if ($fromAppUrl !== '') {
+                $hosts[] = $fromAppUrl;
+            }
+        }
+
+        return array_values(array_unique($hosts));
     }
 
     /**

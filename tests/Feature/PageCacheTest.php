@@ -34,6 +34,7 @@ class PageCacheTest extends TestCase
         unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
         putenv('PHPUNIT_TEST');
         parent::tearDown();
+        putenv('ALLOWED_HOSTS');
     }
 
     private function setCacheFileViaReflection(string $file): void
@@ -158,6 +159,7 @@ class PageCacheTest extends TestCase
 
     public function test_early_cache_file_hit_uses_host_in_key_and_touches_no_db()
     {
+        putenv("ALLOWED_HOSTS=example.test,other.example.test");
         $_SERVER["HTTP_HOST"] = "example.test";
         $_SERVER["REQUEST_URI"] = "/cached-page";
 
@@ -192,6 +194,7 @@ class PageCacheTest extends TestCase
 
     public function test_early_cache_misses_on_different_host()
     {
+        putenv("ALLOWED_HOSTS=example.test,other.example.test");
         $_SERVER["HTTP_HOST"] = "example.test";
         $_SERVER["REQUEST_URI"] = "/host-page";
 
@@ -208,6 +211,7 @@ class PageCacheTest extends TestCase
 
     public function test_early_cache_skips_session_cookies_and_excluded_paths()
     {
+        putenv("ALLOWED_HOSTS=example.test,other.example.test");
         $_SERVER["HTTP_HOST"] = "example.test";
 
         // Session cookie present -> defer to the normal flow

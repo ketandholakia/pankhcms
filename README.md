@@ -92,7 +92,7 @@ PankhCMS is a lightweight, simple, and extensible PHP Content Management System 
 
 - **PHP 8.2+** with `pdo_sqlite` *or* `pdo_mysql`, `zip`, `fileinfo`, `mbstring`, `dom`, `openssl`; the web installer verifies all of these.
 - Run `composer install --no-dev --optimize-autoloader` on production.
-- `.env`: set `APP_DEBUG=false`, a correct `APP_URL`, and database credentials. Set `TRUSTED_PROXIES` (comma-separated IPs/CIDRs) only if PHP sits behind a reverse proxy — otherwise leave it empty. Behind that proxy, also set `TRUSTED_PROXY_HEADER` to the single header the proxy actually provides (`X-Forwarded-For` (default), `X-Real-IP`, or `CF-Connecting-IP` for Cloudflare); only that one header is trusted for client-IP resolution.
+- `.env`: set `APP_DEBUG=false`, a correct `APP_URL`, and database credentials. Set `TRUSTED_PROXIES` (comma-separated IPs/CIDRs) only if PHP sits behind a reverse proxy — otherwise leave it empty. Behind that proxy, also set `TRUSTED_PROXY_HEADER` to the single header the proxy actually provides (`X-Forwarded-For` (default), `X-Real-IP`, or `CF-Connecting-IP` for Cloudflare); only that one header is trusted for client-IP resolution. Multi-host installs should list every public hostname in `ALLOWED_HOSTS`; requests with any other `Host` header bypass the full-page cache entirely.
 - Web-server-writable directories: `storage/` (cache, logs, backups) and `public/uploads/`.
 - Ensure `public/install/lock` exists after installation (the installer creates it) so the installer cannot be re-run.
 - Point the web server's document root at `public/`. Subdirectory deployments are supported — set `APP_URL` including the subdirectory path.
