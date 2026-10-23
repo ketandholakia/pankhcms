@@ -73,16 +73,11 @@ if (!$isAdminPath && !$isInstallPath && !$isStaticAssetPath) {
     }
 }
 
-// Security headers on every response.
+// Security headers on every response. The early page-cache path sends
+// the same headers from PageCache::serveEarlyIfPossible() via the same
+// App\Core\SecurityHeaders helper, so cached responses match.
 \Flight::before('start', function () {
-    header('X-Content-Type-Options: nosniff');
-    header('X-Frame-Options: SAMEORIGIN');
-    header('Referrer-Policy: strict-origin-when-cross-origin');
-
-    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-    if ($isHttps) {
-        header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
-    }
+    \App\Core\SecurityHeaders::send();
 
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     if (str_contains($path, '/admin')) {

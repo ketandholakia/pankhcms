@@ -72,6 +72,10 @@ class PageCache
             return;
         }
 
+        // Early hits bypass public/index.php's Flight::before('start')
+        // hook, so the site-wide security headers must be sent here too.
+        \App\Core\SecurityHeaders::send();
+
         header('X-Pankh-Cache: HIT');
         header('Content-Type: text/html; charset=utf-8');
         readfile($file);
