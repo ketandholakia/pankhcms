@@ -38,6 +38,14 @@ try {
 
     $deleted = Capsule::table('page_views')->where('created_at', '<', $cutoff)->delete();
     echo "Deleted {$deleted} page view(s) older than {$days} days (before {$cutoff}).\n";
+
+    // Keep the login-throttle directory bounded while we are here.
+    if (function_exists('login_throttle_enforce_cap')) {
+        $throttleRemoved = login_throttle_enforce_cap();
+        if ($throttleRemoved > 0) {
+            echo "Removed {$throttleRemoved} old login-throttle file(s) over the cap.\n";
+        }
+    }
     exit(0);
 } catch (Throwable $e) {
     fwrite(STDERR, 'Prune failed: ' . $e->getMessage() . "\n");

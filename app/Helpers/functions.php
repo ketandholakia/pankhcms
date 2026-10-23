@@ -357,6 +357,37 @@ if (!function_exists('login_throttle_check')) {
     }
 }
 
+if (!function_exists('login_throttle_enforce_cap')) {
+    /**
+     * Global cap on throttle files: when more than \$max exist, delete
+     * the oldest (by modification time) until only \$keep remain. An
+     * attacker hammering login/reset endpoints with rotating identifiers
+     * creates fresh files that login_throttle_prune() (1-day staleness)
+     * never touches, so the directory also needs a size bound.
+     *
+     * @return int the number of files removed
+     */
+    function login_throttle_enforce_cap(int $max = 5000, int $keep = 4000): int
+    {
+        $dir = dirname(__DIR__, 2) . '/storage/cache/login_throttle/';
+        $files = glob($dir . '*.json') ?: [];
+        if (count($files) <= $max) {
+            return 0;
+        }
+
+        usort($files, fn ($a, $b) => filemtime($a) <=> filemtime($b));
+
+        $removed = 0;
+        $excess = count($files) - $keep;
+        for ($i = 0; $i < $excess; $i++) {
+            if (is_file($files[$i]) && @unlink($files[$i])) {
+                $removed++;
+            }
+        }
+
+        return $removed;
+    }
+}
 if (!function_exists('login_throttle_register_failure')) {
     function login_throttle_register_failure(string $key, int $maxAttempts = 5, int $window = 900): array
     {
@@ -388,9 +419,11 @@ if (!function_exists('login_throttle_register_failure')) {
 
         login_throttle_write($key, $data);
 
-        // Opportunistic cleanup of stale throttle files.
+        // Opportunistic cleanup of stale throttle files and, since fresh
+        // flood files are never 'stale', the global size cap.
         if (random_int(1, 50) === 1) {
             login_throttle_prune();
+            login_throttle_enforce_cap();
         }
 
         return ['locked' => $lockUntil > $now, 'retry_after' => max(0, $lockUntil - $now)];
