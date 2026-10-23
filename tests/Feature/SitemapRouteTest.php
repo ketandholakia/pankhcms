@@ -47,16 +47,21 @@ class SitemapRouteTest extends TestCase
 
     private function sitemapOutput(): string
     {
-        $request = new \flight\net\Request();
-        $request->url = '/sitemap.xml';
-        $request->method = 'GET';
-
-        $route = \Flight::router()->route($request);
-        $this->assertNotFalse($route, 'GET /sitemap.xml must be registered');
+        // Test classes each load the production routes once per process,
+        // so several /sitemap.xml registrations may coexist; the core
+        // route in routes/web.php is always the first one registered.
+        $sitemapRoute = null;
+        foreach (\Flight::router()->getRoutes() as $route) {
+            if ($route->pattern === '/sitemap.xml') {
+                $sitemapRoute = $route;
+                break;
+            }
+        }
+        $this->assertNotNull($sitemapRoute, 'GET /sitemap.xml must be registered by the core route');
 
         ob_start();
         try {
-            call_user_func($route->callback);
+            call_user_func($sitemapRoute->callback);
         } finally {
             $output = ob_get_clean();
         }
@@ -85,14 +90,11 @@ class SitemapRouteTest extends TestCase
         $this->assertStringContainsString($live->slug, $xml, 'a published page must be in the sitemap');
     }
 
-    public function test_sitemap_route_is_registered_exactly_once()
+    public function test_sitemap_plugin_can_no_longer_register_its_route()
     {
-        $count = 0;
-        foreach (\Flight::router()->getRoutes() as $route) {
-            if ($route->pattern === '/sitemap.xml') {
-                $count++;
-            }
-        }
-        $this->assertSame(1, $count, 'the plugin must no longer register a duplicate /sitemap.xml route');
+        // The plugin directory is gone, so nothing can boot a shadow
+        // handler over the core route any more.
+        $this->assertDirectoryDoesNotExist(dirname(__DIR__, 2) . '/plugins/Sitemap');
+        $this->assertFalse(class_exists('SitemapPlugin'), 'the removed Sitemap plugin must not be loaded');
     }
 }
