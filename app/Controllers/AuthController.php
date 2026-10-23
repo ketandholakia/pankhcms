@@ -105,6 +105,10 @@ class AuthController
         $user->password = password_hash($password, PASSWORD_DEFAULT);
         $user->save();
 
+        // A password reset proves the account owner lost control of the
+        // credential: every API token issued under it is revoked.
+        $user->apiTokens()->delete();
+
         Capsule::table('password_resets')->where('user_id', $user->id)->delete();
 
         \Flight::redirect('/admin/login?status=password-reset');
