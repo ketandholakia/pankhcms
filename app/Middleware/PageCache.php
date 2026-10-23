@@ -79,7 +79,60 @@ class PageCache
         header('X-Pankh-Cache: HIT');
         header('Content-Type: text/html; charset=utf-8');
         readfile($file);
+
+        // The response is out; count the view now (DB-only, best effort).
+        self::trackEarlyHit($path);
         exit;
+    }
+
+    /**
+     * Count a view served from the early cache. Chosen over a tracking
+     * beacon: the HTML response itself stays completely session-less and
+     * DB-free, no JavaScript is injected, and no second request runs a
+     * full bootstrap. The visitor has no session cookie on this path (a
+     * session cookie skips the early cache entirely), so VisitTracker
+     * stores no session id and the response never starts a session.
+     * Browsers-only: known bots are skipped so statistics are not
+     * flooded. Runs AFTER the cached body has been sent, DB-only (no
+     * plugins, no Blade), and every failure is swallowed — analytics
+     * must never break a cache hit.
+     */
+    public static function trackEarlyHit(string $path): void
+    {
+        $userAgent = strtolower((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        if (self::isBot($userAgent)) {
+            return;
+        }
+
+        try {
+            // DB-only bootstrap; require_once is a no-op when the app is
+            // already bootstrapped (tests, normal-flow fallbacks).
+            require_once dirname(__DIR__, 2) . '/app/database.php';
+
+            $slug = ltrim($path, '/');
+            $pageId = \Illuminate\Database\Capsule\Manager::table('pages')
+                ->where('slug', $slug)
+                ->value('id');
+
+            \App\Core\VisitTracker::track($pageId !== null ? (int) $pageId : null, $path);
+        } catch (\Throwable $e) {
+            // Best effort only.
+        }
+    }
+
+    /**
+     * Conservative crawler detector for view counting (empty agents are
+     * treated as bots: no real browser sends no User-Agent).
+     */
+    public static function isBot(string $userAgentLower): bool
+    {
+        if (trim($userAgentLower) === '') {
+            return true;
+        }
+        return (bool) preg_match(
+            '/bot|crawl|spider|slurp|curl|wget|facebookexternalhit|headless|lighthouse|monitor|pingdom|uptime/',
+            $userAgentLower
+        );
     }
 
     /**
