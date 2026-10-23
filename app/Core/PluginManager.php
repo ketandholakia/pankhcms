@@ -53,6 +53,12 @@ class PluginManager
             $jsonFile = $dir . '/plugin.json';
             if (!file_exists($jsonFile)) continue;
             $meta = json_decode(file_get_contents($jsonFile), true);
+            if (!is_array($meta)
+                || !is_string($meta['slug'] ?? null) || $meta['slug'] === ''
+                || !is_string($meta['name'] ?? null) || $meta['name'] === '') {
+                error_log('PluginManager: skipping invalid plugin manifest: ' . $jsonFile);
+                continue;
+            }
             $meta['__dir'] = $dir;
             $found[$meta['slug']] = $meta;
         }

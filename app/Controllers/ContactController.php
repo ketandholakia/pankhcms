@@ -73,12 +73,24 @@ class ContactController
 
         self::registerHit($ip);
 
+        // Privacy: store the anonymized IP by default (last IPv4 octet
+        // / IPv6 interface identifier removed, same as page-view
+        // tracking). Set CONTACT_STORE_FULL_IP=true only if the
+        // message inbox genuinely needs the full address (abuse reports
+        // to providers); the tradeoff is keeping identifying data for
+        // every submitter instead of a /24-ish prefix.
+        // env() dotenv-casts the literal true to a boolean — compare
+        // through filter_var so both 'true' and true work.
+        $storedIp = filter_var((string) env('CONTACT_STORE_FULL_IP', 'false'), FILTER_VALIDATE_BOOL)
+            ? $ip
+            : \App\Core\VisitTracker::anonymizeIp($ip);
+
         ContactMessage::create([
             'name'       => trim($data->name),
             'email'      => trim($data->email),
             'subject'    => trim($data->subject ?? ''),
             'message'    => trim($data->message),
-            'ip'         => $ip,
+            'ip'         => $storedIp !== '' ? $storedIp : $ip,
             'user_agent' => $request->user_agent,
         ]);
 

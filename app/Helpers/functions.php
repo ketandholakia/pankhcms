@@ -517,8 +517,7 @@ if (!function_exists('csrf_verify')) {
         }
 
         $provided = $_POST['_csrf']
-            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)
-            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'.''] ?? null);
+            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
 
         if (!is_string($provided) || $provided === '') {
             return false;

@@ -31,6 +31,12 @@ class PageController
      */
     private const REQUIRED = ['title'];
 
+    /** Top-level paths a page slug must never shadow. */
+    private const RESERVED_SLUGS = [
+        'admin', 'install', 'api', 'storage', 'themes', 'uploads',
+        'assets', 'contact', 'search', 'sitemap', 'robots', 'favicon',
+    ];
+
     /**
      * Fields whose empty string should be stored as NULL.
      * (i.e. optional SEO fields — avoids storing "" in the DB)
@@ -301,6 +307,12 @@ class PageController
         // 5. Validate slug format if provided
         if (!empty($data['slug']) && !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $data['slug'])) {
             $errors[] = "'slug' may only contain lowercase letters, numbers, and hyphens.";
+        }
+
+        // Slugs that would collide with framework/system paths can never
+        // be reached as public pages anyway — reject them up front.
+        if (!empty($data['slug']) && in_array($data['slug'], self::RESERVED_SLUGS, true)) {
+            $errors[] = "'{$data['slug']}' is a reserved path and cannot be used as a page slug.";
         }
 
         if (array_key_exists('layout', $data)) {

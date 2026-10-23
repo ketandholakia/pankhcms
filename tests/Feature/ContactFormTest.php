@@ -79,7 +79,8 @@ class ContactFormTest extends TestCase
         $message = ContactMessage::where('email', 'jane@example.com')->first();
         $this->assertNotNull($message);
         $this->assertSame('Jane Doe', $message->name);
-        $this->assertSame('203.0.113.10', $message->ip);
+        // Privacy default: the stored IP is anonymized (last octet removed).
+        $this->assertSame('203.0.113.x', $message->ip);
         $this->assertArrayNotHasKey('contact_captcha_expected', $_SESSION);
     }
 
