@@ -44,6 +44,7 @@ class ApiTokenRevocationTest extends TestCase
         $this->userIds = [];
         $this->resetIds = [];
         unset($_SESSION['user_id'], $_SESSION['password_hash']);
+        \App\Core\Auth::forgetUser();
         $_POST = [];
         putenv('PHPUNIT_TEST');
         parent::tearDown();

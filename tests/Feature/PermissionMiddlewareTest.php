@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use PHPUnit\Framework\TestCase;
+use App\Core\Auth;
 use App\Models\User;
 use App\Models\Role;
 use App\Middleware\RequirePermission;
@@ -37,6 +38,7 @@ class PermissionMiddlewareTest extends TestCase
         $this->limitedUser->delete();
         Role::where('name', 'Visitor')->delete();
         unset($_SESSION['user_id'], $_SESSION['password_hash']);
+        Auth::forgetUser();
         putenv('PHPUNIT_TEST');
         parent::tearDown();
     }

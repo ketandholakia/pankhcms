@@ -9,6 +9,15 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 class AuthTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        // The memoized auth user must never leak between tests: these
+        // tests create, re-hash and delete users mid-test.
+        Auth::forgetUser();
+        unset($_SESSION['user_id'], $_SESSION['password_hash']);
+        parent::tearDown();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

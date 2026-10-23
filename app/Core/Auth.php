@@ -85,6 +85,9 @@ class Auth
 
     public static function attempt($identifier, $password)
     {
+        // A fresh login is a new identity for this request context.
+        self::forgetUser();
+
         $identifier = trim((string) $identifier);
         $usernameIdentifier = strtolower($identifier);
 
