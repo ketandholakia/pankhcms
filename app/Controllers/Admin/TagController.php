@@ -40,6 +40,7 @@ class TagController
 
         try {
             $tag = Tag::create($input);
+            \App\Middleware\PageCache::clear();
             $this->jsonResponse(['success' => true, 'id' => $tag->id], 201);
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to create tag.'], 500);
@@ -58,6 +59,7 @@ class TagController
 
         try {
             $tag->update($input);
+            \App\Middleware\PageCache::clear();
             $this->jsonResponse(['success' => true]);
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to update tag.'], 500);
@@ -70,6 +72,7 @@ class TagController
 
         try {
             $tag->delete();
+            \App\Middleware\PageCache::clear();
             $this->jsonResponse(['success' => true]);
         } catch (Exception $e) {
             $this->jsonResponse(['error' => 'Failed to delete tag.'], 500);

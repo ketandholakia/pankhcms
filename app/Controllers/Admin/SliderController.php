@@ -51,6 +51,7 @@ class SliderController
         }
 
         SliderImage::create($payload);
+        \App\Middleware\PageCache::clear();
         \Flight::redirect('/admin/slider');
     }
 
@@ -99,6 +100,7 @@ class SliderController
             $slider->active = !empty($data['active']) ? 1 : 0;
         }
         $slider->save();
+        \App\Middleware\PageCache::clear();
         \Flight::redirect('/admin/slider');
     }
 
@@ -107,6 +109,7 @@ class SliderController
         $slider = SliderImage::find($id);
         if ($slider) {
             $slider->delete();
+            \App\Middleware\PageCache::clear();
         }
         \Flight::redirect('/admin/slider');
     }

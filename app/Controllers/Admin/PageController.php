@@ -169,7 +169,19 @@ class PageController
             $input['published_at'] = $input['published_at']
                 ?? ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
 
+            // A changed publish date or status re-arms the scheduled-
+            // publishing notifier so scripts/publish-scheduled.php fires
+            // page.published (and its cache invalidation) again. The
+            // column is not mass-assignable, so it is set on the model.
+            $notifierChanged = ($input['published_at'] ?? null) !== $page->getRawOriginal('published_at')
+                || ($input['status'] ?? null) !== $page->getRawOriginal('status');
+
             $page->update($input);
+
+            if ($notifierChanged) {
+                $page->published_notified_at = null;
+                $page->save();
+            }
 
             $this->syncRelations($page);
             \Event::dispatch('page.updated', $page);

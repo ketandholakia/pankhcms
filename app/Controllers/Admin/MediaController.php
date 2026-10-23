@@ -100,6 +100,7 @@ class MediaController
             unlink($filePath);
         }
         $media->delete();
+        \App\Middleware\PageCache::clear();
         $this->jsonResponse(['success' => true]);
     }
 

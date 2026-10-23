@@ -20,4 +20,10 @@ foreach ($due as $page) {
     $page->save();
 }
 
+// The page.published listener clears the cache per event; this explicit
+// clear keeps the guarantee even if no listener ran.
+if (count($due) > 0) {
+    \App\Middleware\PageCache::clear();
+}
+
 echo "Processed " . count($due) . " scheduled pages.\n";
