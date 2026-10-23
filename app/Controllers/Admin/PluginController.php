@@ -11,11 +11,14 @@ class PluginController
     {
         $plugins = [];
         $pluginDir = __DIR__ . '/../../../plugins';
+        // One query for every plugin row; the old loop issued one
+        // query per discovered plugin directory.
+        $dbRows = Capsule::table('plugins')->get()->keyBy('slug');
         foreach (glob($pluginDir . '/*', GLOB_ONLYDIR) as $dir) {
             $jsonFile = $dir . '/plugin.json';
             if (!file_exists($jsonFile)) continue;
             $meta = json_decode(file_get_contents($jsonFile), true);
-            $db = Capsule::table('plugins')->where('slug', $meta['slug'])->first();
+            $db = $dbRows[$meta['slug']] ?? null;
             $plugins[] = [
                 'name' => $meta['name'],
                 'slug' => $meta['slug'],

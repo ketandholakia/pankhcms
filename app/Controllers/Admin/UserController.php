@@ -143,6 +143,9 @@ class UserController
         $_SESSION['password_hash'] = $user->password;
         session_regenerate_id(true);
 
+        // The memoized user still carries the old hash; drop it.
+        Auth::forgetUser();
+
         \Flight::redirect('/admin/profile?status=password-updated');
     }
 

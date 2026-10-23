@@ -104,5 +104,27 @@ document.getElementById('media-upload-form').addEventListener('submit', function
         alert('Upload failed.');
     });
 });
+
+@if(!empty($paginator) && ($paginator['last'] ?? 0) > 1)
+    @php
+        $pagerParams = $_GET ?? [];
+        unset($pagerParams['page']);
+    @endphp
+    <div class="flex items-center justify-between mt-6">
+        <div>
+            @if($paginator['current'] > 1)
+                @php $prev = array_merge($pagerParams, ['page' => $paginator['current'] - 1]); @endphp
+                <a href="?{{ http_build_query($prev) }}" class="px-3 py-2 bg-gray-100 rounded">&laquo; Previous</a>
+            @endif
+        </div>
+        <div class="text-sm text-gray-600">Page {{ $paginator['current'] }} of {{ $paginator['last'] }} ({{ $paginator['total'] }} items)</div>
+        <div>
+            @if($paginator['current'] < $paginator['last'])
+                @php $next = array_merge($pagerParams, ['page' => $paginator['current'] + 1]); @endphp
+                <a href="?{{ http_build_query($next) }}" class="px-3 py-2 bg-gray-100 rounded">Next &raquo;</a>
+            @endif
+        </div>
+    </div>
+@endif
 </script>
 @endsection
