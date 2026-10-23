@@ -107,11 +107,9 @@ class ThemeController
 
     private static function themeExists(string $slug): bool
     {
-        if ($slug === '') {
-            return false;
-        }
-
-        $path = dirname(__DIR__, 3) . '/themes/' . $slug;
-        return is_dir($path);
+        // Same rule as Theme::normalizeThemeSlug: charset AND a real
+        // directory directly under themes/ — '../app', '..' and 'a/b'
+        // must never activate a theme outside themes/.
+        return Theme::normalizeThemeSlug($slug) !== null;
     }
 }

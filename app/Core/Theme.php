@@ -186,14 +186,30 @@ class Theme
         @rmdir($dir);
     }
 
-    private static function normalizeThemeSlug($theme): ?string
+    /**
+     * Validate a theme slug: ^[a-z0-9_-]+$ AND a real directory located
+     * DIRECTLY under themes/ (realpath on both sides, so '..', '../app',
+     * 'a/b' and symlinked aliases can never resolve outside themes/).
+     * Public so ThemeController::themeExists applies the identical rule.
+     */
+    public static function normalizeThemeSlug($theme): ?string
     {
         $theme = trim((string) $theme);
-        if ($theme === '') {
+        if ($theme === '' || !preg_match('/^[a-z0-9_-]+$/', $theme)) {
             return null;
         }
 
-        return is_dir(self::path($theme)) ? $theme : null;
+        $themesRoot = realpath(dirname(__DIR__, 2) . '/themes');
+        if ($themesRoot === false) {
+            return null;
+        }
+
+        $resolved = realpath($themesRoot . '/' . $theme);
+        if ($resolved === false || dirname($resolved) !== $themesRoot || !is_dir($resolved)) {
+            return null;
+        }
+
+        return $theme;
     }
 
     private static function availableThemes(): array
