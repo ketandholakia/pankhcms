@@ -114,9 +114,10 @@ class PageController
                 $input['slug'] ?: $input['title']
             );
 
-            $input['published_at'] = !empty($raw['published_at'])
-                ? date('Y-m-d H:i:s', strtotime($raw['published_at']))
-                : ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
+            // getValidatedInput() already normalized a submitted value;
+            // the fallbacks only run when the field was absent/blank.
+            $input['published_at'] = $input['published_at']
+                ?? ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
 
             $page = Page::create($input);
             $this->syncRelations($page);
@@ -162,9 +163,11 @@ class PageController
                 $id
             );
 
-            $input['published_at'] = !empty($raw['published_at'])
-                ? date('Y-m-d H:i:s', strtotime($raw['published_at']))
-                : ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
+            // A submitted value was normalized by getValidatedInput();
+            // never silently reset it to now(). The fallbacks only run
+            // when the field was absent/blank.
+            $input['published_at'] = $input['published_at']
+                ?? ((($input['status'] ?? 'published') === 'published') ? \Illuminate\Support\Carbon::now() : null);
 
             $page->update($input);
 
@@ -296,6 +299,20 @@ class PageController
             }
         }
 
+        // 7. Publish date: strict parse instead of strtotime(), which
+        // silently turns garbage into 1970-01-01. A present-but-invalid
+        // value is a validation error; a valid one is normalized to the
+        // database format here, interpreted in the application timezone
+        // (Bootstrap::applyTimezone sets PHP's default timezone).
+        if (isset($raw['published_at']) && trim((string) $raw['published_at']) !== '') {
+            $parsed = self::parsePublishedAt((string) $raw['published_at']);
+            if ($parsed === null) {
+                $errors[] = "'published_at' is not a valid date and time (expected YYYY-MM-DD HH:MM).";
+            } else {
+                $data['published_at'] = $parsed;
+            }
+        }
+
         if (empty($errors)) {
             $contentJson = $this->mergeCustomFieldsIntoContentJson(
                 (string) ($data['content_json'] ?? '[]'),
@@ -307,6 +324,36 @@ class PageController
         }
 
         return $errors ? ['errors' => $errors] : $data;
+    }
+
+    /**
+     * Strictly parse an admin-submitted publish date (the form posts
+     * datetime-local values, 'YYYY-MM-DDTHH:MM') in the application
+     * timezone. Returns the database format, or null when the value is
+     * not a real date/time — never a silent 1970.
+     */
+    public static function parsePublishedAt(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d H:i', 'Y-m-d H:i:s', 'Y-m-d'] as $format) {
+            $dt = \DateTimeImmutable::createFromFormat($format, $value);
+            if ($dt === false) {
+                continue;
+            }
+            $lastErrors = \DateTimeImmutable::getLastErrors();
+            $clean = is_array($lastErrors)
+                ? ((int) ($lastErrors['warning_count'] ?? 0)) === 0 && ((int) ($lastErrors['error_count'] ?? 0)) === 0
+                : true;
+            if ($clean) {
+                return $dt->format('Y-m-d H:i:s');
+            }
+        }
+
+        return null;
     }
 
     private function mergeCustomFieldsIntoContentJson(string $contentJson, array $customFields): string

@@ -2,6 +2,16 @@
 
 @section('content')
     <h1 class="text-2xl font-bold mb-4">Edit Page</h1>
+    @if(!empty($errors ?? []))
+        <div class="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded mb-4">
+            <ul class="list-disc ml-5">
+                @foreach($errors as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
 
     @php
       $currentCustomFields = [];

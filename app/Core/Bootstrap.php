@@ -16,13 +16,39 @@ class Bootstrap
         self::loadEnv();
         self::initConfig();
         self::initDatabase();
-        
+        self::applyTimezone();
+
         // Load plugins before routes so they can register routes and hooks
         require_once __DIR__ . '/PluginManager.php';
         \PluginManager::boot();
-        
+
         self::initBlade();
         self::loadRoutes();
+    }
+
+    /**
+     * Apply the `timezone` setting as PHP's default timezone, falling
+     * back to UTC when the value is missing or invalid. Called from
+     * init() after the database is ready and BEFORE plugins, routes and
+     * controllers run, so Carbon::now() and strtotime() always agree on
+     * one timezone. Public so CLI scripts that do not fully bootstrap
+     * (e.g. scripts/prune-page-views.php) can apply it too.
+     */
+    public static function applyTimezone(): void
+    {
+        $timezone = 'UTC';
+        try {
+            $settings = \settings_all();
+            $candidate = trim((string) ($settings['timezone'] ?? 'UTC'));
+            if ($candidate !== '') {
+                // Throws on unknown identifiers.
+                new \DateTimeZone($candidate);
+                $timezone = $candidate;
+            }
+        } catch (\Throwable $e) {
+            // Invalid setting value: stay on UTC.
+        }
+        date_default_timezone_set($timezone);
     }
 
     /**

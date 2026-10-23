@@ -13,9 +13,13 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/database.php';
-require_once __DIR__ . '/../app/Helpers/functions.php';
+require_once __DIR__ . '/../app/Core/Bootstrap.php';
 
 use Illuminate\Database\Capsule\Manager as Capsule;
+
+// Keep date() on the configured application timezone (like every web
+// request); falls back to UTC when the setting is missing or invalid.
+\App\Core\Bootstrap::applyTimezone();
 
 $days = 90;
 foreach ($argv as $arg) {
