@@ -128,6 +128,15 @@ class AdminMissingViewsTest extends TestCase
         $repoRoot = dirname(__DIR__, 2);
         $this->assertFileExists($repoRoot . '/public/assets/tinymce/plugins/media/plugin.min.js');
 
+        // This probe shells out to git; minimal PHP images (e.g. the
+        // php:8.2-cli container) have no git binary — skip rather than
+        // misreport there. Windows dev and the CI ubuntu runner have it.
+        $gitProbe = 0;
+        @exec('git --version 2>/dev/null', $gitOut, $gitProbe);
+        if ($gitProbe !== 0) {
+            $this->markTestSkipped('git binary not available for the check-ignore probe');
+        }
+
         // check-ignore -q accepts exactly one pathname; probe each source
         // path separately. Exit 1 = not ignored; 0 = ignored (bad).
         foreach ([
