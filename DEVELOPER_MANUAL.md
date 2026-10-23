@@ -88,11 +88,61 @@ AdminMenu::add([
 ]);
 ```
 
+#### Manifest Requirements
+
+`plugin.json` must be valid JSON containing at least non-empty string
+`slug` and `name` values. `PluginManager::discoverAll()` skips (and
+logs) any plugin directory whose manifest is invalid or incomplete —
+such plugins never boot and never appear in the admin list.
+
+#### Shipped Plugins
+
+- **Search** (`plugins/Search`) — provides `GET /search`. Results are
+  restricted to publicly visible pages (`Page::visible()` semantics),
+  matched by title, slug, legacy `content` and `content_json` block
+  text via an escaped, parameterized LIKE query (portable across
+  SQLite and MySQL), capped at 100 query characters and 50 results,
+  rendered through the theme's `site.search` view. FTS5 was dropped:
+  the old `pages_fts` table was never populated and does not exist on
+  MySQL.
+- The former **Sitemap** and **ContactForm** plugins were removed: the
+  core `GET /sitemap.xml` route (visible-pages only) and the core
+  `GET|POST /contact` controller own those features. Existing
+  installs with stale `plugins` table rows are unaffected —
+  `PluginManager::boot()` skips slugs whose files no longer exist.
+
 #### Plugin Migrations
 
 If your plugin requires database tables, provide SQL in the `migrations/` folder (e.g., `install.sql`). The `PluginManager` can execute packaged SQL files upon activation. Alternatively, you can run DB setup manually inside the `activate()` method.
 
 ---
+
+### Transactional Mail (App\Core\Mailer)
+
+All outgoing application mail (password resets, contact notifications)
+goes through `App\Core\Mailer::send($to, $subject, $body, $options)`:
+
+- `MAIL_HOST` set → SMTP via PHPMailer (`MAIL_PORT`, `MAIL_USERNAME`,
+  `MAIL_PASSWORD`, `MAIL_ENCRYPTION` = `tls` (default) / `ssl` /
+  `none`).
+- `MAIL_HOST` empty → PHP's `mail()` built-in (local delivery only).
+- Sender identity comes from `MAIL_FROM_ADDRESS` / `MAIL_FROM_NAME`.
+- Every header-bound value is CR/LF-stripped against injection;
+  failures are logged to `storage/logs/mailer.log` and reported by the
+  boolean return value — sending must never take a page down.
+
+Callers pass user addresses via `$options['reply_to']` rather than
+forging them into From.
+
+### Timezone Handling
+
+The admin `timezone` setting is applied with
+`Bootstrap::applyTimezone()` early in `Bootstrap::init()` (and
+explicitly in `scripts/prune-page-views.php`), falling back to UTC on
+invalid values. All `Carbon::now()` / `strtotime()` / `date()` calls
+therefore share one timezone. Admin-submitted `published_at` values
+are strictly parsed (`PageController::parsePublishedAt()`) in that
+timezone — invalid dates are validation errors, never silent 1970.
 
 ## 4. Coding Standards
 
