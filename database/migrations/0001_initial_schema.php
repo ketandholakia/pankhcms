@@ -335,11 +335,6 @@ Capsule::table('content_types')->updateOrInsert(['slug' => 'page'], ['name' => '
 Capsule::table('content_types')->updateOrInsert(['slug' => 'feature'], ['name' => 'Feature', 'is_system' => 0, 'created_at' => $now]);
 Capsule::table('content_types')->updateOrInsert(['slug' => 'product'], ['name' => 'Product', 'is_system' => 0, 'created_at' => $now]);
 
-// FTS
-try {
-    Capsule::connection()->statement("CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(title, content, slug, content='pages', content_rowid='id')");
-} catch (\Throwable $e) {}
-
 // Seed RBAC roles & permissions via the canonical shared seeder so the
 // installer and migrations always produce the same set.
 require_once __DIR__ . '/../seeds/roles.php';
