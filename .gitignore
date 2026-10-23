@@ -1,16 +1,4 @@
-/.env
-/vendor/
-/node_modules/
-/public/storage/
-/storage/backups/
-/storage/cache/
-/storage/logs/
-*.sqlite
-.idea/
-.vscode/
-*.log
-/.env.*
-/.DS_Store# =========================
+# =========================
 # OS Files
 # =========================
 .DS_Store
@@ -30,10 +18,9 @@ Desktop.ini
 # Logs
 # =========================
 *.log
-logs/
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
+yarn-error-debug.log*
 
 # =========================
 # Environment Files
@@ -48,23 +35,24 @@ yarn-error.log*
 vendor/
 # composer.lock should NOT be ignored for apps
 
-
 # =========================
 # Node / Frontend
+# (anchored: never match source dirs such as views/, app/, themes/, resources/)
 # =========================
 node_modules/
-dist/
-build/
-public/build/
-public/hot
+/dist/
+/build/
+/public/build/
+/public/hot
 
 # =========================
 # Cache & Temp
 # =========================
-cache/
-tmp/
-temp/
 *.cache
+/tmp/
+/temp/
+/storage/cache/
+/storage/backups/
 
 # =========================
 # Laravel-style (if applicable)
@@ -81,16 +69,12 @@ storage/app/*
 # =========================
 # Uploads / User Content
 # =========================
-uploads/
-public/uploads/
-public/uploads/media/
-public/uploads/settings/
-public/uploads/slider/
-media/
-files/
-storage/backups/
-storage/cache/
-storage/logs/
+/public/uploads/
+/public/uploads/media/
+/public/uploads/settings/
+/public/uploads/slider/
+/public/uploads/files/
+/files/
 
 # =========================
 # Database

@@ -172,15 +172,24 @@ if (!$schema->hasTable('settings')) {
 }
 
 if (!$schema->hasTable('media')) {
+    // Column names MUST match MediaController and the Media model
+    // (original_name/mime_type/url/title/alt/description/user_id and
+    // Eloquent timestamps). The earlier page_id/path/mime/uploaded_at
+    // set was written by nothing and read by nothing, while every real
+    // query hit columns that did not exist — the media library 500s on
+    // any install built from the old definition.
     $schema->create('media', function ($t) {
         $t->increments('id');
-        $t->unsignedInteger('page_id')->nullable();
         $t->string('filename')->nullable();
-        $t->text('path')->nullable();
-        $t->string('mime')->nullable();
+        $t->string('original_name')->nullable();
+        $t->string('mime_type')->nullable();
         $t->integer('size')->nullable();
-        $t->dateTime('uploaded_at')->nullable();
-        $t->foreign('page_id')->references('id')->on('pages')->onDelete('set null');
+        $t->string('url')->nullable();
+        $t->unsignedInteger('user_id')->nullable();
+        $t->string('title')->nullable();
+        $t->string('alt')->nullable();
+        $t->text('description')->nullable();
+        $t->timestamps();
     });
 }
 
