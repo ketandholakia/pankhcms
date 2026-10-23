@@ -186,14 +186,11 @@ class ContactController
         ];
         $body = implode("\n", $bodyLines);
 
-        $headers = [
-            'MIME-Version: 1.0',
-            'Content-Type: text/plain; charset=UTF-8',
-            'From: ' . $safeName . ' <' . $safeEmail . '>',
-            'Reply-To: ' . $safeEmail,
-            'X-Mailer: PHP/' . phpversion(),
-        ];
-
-        @mail($recipient, $mailSubject, $body, implode("\r\n", $headers));
+        // From is the configured site address (SMTP relays reject other
+        // senders); the submitter's address travels in Reply-To and the
+        // body. Mailer::send strips CR/LF from every header-bound value.
+        \App\Core\Mailer::send($recipient, $mailSubject, $body, [
+            'reply_to' => $safeEmail,
+        ]);
     }
 }

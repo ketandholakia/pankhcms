@@ -257,13 +257,6 @@ class AuthController
             'If you did not request this, you can ignore this email.',
         ]);
 
-        $headers = [
-            'MIME-Version: 1.0',
-            'Content-Type: text/plain; charset=UTF-8',
-            'From: ' . $siteName . ' <no-reply@localhost>',
-            'X-Mailer: PHP/' . phpversion(),
-        ];
-
-        @mail($recipient, $subject, $body, implode("\r\n", $headers));
+        \App\Core\Mailer::send($recipient, $subject, $body);
     }
 }
