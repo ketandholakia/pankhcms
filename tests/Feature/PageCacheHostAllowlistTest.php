@@ -57,7 +57,19 @@ class PageCacheHostAllowlistTest extends TestCase
         $keyMethod = new \ReflectionMethod(PageCache::class, 'cacheKey');
         $keyMethod->setAccessible(true);
         $file = $this->cacheDir . '/' . $keyMethod->invoke(null, '/allowlist-probe', []) . '.html';
-        file_put_contents($file, '<html>allowlist</html>');
+
+        // Fresh checkouts (hosted CI) have no storage/cache/pages: create
+        // it exactly as the production cacheDir() would, and fail loudly
+        // if the seed write ever silently no-ops (it once failed with
+        // ENOENT here and made these tests vacuous).
+        if (!is_dir($this->cacheDir)) {
+            @mkdir($this->cacheDir, 0755, true);
+        }
+        $this->assertSame(
+            strlen('<html>allowlist</html>'),
+            file_put_contents($file, '<html>allowlist</html>'),
+            'cache seed write must succeed'
+        );
         $this->files[] = $file;
         return $file;
     }
@@ -87,7 +99,14 @@ class PageCacheHostAllowlistTest extends TestCase
         $_SERVER['HTTP_HOST'] = 'evil.example';
         $legacyKey = md5('evil.example|/allowlist-probe?' . http_build_query([]));
         $legacyFile = $this->cacheDir . '/' . $legacyKey . '.html';
-        file_put_contents($legacyFile, '<html>poison</html>');
+        if (!is_dir($this->cacheDir)) {
+            @mkdir($this->cacheDir, 0755, true);
+        }
+        $this->assertSame(
+            strlen('<html>poison</html>'),
+            file_put_contents($legacyFile, '<html>poison</html>'),
+            'cache seed write must succeed'
+        );
         $this->files[] = $legacyFile;
 
         $this->assertNull(PageCache::earlyCacheFile(), 'an unknown Host must never be served from cache');
