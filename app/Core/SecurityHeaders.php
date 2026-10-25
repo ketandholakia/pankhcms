@@ -25,9 +25,14 @@ class SecurityHeaders
     }
 
     /**
-     * The headers that apply to every response. HSTS is only sent over
-     * HTTPS (sending it over plain HTTP is ignored at best and captured
-     * by intermediaries at worst).
+     * The HSTS policy: env-configurable so operators can opt out of
+     * includeSubDomains (HSTS is domain-wide, including sibling
+     * subdomains — enabling it here forces HTTPS on EVERY subdomain for
+     * the max-age duration once a visitor's browser sees the header, so
+     * a sibling service without HTTPS breaks). Defaults preserve the
+     * previous behavior: one year with includeSubDomains. Setting
+     * HSTS_MAX_AGE=0 disables the header entirely (the RFC-correct
+     * opt-out).
      *
      * @return array<string, string>
      */
@@ -41,9 +46,31 @@ class SecurityHeaders
 
         $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
         if ($isHttps) {
-            $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+            $hsts = self::hstsValue();
+            if ($hsts !== null) {
+                $headers['Strict-Transport-Security'] = $hsts;
+            }
         }
 
         return $headers;
+    }
+
+    /**
+     * The Strict-Transport-Security header value, or null when HSTS is
+     * disabled (max-age 0).
+     */
+    public static function hstsValue(): ?string
+    {
+        $maxAge = (int) env('HSTS_MAX_AGE', 31536000);
+        if ($maxAge <= 0) {
+            return null;
+        }
+
+        $includeSubDomains = filter_var(
+            (string) env('HSTS_INCLUDE_SUBDOMAINS', 'true'),
+            FILTER_VALIDATE_BOOL
+        );
+
+        return 'max-age=' . $maxAge . ($includeSubDomains ? '; includeSubDomains' : '');
     }
 }
