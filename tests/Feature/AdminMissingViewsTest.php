@@ -130,11 +130,22 @@ class AdminMissingViewsTest extends TestCase
 
         // This probe shells out to git; minimal PHP images (e.g. the
         // php:8.2-cli container) have no git binary — skip rather than
-        // misreport there. Windows dev and the CI ubuntu runner have it.
+        // misreport there. Also skip when git exists but cannot resolve
+        // THIS checkout as a repository (git-worktree checkouts carry a
+        // .git FILE whose gitdir may point at an unreachable path, e.g.
+        // a Windows absolute path when the worktree is mounted into a
+        // Linux container). Windows dev and the CI ubuntu runner have a
+        // normal repository, where the guard really runs.
         $gitProbe = 0;
         @exec('git --version 2>/dev/null', $gitOut, $gitProbe);
         if ($gitProbe !== 0) {
             $this->markTestSkipped('git binary not available for the check-ignore probe');
+        }
+
+        $repoProbe = 0;
+        @exec('git -C ' . escapeshellarg($repoRoot) . ' rev-parse --git-dir 2>/dev/null', $repoOut, $repoProbe);
+        if ($repoProbe !== 0) {
+            $this->markTestSkipped('git cannot resolve this checkout as a repository (detached worktree in a foreign environment)');
         }
 
         // check-ignore -q accepts exactly one pathname; probe each source
