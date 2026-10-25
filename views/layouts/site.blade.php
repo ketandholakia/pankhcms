@@ -45,5 +45,17 @@
         @yield('content')
     </main>
 
+
+{{-- View beacon: cached pages never reach PHP rendering, so the
+     layout ships a tiny sendBeacon ping to POST /_v (handled
+     pre-bootstrap in public/index.php). Browsers only. --}}
+<script>
+(function () {
+    if (/bot|crawl|spider|slurp|curl|wget|headless/i.test(navigator.userAgent)) { return; }
+    try {
+        navigator.sendBeacon('/_v', new URLSearchParams({ p: location.pathname }));
+    } catch (e) { /* analytics must never break the page */ }
+})();
+</script>
 </body>
 </html>

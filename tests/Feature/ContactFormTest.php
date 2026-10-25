@@ -79,7 +79,8 @@ class ContactFormTest extends TestCase
         $message = ContactMessage::where('email', 'jane@example.com')->first();
         $this->assertNotNull($message);
         $this->assertSame('Jane Doe', $message->name);
-        $this->assertSame('203.0.113.10', $message->ip);
+        // Privacy default: the stored IP is anonymized (last octet removed).
+        $this->assertSame('203.0.113.x', $message->ip);
         $this->assertArrayNotHasKey('contact_captcha_expected', $_SESSION);
     }
 
@@ -146,5 +147,14 @@ class ContactFormTest extends TestCase
 
         $this->assertSame(429, \Flight::response()->status());
         $this->assertSame(5, ContactMessage::count());
+    }
+
+    public function test_contact_form_plugin_is_gone_and_core_contact_route_serves()
+    {
+        // plugins/ContactForm rendered a view on no Blade path and
+        // shadowed nothing: the core GET/POST /contact routes are the
+        // real implementation. The plugin must stay removed.
+        $this->assertDirectoryDoesNotExist(dirname(__DIR__, 2) . '/plugins/ContactForm');
+        $this->assertFalse(class_exists('ContactFormPlugin'));
     }
 }

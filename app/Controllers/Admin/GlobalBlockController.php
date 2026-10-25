@@ -39,14 +39,24 @@ class GlobalBlockController
     // Show edit form
     public function edit($id)
     {
-        $block = GlobalBlock::findOrFail($id);
+        $block = GlobalBlock::find($id);
+        if (!$block) {
+            \Flight::response()->status(404);
+            echo \Flight::get('blade')->render('admin.errors.404', ['message' => 'Global block not found.']);
+            return;
+        }
         echo \Flight::get('blade')->render('admin.global_blocks.edit', compact('block'));
     }
 
     // Update block
     public function update($id)
     {
-        $block = GlobalBlock::findOrFail($id);
+        $block = GlobalBlock::find($id);
+        if (!$block) {
+            \Flight::response()->status(404);
+            \Flight::json(['error' => 'Global block not found.'], 404);
+            return;
+        }
         $data = Flight::request()->data->getData();
         $block->update([
             'title' => $data['title'] ?? $block->title,
@@ -83,7 +93,12 @@ class GlobalBlockController
     // Delete block
     public function delete($id)
     {
-        $block = GlobalBlock::findOrFail($id);
+        $block = GlobalBlock::find($id);
+        if (!$block) {
+            \Flight::response()->status(404);
+            \Flight::json(['error' => 'Global block not found.'], 404);
+            return;
+        }
         $block->delete();
         \App\Middleware\PageCache::clear();
         Flight::json(['success' => true]);

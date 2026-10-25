@@ -1,5 +1,5 @@
 <section class="section pb-block pb-block-text">
     <div class="content">
-        {!! $block['html'] ?? '' !!}
+        {!! sanitize_html((string) ($block['html'] ?? '')) !!}
     </div>
 </section>

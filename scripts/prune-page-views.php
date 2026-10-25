@@ -13,9 +13,13 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../app/database.php';
-require_once __DIR__ . '/../app/Helpers/functions.php';
+require_once __DIR__ . '/../app/Core/Bootstrap.php';
 
 use Illuminate\Database\Capsule\Manager as Capsule;
+
+// Keep date() on the configured application timezone (like every web
+// request); falls back to UTC when the setting is missing or invalid.
+\App\Core\Bootstrap::applyTimezone();
 
 $days = 90;
 foreach ($argv as $arg) {
@@ -34,6 +38,14 @@ try {
 
     $deleted = Capsule::table('page_views')->where('created_at', '<', $cutoff)->delete();
     echo "Deleted {$deleted} page view(s) older than {$days} days (before {$cutoff}).\n";
+
+    // Keep the login-throttle directory bounded while we are here.
+    if (function_exists('login_throttle_enforce_cap')) {
+        $throttleRemoved = login_throttle_enforce_cap();
+        if ($throttleRemoved > 0) {
+            echo "Removed {$throttleRemoved} old login-throttle file(s) over the cap.\n";
+        }
+    }
     exit(0);
 } catch (Throwable $e) {
     fwrite(STDERR, 'Prune failed: ' . $e->getMessage() . "\n");

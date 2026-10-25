@@ -51,6 +51,7 @@ class ContentTypeController
 
         try {
             ContentType::create($input + ['is_system' => 0]);
+            \App\Middleware\PageCache::clear();
             Flight::redirect('/admin/content-types?created=1');
         } catch (Exception $e) {
             $this->renderView('admin.content_types.create', [
@@ -86,6 +87,7 @@ class ContentTypeController
 
         try {
             $type->update($input);
+            \App\Middleware\PageCache::clear();
             Flight::redirect('/admin/content-types?updated=1');
         } catch (Exception $e) {
             $this->renderView('admin.content_types.edit', [
@@ -143,6 +145,7 @@ class ContentTypeController
 
         try {
             $type->delete();
+            \App\Middleware\PageCache::clear();
             Flight::redirect('/admin/content-types?deleted=1');
         } catch (Exception $e) {
             Flight::redirect('/admin/content-types?error=delete_failed');

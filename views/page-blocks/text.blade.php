@@ -1,3 +1,3 @@
 <div class="pb-block pb-block-text">
-    {!! $block['html'] ?? '' !!}
+    {!! sanitize_html((string) ($block['html'] ?? '')) !!}
 </div>

@@ -181,11 +181,15 @@ if (!function_exists('ip_in_list')) {
 
 if (!function_exists('client_ip')) {
     /**
-     * Resolve the client IP. Forwarded headers (X-Forwarded-For,
-     * X-Real-IP) are only honored when REMOTE_ADDR itself is a trusted
-     * proxy (TRUSTED_PROXIES, comma-separated IPs/CIDRs). In that case
-     * the rightmost untrusted address in the chain is returned, so a
-     * client cannot spoof an arbitrary IP.
+     * Resolve the client IP. Exactly ONE forwarding header is ever
+     * trusted, chosen by TRUSTED_PROXY_HEADER (X-Forwarded-For by
+     * default; X-Real-IP and CF-Connecting-IP are also allowed), and it
+     * is only honored when REMOTE_ADDR itself is a trusted proxy
+     * (TRUSTED_PROXIES, comma-separated IPs/CIDRs). Reading several
+     * headers at once would let a client pick whichever header the
+     * proxy does not overwrite. For X-Forwarded-For the rightmost
+     * untrusted address in the chain is returned, so a client cannot
+     * spoof an arbitrary IP by injecting extra entries.
      */
     function client_ip(): string
     {
@@ -201,26 +205,41 @@ if (!function_exists('client_ip')) {
             return $remote;
         }
 
-        $chain = [];
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            foreach (explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']) as $part) {
-                $chain[] = trim($part);
-            }
+        // Only the configured header is read; an unknown configured
+        // header falls back to REMOTE_ADDR rather than guessing.
+        $allowedHeaders = ['X-FORWARDED-FOR', 'X-REAL-IP', 'CF-CONNECTING-IP'];
+        $header = strtoupper(trim((string) env('TRUSTED_PROXY_HEADER', 'X-Forwarded-For')));
+        if (!in_array($header, $allowedHeaders, true)) {
+            return $remote;
         }
-        if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
-            $chain[] = trim((string) $_SERVER['HTTP_X_REAL_IP']);
+        $serverKey = 'HTTP_' . str_replace('-', '_', $header);
+        $raw = trim((string) ($_SERVER[$serverKey] ?? ''));
+        if ($raw === '') {
+            return $remote;
         }
 
-        // Walk from the rightmost (closest to our proxy) backwards; the
-        // first address that is not itself a trusted proxy is the client.
-        for ($i = count($chain) - 1; $i >= 0; $i--) {
-            $candidate = $chain[$i];
-            if (!filter_var($candidate, FILTER_VALIDATE_IP)) {
-                continue;
+        if ($header === 'X-FORWARDED-FOR') {
+            // Walk from the rightmost (closest to our proxy) backwards;
+            // the first address that is not itself a trusted proxy is
+            // the client.
+            $chain = array_map('trim', explode(',', $raw));
+            for ($i = count($chain) - 1; $i >= 0; $i--) {
+                $candidate = $chain[$i];
+                if (!filter_var($candidate, FILTER_VALIDATE_IP)) {
+                    continue;
+                }
+                if (!ip_in_list($candidate, $trusted)) {
+                    return $candidate;
+                }
             }
-            if (!ip_in_list($candidate, $trusted)) {
-                return $candidate;
-            }
+            return $remote;
+        }
+
+        // Single-value headers (X-Real-IP, CF-Connecting-IP): the value
+        // is set by the trusted proxy itself, so accept a valid IP that
+        // is not one of our own proxies.
+        if (filter_var($raw, FILTER_VALIDATE_IP) && !ip_in_list($raw, $trusted)) {
+            return $raw;
         }
 
         return $remote;
@@ -338,6 +357,37 @@ if (!function_exists('login_throttle_check')) {
     }
 }
 
+if (!function_exists('login_throttle_enforce_cap')) {
+    /**
+     * Global cap on throttle files: when more than \$max exist, delete
+     * the oldest (by modification time) until only \$keep remain. An
+     * attacker hammering login/reset endpoints with rotating identifiers
+     * creates fresh files that login_throttle_prune() (1-day staleness)
+     * never touches, so the directory also needs a size bound.
+     *
+     * @return int the number of files removed
+     */
+    function login_throttle_enforce_cap(int $max = 5000, int $keep = 4000): int
+    {
+        $dir = dirname(__DIR__, 2) . '/storage/cache/login_throttle/';
+        $files = glob($dir . '*.json') ?: [];
+        if (count($files) <= $max) {
+            return 0;
+        }
+
+        usort($files, fn ($a, $b) => filemtime($a) <=> filemtime($b));
+
+        $removed = 0;
+        $excess = count($files) - $keep;
+        for ($i = 0; $i < $excess; $i++) {
+            if (is_file($files[$i]) && @unlink($files[$i])) {
+                $removed++;
+            }
+        }
+
+        return $removed;
+    }
+}
 if (!function_exists('login_throttle_register_failure')) {
     function login_throttle_register_failure(string $key, int $maxAttempts = 5, int $window = 900): array
     {
@@ -369,9 +419,11 @@ if (!function_exists('login_throttle_register_failure')) {
 
         login_throttle_write($key, $data);
 
-        // Opportunistic cleanup of stale throttle files.
+        // Opportunistic cleanup of stale throttle files and, since fresh
+        // flood files are never 'stale', the global size cap.
         if (random_int(1, 50) === 1) {
             login_throttle_prune();
+            login_throttle_enforce_cap();
         }
 
         return ['locked' => $lockUntil > $now, 'retry_after' => max(0, $lockUntil - $now)];
@@ -465,8 +517,7 @@ if (!function_exists('csrf_verify')) {
         }
 
         $provided = $_POST['_csrf']
-            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null)
-            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'.''] ?? null);
+            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
 
         if (!is_string($provided) || $provided === '') {
             return false;

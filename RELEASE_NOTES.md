@@ -71,6 +71,64 @@ version label is proposed and may change before the actual tag.
 - Removed committed debris (debug scripts, stray files, hardcoded
   paths) and merged `app/helpers.php` into `app/Helpers/functions.php`.
 
+## Fixes (post-RC1 review batch)
+
+- **Fresh-install schema corrections.** `media` and `block_placements`
+  now match the columns the code actually uses (the old definitions
+  500'd every media-library and public page render on new installs).
+- **Admin views restored.** `.gitignore` directory rules are anchored to
+  the repo root (the bare `media/` rule had swallowed the TinyMCE media
+  plugin and would have swallowed `views/admin/media/`); the missing
+  media index/picker and admin 404/403 views now exist.
+- **Security headers on cached pages.** The pre-bootstrap page cache now
+  sends the same site-wide security headers as normal responses
+  (`App\Core\SecurityHeaders`).
+- **Search plugin rebuilt.** Publicly-visible-only results, portable
+  escaped LIKE search (FTS dropped — never populated, not on MySQL),
+  correct `site.search` view, capped queries, view-only field
+  whitelist.
+- **Plugin clean-ups.** The Sitemap plugin (shadowed the core
+  `visible()`-based route and leaked scheduled pages) and the
+  ContactForm plugin (unresolvable view) were removed; core routes own
+  both features. Stale plugin-table rows are skipped gracefully.
+- **Timezone + publish dates.** The `timezone` setting is applied via
+  `Bootstrap::applyTimezone()` before any date use; `published_at` is
+  strictly validated (no more silent 1970) and page create/edit forms
+  show validation errors at all.
+- **Cache freshness.** Rescheduling a page re-arms
+  `published_notified_at`; sliders, SEO, taxonomies, content types and
+  media deletes now clear the page cache.
+- **Cache-hit analytics.** Cached pages count views through a
+  lightweight POST /_v beacon (sendBeacon injected by the public
+  layouts, handled pre-bootstrap DB-only in VisitTracker::handleBeacon:
+  anonymized IP, bot-free, session-less). The early cache path itself
+  never touches the database.
+- **client_ip hardening.** Exactly one configured forwarding header is
+  trusted (`TRUSTED_PROXY_HEADER`: X-Forwarded-For / X-Real-IP /
+  CF-Connecting-IP); mixing headers is no longer spoofable.
+- **API token hygiene.** Password change/reset (self-service or admin)
+  revokes every API token for the account.
+- **Theme slug validation.** `^[a-z0-9_-]+$` plus realpath confinement
+  under `themes/`; `../app`-style ACTIVE_THEME values are rejected.
+- **Page-cache host allowlist.** Cache keys come from
+  `ALLOWED_HOSTS`/`APP_URL`; unknown Host headers neither read nor
+  write cache files.
+- **Block sanitization.** The page-block text partials sanitize their
+  HTML like the page templates do.
+- **Throttle flood cap.** The login-throttle directory is bounded
+  (cap enforced opportunistically and by the daily prune job).
+- **Mailer.** Transactional mail (password reset, contact
+  notifications) goes through `App\Core\Mailer`: SMTP via PHPMailer
+  when `MAIL_HOST` is set, `mail()` fallback otherwise, failures logged
+  to `storage/logs/mailer.log`.
+- **Admin performance.** Auth user memoization with eager-loaded
+  permissions, 50-per-page media lists, one-query plugin admin.
+- **Small clean-ups.** Redundant CSRF header expression removed;
+  GlobalBlock 404s instead of 500s; reserved top-level slugs rejected;
+  contact messages store the anonymized IP by default
+  (`CONTACT_STORE_FULL_IP=true` to keep full addresses); invalid plugin
+  manifests are skipped with a log line.
+
 ## Compatibility
 
 - **PHP 8.2+** (tested up to 8.4). Required extensions: `pdo_sqlite` or

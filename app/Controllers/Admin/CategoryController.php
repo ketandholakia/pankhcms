@@ -15,6 +15,7 @@ class CategoryController
     {
         $data = \Flight::request()->data->getData();
         Category::create($data);
+        \App\Middleware\PageCache::clear();
         \Flight::json(['success' => true]);
     }
 
@@ -23,6 +24,7 @@ class CategoryController
         $cat = Category::findOrFail($id);
         $data = \Flight::request()->data->getData();
         $cat->update($data);
+        \App\Middleware\PageCache::clear();
         \Flight::json(['success' => true]);
     }
 
@@ -30,6 +32,7 @@ class CategoryController
     {
         $cat = Category::findOrFail($id);
         $cat->delete();
+        \App\Middleware\PageCache::clear();
         \Flight::json(['success' => true]);
     }
 }

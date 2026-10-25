@@ -28,8 +28,19 @@ class MediaController
         if ($date) {
             $query->whereDate('created_at', $date);
         }
-        $media = $query->get();
-        echo \Flight::get('blade')->render('admin.media.index', compact('media', 'search', 'type', 'date'));
+
+        // Hand-rolled pagination, same style as the admin pages index.
+        $perPage = 50;
+        $pageNum = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+        $total = (int) $query->count();
+        $media = $query->skip(($pageNum - 1) * $perPage)->take($perPage)->get();
+        $paginator = [
+            'current' => $pageNum,
+            'last' => max(1, (int) ceil($total / $perPage)),
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+        echo \Flight::get('blade')->render('admin.media.index', compact('media', 'search', 'type', 'date', 'paginator'));
     }
 
     public function upload(): void
@@ -100,6 +111,7 @@ class MediaController
             unlink($filePath);
         }
         $media->delete();
+        \App\Middleware\PageCache::clear();
         $this->jsonResponse(['success' => true]);
     }
 
@@ -124,7 +136,11 @@ class MediaController
         if ($date) {
             $query->whereDate('created_at', $date);
         }
-        $media = $query->get();
+
+        $perPage = 50;
+        $pageNum = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+        $total = (int) $query->count();
+        $media = $query->skip(($pageNum - 1) * $perPage)->take($perPage)->get();
         if (isset($_GET['ajax'])) {
             // Render only the media grid for AJAX
             foreach ($media as $item) {
@@ -141,7 +157,13 @@ class MediaController
             }
             exit;
         }
-        echo \Flight::get('blade')->render('admin.media.picker', compact('media'));
+        $paginator = [
+            'current' => $pageNum,
+            'last' => max(1, (int) ceil($total / $perPage)),
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+        echo \Flight::get('blade')->render('admin.media.picker', compact('media', 'paginator'));
     }
 
     private function jsonResponse(array $data, int $status = 200): void

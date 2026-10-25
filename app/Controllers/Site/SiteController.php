@@ -8,7 +8,6 @@ use App\Models\Menu; // Needed for menuBreadcrumbs
 use App\Models\MenuItem; // Needed for menuBreadcrumbs
 use App\Models\SliderImage;
 use App\Core\Theme;
-use App\Core\VisitTracker;
 
 class SiteController
 {
@@ -39,7 +38,9 @@ class SiteController
                 return self::renderPage($page);
             }
         }
-        VisitTracker::track(null, '/');
+        // View counting happens exclusively via the POST /_v beacon
+        // (VisitTracker::handleBeacon) injected by the public layouts,
+        // so cached and uncached renders are counted exactly once.
         // Fallback: render custom home view
         $site_name = \setting('site_name', 'PankhCMS');
         $sliders = SliderImage::where('active', 1)->orderBy('sort_order')->get();
@@ -62,7 +63,9 @@ class SiteController
         if ($path === '/') {
             $path = '/';
         }
-        VisitTracker::track((int) $page->id, $path);
+        // View counting happens exclusively via the POST /_v beacon
+        // (VisitTracker::handleBeacon) injected by the public layouts,
+        // so cached and uncached renders are counted exactly once.
 
         $breadcrumbs = \generateBreadcrumbs($page);
         $blocks = [];

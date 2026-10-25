@@ -133,11 +133,18 @@ class UserController
         $user->password = password_hash($new, PASSWORD_DEFAULT);
         $user->save();
 
+        // A password change invalidates every API token; the current web
+        // session is re-bound below and stays logged in.
+        $user->apiTokens()->delete();
+
         // Re-bind the current session to the new hash so the user stays
         // logged in here; every OTHER session for this account becomes
         // invalid on its next request (see Auth::check()).
         $_SESSION['password_hash'] = $user->password;
         session_regenerate_id(true);
+
+        // The memoized user still carries the old hash; drop it.
+        Auth::forgetUser();
 
         \Flight::redirect('/admin/profile?status=password-updated');
     }
@@ -338,6 +345,8 @@ class UserController
                 return;
             }
             $user->password = password_hash($data['password'], PASSWORD_DEFAULT);
+            // An admin-set password also invalidates the user's API tokens.
+            $user->apiTokens()->delete();
         }
         $user->save();
 
