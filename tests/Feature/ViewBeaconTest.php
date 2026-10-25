@@ -21,6 +21,20 @@ use Illuminate\Database\Capsule\Manager as DB;
  */
 class ViewBeaconTest extends TestCase
 {
+    public static function setUpBeforeClass(): void
+    {
+        putenv('PHPUNIT_TEST=1');
+        $_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'] ?? '/';
+
+        // The render-based regressions below run the real renderPage(),
+        // which needs the view helpers (breadcrumbs, blocks) and the
+        // Blade engine — the same bootstrap other render tests use.
+        $helpers = new \ReflectionMethod(\App\Core\Bootstrap::class, 'loadHelpers');
+        $helpers->invoke(null);
+        $initBlade = new \ReflectionMethod(\App\Core\Bootstrap::class, 'initBlade');
+        $initBlade->invoke(null);
+    }
+
     /** @var int[] */
     private array $pageIds = [];
     private array $serverBackup = [];
@@ -94,6 +108,11 @@ class ViewBeaconTest extends TestCase
             ->first();
 
         $this->assertNotNull($row, 'a beacon hit must insert a page_views row');
+        $this->assertSame(
+            1,
+            DB::table('page_views')->where('page_id', $page->id)->count(),
+            'one valid beacon request must create exactly one view record'
+        );
         $this->assertSame('/' . $page->slug, $row->path);
         $this->assertNull($row->session_id, 'beacon hits are anonymous: no session id may be stored');
         $this->assertSame('203.0.113.x', $row->ip, 'only the anonymized IP may be persisted');
@@ -209,6 +228,76 @@ class ViewBeaconTest extends TestCase
             'VisitTracker::handleBeacon()',
             $index,
             'public/index.php must route POST /_v to the beacon handler'
+        );
+    }
+
+    /**
+     * P2-1 regression: server-side rendering must NOT write page_views
+     * directly. The POST /_v beacon is the sole counter, so a rendered
+     * page plus one beacon yields exactly one row — cached and uncached
+     * renders alike.
+     */
+    public function test_server_side_render_does_not_write_page_views_directly()
+    {
+        $page = $this->makePage();
+        $_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0 Chrome/126.0';
+
+        // Delta-based so concurrent rows from other fixtures cannot
+        // mask (or fake) a direct write during the render.
+        $before = DB::table('page_views')->count();
+
+        $renderPage = new \ReflectionMethod(\App\Controllers\Site\SiteController::class, 'renderPage');
+        $renderPage->setAccessible(true);
+        ob_start();
+        try {
+            $renderPage->invoke(null, $page);
+        } finally {
+            ob_get_clean();
+        }
+
+        $this->assertSame(
+            $before,
+            DB::table('page_views')->count(),
+            'uncached public page rendering must not write page_views directly'
+        );
+    }
+
+    public function test_render_plus_one_beacon_yields_exactly_one_view_row()
+    {
+        $page = $this->makePage();
+        $_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0 Chrome/126.0';
+
+        $renderPage = new \ReflectionMethod(\App\Controllers\Site\SiteController::class, 'renderPage');
+        $renderPage->setAccessible(true);
+        ob_start();
+        try {
+            $renderPage->invoke(null, $page);
+        } finally {
+            $html = (string) ob_get_clean();
+        }
+
+        // The rendered page must carry the beacon...
+        $this->assertStringContainsString("sendBeacon('/_v'", $html, 'rendered page must include the beacon script');
+
+        // ...and the beacon it triggers writes the ONLY row.
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_POST = ['p' => '/' . $page->slug];
+        VisitTracker::handleBeacon();
+
+        $this->assertSame(
+            1,
+            DB::table('page_views')->where('page_id', $page->id)->count(),
+            'render + beacon must produce exactly one view record (no duplicates)'
+        );
+    }
+
+    public function test_site_controller_has_no_direct_tracking_calls()
+    {
+        $src = file_get_contents(dirname(__DIR__, 2) . '/app/Controllers/Site/SiteController.php');
+        $this->assertStringNotContainsString(
+            'VisitTracker::track',
+            $src,
+            'the beacon must be the sole mechanism for counting public page views'
         );
     }
 }
