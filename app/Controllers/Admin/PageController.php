@@ -38,6 +38,22 @@ class PageController
     ];
 
     /**
+     * The only page statuses the application understands: the admin form
+     * offers draft/published, and scheduling is a published page with a
+     * future published_at. Anything else (a typo, hand-crafted input)
+     * silently makes a page permanently invisible — visible() matches
+     * 'published' exactly.
+     */
+    private const ALLOWED_STATUSES = ['draft', 'published'];
+
+    /**
+     * Core page types referenced by code (sitemap, archives, product
+     * galleries). ContentType slugs are allowed in addition and are
+     * validated against the content_types table at runtime.
+     */
+    private const CORE_PAGE_TYPES = ['page', 'post', 'feature', 'product', 'products'];
+
+    /**
      * Fields whose empty string should be stored as NULL.
      * (i.e. optional SEO fields — avoids storing "" in the DB)
      */
@@ -315,6 +331,21 @@ class PageController
             $errors[] = "'{$data['slug']}' is a reserved path and cannot be used as a page slug.";
         }
 
+        // 5.5 Status and type allowlists: only values the application
+        // actually understands. A mistyped status silently makes a page
+        // permanently invisible; a mistyped type drops it from every
+        // listing. Empty/absent values are left untouched so legacy rows
+        // with an empty type keep editing cleanly.
+        if (isset($data['status']) && $data['status'] !== ''
+            && !in_array($data['status'], self::ALLOWED_STATUSES, true)) {
+            $errors[] = "'status' must be either 'draft' or 'published'.";
+        }
+
+        if (isset($data['type']) && $data['type'] !== ''
+            && !in_array($data['type'], self::allowedPageTypes(), true)) {
+            $errors[] = "'type' is not a known content type.";
+        }
+
         if (array_key_exists('layout', $data)) {
             if ($data['layout'] === '') {
                 $data['layout'] = 'default';
@@ -348,6 +379,26 @@ class PageController
         }
 
         return $errors ? ['errors' => $errors] : $data;
+    }
+
+    /**
+     * Every page type a submission may use: the core types referenced by
+     * application code plus the slugs registered in the content_types
+     * table. Empty string/null stay unvalidated so legacy rows with an
+     * empty type keep editing cleanly.
+     *
+     * @return string[]
+     */
+    private static function allowedPageTypes(): array
+    {
+        $types = self::CORE_PAGE_TYPES;
+        try {
+            $types = array_merge($types, \App\Models\ContentType::query()->pluck('slug')->all());
+        } catch (\Throwable $e) {
+            // content_types table unavailable: core types still apply.
+        }
+
+        return array_values(array_unique($types));
     }
 
     /**
