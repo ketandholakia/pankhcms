@@ -296,6 +296,9 @@ class MediaReferenceProtectionTest extends TestCase
             $url . '/extra',        // path-info style still references it
             'https://cdn.example.com' . $url,
             "text\n" . $url . "\n",
+            // Site-relative form without the leading slash
+            '<img src="' . ltrim($url, '/') . '">',
+            ltrim($url, '/'),
         ];
         foreach ($positives as $haystack) {
             $this->assertTrue($method->invoke(null, $haystack, $url), "must match: $haystack");
@@ -308,6 +311,7 @@ class MediaReferenceProtectionTest extends TestCase
             '/uploads/media/',
             strtoupper('/uploads/media/ABC123.PNG'),
             '',
+            'photo-uploads/media/abc123.png', // relative needle must not match a prefixed path
         ];
         foreach ($negatives as $haystack) {
             $this->assertFalse($method->invoke(null, $haystack, $url), "must NOT match: $haystack");

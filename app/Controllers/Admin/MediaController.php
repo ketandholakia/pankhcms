@@ -177,11 +177,15 @@ class MediaController
     }
 
     /**
-     * Whether $haystack references exactly $url. Every occurrence of the
-     * URL must be followed by a non-name character (end, quote, space,
-     * ?, #, /, >, ...) — a longer filename that merely extends a shorter
-     * one (abc1234.png vs abc123.png) is NOT a match, so deletion is
-     * never blocked by filename-substring false positives.
+     * Whether $haystack references exactly $url. Matches the full URL and
+     * its site-relative form ("uploads/media/x.png" without the leading
+     * slash, as hand-authored markup may write it). Every occurrence must
+     * be followed by a non-name character (end, quote, space, ?, #, /,
+     * >, ...) — a longer filename that merely extends a shorter one
+     * (abc1234.png vs abc123.png) is NOT a match, so deletion is never
+     * blocked by filename-substring false positives. The relative needle
+     * additionally requires a non-name character BEFORE it, so
+     * "photo-uploads/media/x.png" cannot match either.
      *
      * JSON-encoded content stores "/" as "\/", so the match also runs
      * against the backslash-unescaped form of the haystack; otherwise
@@ -193,16 +197,33 @@ class MediaController
             return false;
         }
 
+        $needles = [$url];
+        $relative = ltrim($url, '/');
+        if ($relative !== $url) {
+            $needles[] = $relative;
+        }
+
         $haystacks = [$haystack, str_replace('\\', '', $haystack)];
 
         foreach ($haystacks as $candidate) {
-            $offset = 0;
-            while (($pos = strpos($candidate, $url, $offset)) !== false) {
-                $next = $candidate[$pos + strlen($url)] ?? '';
-                if ($next === '' || !str_contains('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-', $next)) {
-                    return true;
+            foreach ($needles as $index => $needle) {
+                $offset = 0;
+                while (($pos = strpos($candidate, $needle, $offset)) !== false) {
+                    $next = $candidate[$pos + strlen($needle)] ?? '';
+                    $prev = $pos > 0 ? $candidate[$pos - 1] : '';
+                    $nameChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-';
+
+                    $rightOk = $next === '' || !str_contains($nameChars, $next);
+                    // The full path carries its own "/" boundary; the
+                    // relative form needs an explicit left check so a
+                    // longer prefixed path ("photo-uploads/...") cannot match.
+                    $leftOk = $index === 0 || $prev === '' || !str_contains($nameChars, $prev);
+
+                    if ($rightOk && $leftOk) {
+                        return true;
+                    }
+                    $offset = $pos + 1;
                 }
-                $offset = $pos + 1;
             }
         }
 
