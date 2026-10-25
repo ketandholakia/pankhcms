@@ -106,6 +106,19 @@ class MediaController
             $this->jsonResponse(['error' => 'Media not found.'], 404);
             return;
         }
+
+        // Content-integrity guard: a media file that is still referenced
+        // by pages, global blocks or settings must not be deleted — the
+        // references would instantly become broken images.
+        $references = $this->findMediaReferences($media);
+        if ($references !== []) {
+            $this->jsonResponse([
+                'error' => 'This file is still in use and was not deleted. Remove it from the places listed first.',
+                'references' => $references,
+            ], 409);
+            return;
+        }
+
         $filePath = __DIR__ . '/../../../public' . $media->url;
         if (file_exists($filePath)) {
             unlink($filePath);
@@ -113,6 +126,87 @@ class MediaController
         $media->delete();
         \App\Middleware\PageCache::clear();
         $this->jsonResponse(['success' => true]);
+    }
+
+    /**
+     * Find live content that references this media file's URL. Scans:
+     * page featured_image (exact) + page content_json/content and global
+     * block content (boundary-aware substring, so "/a.png" never matches
+     * "/a.png.png"-style names or filename fragments), and every settings
+     * value (logo_path, favicon_path, og images, ...).
+     *
+     * @return string[] human-readable reference descriptions; empty = safe to delete
+     */
+    private function findMediaReferences(Media $media): array
+    {
+        $url = trim((string) $media->url);
+        if ($url === '') {
+            return [];
+        }
+
+        $references = [];
+
+        foreach (\App\Models\Page::select('id', 'title', 'slug', 'featured_image', 'content', 'content_json')->get() as $page) {
+            if ((string) $page->featured_image === $url) {
+                $references[] = 'Page "' . $page->title . '" (featured image)';
+                continue;
+            }
+            if (self::contentReferencesUrl((string) $page->content_json, $url)
+                || self::contentReferencesUrl((string) $page->content, $url)) {
+                $references[] = 'Page "' . $page->title . '" (content)';
+            }
+        }
+
+        foreach (\App\Models\GlobalBlock::select('id', 'title', 'content')->get() as $block) {
+            if (self::contentReferencesUrl((string) $block->content, $url)) {
+                $references[] = 'Global block "' . $block->title . '"';
+            }
+        }
+
+        try {
+            foreach (\Illuminate\Database\Capsule\Manager::table('settings')->get() as $setting) {
+                if (self::contentReferencesUrl((string) $setting->value, $url)) {
+                    $references[] = 'Setting "' . $setting->key . '"';
+                }
+            }
+        } catch (\Throwable $e) {
+            // Settings table unavailable: do not block deletion on it.
+        }
+
+        return $references;
+    }
+
+    /**
+     * Whether $haystack references exactly $url. Every occurrence of the
+     * URL must be followed by a non-name character (end, quote, space,
+     * ?, #, /, >, ...) — a longer filename that merely extends a shorter
+     * one (abc1234.png vs abc123.png) is NOT a match, so deletion is
+     * never blocked by filename-substring false positives.
+     *
+     * JSON-encoded content stores "/" as "\/", so the match also runs
+     * against the backslash-unescaped form of the haystack; otherwise
+     * every block-encoded reference would be invisible.
+     */
+    public static function contentReferencesUrl(string $haystack, string $url): bool
+    {
+        if ($url === '' || $haystack === '') {
+            return false;
+        }
+
+        $haystacks = [$haystack, str_replace('\\', '', $haystack)];
+
+        foreach ($haystacks as $candidate) {
+            $offset = 0;
+            while (($pos = strpos($candidate, $url, $offset)) !== false) {
+                $next = $candidate[$pos + strlen($url)] ?? '';
+                if ($next === '' || !str_contains('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-', $next)) {
+                    return true;
+                }
+                $offset = $pos + 1;
+            }
+        }
+
+        return false;
     }
 
     public function picker(): void
@@ -168,7 +262,9 @@ class MediaController
 
     private function jsonResponse(array $data, int $status = 200): void
     {
-        \Flight::response()->status($status);
-        \Flight::json($data);
+        // Flight::json() re-sets the response status from its $code
+        // parameter (default 200) — the status must travel WITH the json
+        // call, not be set beforehand, or error responses ship as 200.
+        \Flight::json($data, $status);
     }
 }
