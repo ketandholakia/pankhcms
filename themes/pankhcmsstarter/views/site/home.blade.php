@@ -47,7 +47,8 @@
                         </div>
 
                         <div class="column is-6 has-text-centered">
-                            <img src="{{ $heroImage }}" alt="{{ setting('site_title', setting('site_name', 'PankhCMS')) }}">
+                            <img src="{{ $heroImage }}" alt="{{ setting('site_title', setting('site_name', 'PankhCMS')) }}"
+                                 loading="eager" decoding="async" width="960" height="640">
                         </div>
                     </div>
                 </div>
@@ -79,7 +80,8 @@
                             </div>
 
                             <div class="column is-6 has-text-centered">
-                                <img src="{{ $slide->image_path }}" alt="{{ $slideTitle }}">
+                                <img src="{{ $slide->image_path }}" alt="{{ $slideTitle }}"
+                                     loading="lazy" decoding="async" width="960" height="640">
                             </div>
                         </div>
                     </div>

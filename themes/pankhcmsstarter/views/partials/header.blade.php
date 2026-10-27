@@ -33,7 +33,7 @@
             $logoUsable = $logoEnabled == '1' && $logoFile !== '' && is_file($logoFile);
         @endphp
         @if($logoUsable)
-            <img src="{{ $logoPath }}" alt="{{ $siteTitle }}" style="max-height: 48px;">
+            <img src="{{ $logoPath }}" alt="{{ $siteTitle }}" width="160" height="48" style="max-height: 48px;">
         @else
             <span class="logo-lockup">
                 <span class="logo-text">{{ $siteTitle }}</span>
@@ -61,6 +61,12 @@
 
             <!-- RIGHT SIDE -->
             <div class="navbar-end">
+                <div class="navbar-item">
+                    <button type="button" id="theme-mode-toggle" class="button is-light theme-mode-toggle"
+                            aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
+                        <span aria-hidden="true">☾</span>
+                    </button>
+                </div>
                 <div class="navbar-item">
                     <a href="{{ preg_match('#^https?://#i', $ctaUrl) ? $ctaUrl : url($ctaUrl) }}" class="button is-primary is-rounded cta-button">
                         {{ $ctaLabel }}
