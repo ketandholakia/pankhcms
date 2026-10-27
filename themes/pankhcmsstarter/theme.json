@@ -10,5 +10,52 @@
     "menus": true,
     "templates": true,
     "blog": true
+  },
+  "options": {
+    "primary_color": {
+      "label": "Primary color",
+      "type": "color",
+      "default": "#0f6dff",
+      "css": "--theme-primary"
+    },
+    "accent_color": {
+      "label": "Accent color",
+      "type": "color",
+      "default": "#19b394",
+      "css": "--theme-accent"
+    },
+    "container_width": {
+      "label": "Container width (px)",
+      "type": "number",
+      "default": "1200",
+      "css": "--theme-container",
+      "unit": "px"
+    },
+    "font_stack": {
+      "label": "Font stack",
+      "type": "text",
+      "default": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+      "css": "--theme-font"
+    },
+    "logo": {
+      "label": "Logo path",
+      "type": "text",
+      "default": ""
+    },
+    "header_cta_label": {
+      "label": "Header CTA label",
+      "type": "text",
+      "default": "Get Quote"
+    },
+    "header_cta_url": {
+      "label": "Header CTA URL",
+      "type": "text",
+      "default": "/contact-us"
+    },
+    "footer_text": {
+      "label": "Footer text",
+      "type": "text",
+      "default": ""
+    }
   }
 }

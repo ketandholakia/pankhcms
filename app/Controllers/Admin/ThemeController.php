@@ -105,6 +105,42 @@ class ThemeController
         return $themes;
     }
 
+    public static function showOptions()
+    {
+        $slug = \App\Core\Theme::active();
+        $options = \App\Core\Theme::options($slug);
+        echo \Flight::get('blade')->render('admin.themes.options', compact('slug', 'options'));
+    }
+
+    public static function saveOptions()
+    {
+        $slug = \App\Core\Theme::active();
+        $data = \Flight::request()->data->getData();
+
+        $values = [];
+        foreach (\App\Core\Theme::options($slug) as $key => $option) {
+            $values[$key] = (string) ($data[$key] ?? '');
+        }
+
+        $errors = \App\Core\Theme::validateOptions($values, $slug);
+        if ($errors !== []) {
+            \Flight::redirect('/admin/themes/options?error=' . urlencode(implode(' ', $errors)));
+            return;
+        }
+
+        try {
+            Capsule::table('settings')->updateOrInsert(
+                ['key' => 'theme_options_' . $slug],
+                ['value' => json_encode($values, JSON_UNESCAPED_UNICODE)]
+            );
+            setting_cache_clear();
+            \App\Middleware\PageCache::clear();
+            \Flight::redirect('/admin/themes/options?status=saved');
+        } catch (\Throwable $e) {
+            \Flight::redirect('/admin/themes/options?error=' . urlencode('Could not save options.'));
+        }
+    }
+
     private static function themeExists(string $slug): bool
     {
         // Same rule as Theme::normalizeThemeSlug: charset AND a real

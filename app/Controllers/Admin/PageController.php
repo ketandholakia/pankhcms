@@ -346,6 +346,12 @@ class PageController
 
             // Strip unsafe HTML from block content before it is stored.
             $data['content_json'] = \App\Core\HtmlSanitizer::sanitizeBlocksJson($contentJson);
+
+            // Per-type validation the sanitizer cannot judge: video_embed
+            // URLs must come from the allowlisted hosts.
+            foreach (self::validateBlocks(json_decode((string) $data['content_json'], true) ?: []) as $blockError) {
+                $errors[] = $blockError;
+            }
         }
 
         return $errors ? ['errors' => $errors] : $data;
@@ -379,6 +385,36 @@ class PageController
         }
 
         return null;
+    }
+
+    /**
+     * Block-type-specific validation, run after the sanitizer. The
+     * sanitizer only handles html/text; video_embed URLs must point at
+     * the allowlisted providers (YouTube/Vimeo) so arbitrary third-party
+     * scripts cannot be embedded.
+     *
+     * @param array $blocks decoded content_json
+     * @return string[] validation errors
+     */
+    private static function validateBlocks(array $blocks): array
+    {
+        $errors = [];
+        foreach ($blocks as $index => $block) {
+            if (!is_array($block) || ($block['type'] ?? '') !== 'video_embed') {
+                continue;
+            }
+            $url = trim((string) ($block['url'] ?? ''));
+            if ($url === '') {
+                $errors[] = 'Block ' . ($index + 1) . ' (video): a video URL is required.';
+                continue;
+            }
+            if (!preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/)([\w-]{6,20})#i', $url)
+                && !preg_match('#vimeo\.com/(\d{6,12})#i', $url)) {
+                $errors[] = 'Block ' . ($index + 1) . ' (video): only YouTube and Vimeo URLs are supported.';
+            }
+        }
+
+        return $errors;
     }
 
     private function mergeCustomFieldsIntoContentJson(string $contentJson, array $customFields): string

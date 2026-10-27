@@ -51,7 +51,7 @@
         </div>
 
         <div class="footer-bottom">
-            <p>&copy; {{ date('Y') }} {{ $siteTitle }}</p>
+            <p>&copy; {{ date('Y') }} {{ $siteTitle }}{{ \App\Core\Theme::option('footer_text') ? ' — ' . \App\Core\Theme::option('footer_text') : '' }}</p>
             @if($showCredit && $themeAuthor)
                 <p>
                     Theme created by

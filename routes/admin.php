@@ -134,6 +134,8 @@ Flight::group('/admin', function () {
     // Themes
     Flight::route('GET /themes', [ThemeController::class, 'index'])->addMiddleware([new RequirePermission('manage_themes')]);
     Flight::route('POST /themes', [ThemeController::class, 'update'])->addMiddleware([new RequirePermission('manage_themes')]);
+    Flight::route('GET /themes/options', [ThemeController::class, 'showOptions'])->addMiddleware([new RequirePermission('manage_themes')]);
+    Flight::route('POST /themes/options', [ThemeController::class, 'saveOptions'])->addMiddleware([new RequirePermission('manage_themes')]);
 
     // Menus
     Flight::route('GET /menus', [MenuController::class, 'index'])->addMiddleware([new RequirePermission('manage_menus')]);
