@@ -123,6 +123,10 @@ Flight::route('GET /robots.txt', function () {
 // Homepage
 Flight::route('GET /', [\App\Controllers\Site\SiteController::class, 'home']);
 
+// Blog index: registered BEFORE the /@slug catch-all so a page slug
+// can never shadow it (and 'blog' is a reserved page slug).
+Flight::route('GET /blog', [\App\Controllers\Site\SiteController::class, 'blog']);
+
 
 // Public pages by slug — SAFE VERSION
 Flight::route('GET /@slug', function ($slug) {

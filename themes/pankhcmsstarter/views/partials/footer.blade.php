@@ -6,16 +6,11 @@
     $footerLinksMenu = (string) menu('footer-links');
     $showCredit = setting('show_theme_credit', '1') === '1';
     $theme = \App\Core\Theme::active();
-    $themeJsonPath = \App\Core\Theme::path($theme, 'theme.json');
-    $themeAuthor = null;
-    $themeAuthorUrl = null;
-    if (is_file($themeJsonPath)) {
-        $themeMeta = json_decode(file_get_contents($themeJsonPath), true);
-        if (is_array($themeMeta)) {
-            $themeAuthor = $themeMeta['author'] ?? null;
-            $themeAuthorUrl = $themeMeta['author_url'] ?? null;
-        }
-    }
+    // Theme::meta() reads theme.json once and caches it statically.
+    $themeMeta = \App\Core\Theme::meta($theme);
+    $themeAuthor = $themeMeta['author'] ?? null;
+    $themeAuthorUrl = $themeMeta['author_url'] ?? null;
+    $isAdmin = \App\Core\Auth::check();
 @endphp
 
 <footer class="site-footer footer">
@@ -26,6 +21,8 @@
                 <p>{{ $siteTagline }}</p>
                 @if($siteUrl !== '')
                     <p><a href="{{ $siteUrl }}">{{ $siteUrl }}</a></p>
+                @else
+                    <p><a href="{{ url('/') }}">{{ url('/') }}</a></p>
                 @endif
             </div>
 
@@ -33,7 +30,7 @@
                 <h4>Navigation</h4>
                 @if(trim($footerMenu) !== '')
                     {!! $footerMenu !!}
-                @else
+                @elseif($isAdmin)
                     <p>Add a menu with location <strong>footer</strong>.</p>
                 @endif
             </div>
@@ -42,7 +39,7 @@
                 <h4>Resources</h4>
                 @if(trim($footerLinksMenu) !== '')
                     {!! $footerLinksMenu !!}
-                @else
+                @elseif($isAdmin)
                     <p>Add a menu with location <strong>footer-links</strong>.</p>
                 @endif
             </div>

@@ -26,8 +26,17 @@ require $root . '/vendor/autoload.php';
 // before the framework boots, so cached pages still count views. The
 // handler follows the PHPUNIT_TEST no-exit convention; in production
 // it exits right after answering.
+$beaconPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$beaconBase = rtrim((string) (parse_url((string) env('APP_URL', ''), PHP_URL_PATH) ?? ''), '/');
+if ($beaconBase !== '' && $beaconBase !== '/' && str_starts_with($beaconPath, $beaconBase)) {
+    $beaconPath = substr($beaconPath, strlen($beaconBase));
+    if ($beaconPath === '' || $beaconPath === false) {
+        $beaconPath = '/';
+    }
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
-    && rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/') === '/_v') {
+    && rtrim($beaconPath, '/') === '/_v') {
     \App\Core\VisitTracker::handleBeacon();
     exit;
 }

@@ -16,16 +16,23 @@
 
         <!-- BRAND -->
         <div class="navbar-brand">
-            <a class="navbar-item brand-logo" href="/">
+            <a class="navbar-item brand-logo" href="{{ url('/') }}">
                 @php
-                    $logoPath = setting('logo_path', '/public/assets/tinymce/logo.png');
             $siteTitle = setting('site_title', 'PankhCMS');
-            $logoEnabled = setting('logo_enabled', '1');
             $tagline = setting('site_tagline', '');
             $ctaLabel = setting('header_cta_label', 'Get Quote');
             $ctaUrl = setting('header_cta_url', '/contact-us');
+
+            // Only use the logo when the setting points at a file that
+            // actually exists — the historical default
+            // (/public/assets/tinymce/logo.png) does not, and produced a
+            // broken image on every page.
+            $logoPath = trim((string) setting('logo_path', ''));
+            $logoEnabled = setting('logo_enabled', '1');
+            $logoFile = $logoPath !== '' ? base_path('/public' . (string) parse_url($logoPath, PHP_URL_PATH)) : '';
+            $logoUsable = $logoEnabled == '1' && $logoFile !== '' && is_file($logoFile);
         @endphp
-        @if($logoEnabled == '1' && $logoPath)
+        @if($logoUsable)
             <img src="{{ $logoPath }}" alt="{{ $siteTitle }}" style="max-height: 48px;">
         @else
             <span class="logo-lockup">
@@ -55,7 +62,7 @@
             <!-- RIGHT SIDE -->
             <div class="navbar-end">
                 <div class="navbar-item">
-                    <a href="{{ $ctaUrl }}" class="button is-primary is-rounded cta-button">
+                    <a href="{{ preg_match('#^https?://#i', $ctaUrl) ? $ctaUrl : url($ctaUrl) }}" class="button is-primary is-rounded cta-button">
                         {{ $ctaLabel }}
                     </a>
                 </div>

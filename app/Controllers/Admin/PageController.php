@@ -35,6 +35,7 @@ class PageController
     private const RESERVED_SLUGS = [
         'admin', 'install', 'api', 'storage', 'themes', 'uploads',
         'assets', 'contact', 'search', 'sitemap', 'robots', 'favicon',
+        'blog',
     ];
 
     /**

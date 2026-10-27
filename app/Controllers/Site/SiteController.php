@@ -57,6 +57,37 @@ class SiteController
         self::renderPage($page);
     }
 
+    /**
+     * Public blog index: newest-first list of published posts, 10 per
+     * page (?page=N), same hand-rolled paginator shape as the admin.
+     */
+    public static function blog()
+    {
+        $perPage = 10;
+        $pageNum = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+
+        $query = Page::visible()->where('type', 'post');
+        $total = (int) $query->count();
+
+        $posts = $query->orderByRaw('COALESCE(published_at, created_at) DESC')
+            ->skip(($pageNum - 1) * $perPage)
+            ->take($perPage)
+            ->get();
+
+        $paginator = [
+            'current' => $pageNum,
+            'last' => max(1, (int) ceil($total / $perPage)),
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+
+        echo \Flight::get('blade')->render('site.blog', [
+            'posts' => $posts,
+            'paginator' => $paginator,
+            'site_name' => \setting('site_name', 'PankhCMS'),
+        ]);
+    }
+
     private static function renderPage(Page $page)
     {
         $path = '/' . ltrim((string) ($page->slug ?? ''), '/');

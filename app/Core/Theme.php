@@ -59,7 +59,27 @@ class Theme
     public static function asset(string $file, ?string $theme = null): string
     {
         $theme = $theme ?: self::active();
-        return '/themes/' . $theme . '/assets/' . ltrim($file, '/');
+        return url('/themes/' . $theme . '/assets/' . ltrim($file, '/'));
+    }
+
+    /**
+     * The theme's theme.json contents (statically cached per theme), or
+     * an empty array when the file is missing or invalid.
+     *
+     * @return array<string, mixed>
+     */
+    public static function meta(?string $slug = null): array
+    {
+        static $cache = [];
+        $slug = $slug ?: self::active();
+
+        if (!array_key_exists($slug, $cache)) {
+            $path = self::path($slug, 'theme.json');
+            $meta = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
+            $cache[$slug] = is_array($meta) ? $meta : [];
+        }
+
+        return $cache[$slug];
     }
 
     /**

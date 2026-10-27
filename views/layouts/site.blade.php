@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ setting('site_title', setting('site_name', 'PankhCMS')) }}</title>
     @include('partials.seo')
-    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
@@ -21,11 +21,11 @@
     <nav class="bg-white shadow p-4">
         <div class="container mx-auto flex items-center justify-between gap-4">
             <div class="flex items-center space-x-8">
-            <a href="/" class="font-bold text-lg">PankhCMS</a>
+            <a href="{{ url('/') }}" class="font-bold text-lg">{{ setting('site_title', setting('site_name', 'PankhCMS')) }}</a>
             {!! $menuHtml !!}
             </div>
 
-            <form action="/search" method="GET" class="flex gap-2">
+            <form action="{{ url('/search') }}" method="GET" class="flex gap-2">
                 <input
                     type="text"
                     name="q"
@@ -53,7 +53,7 @@
 (function () {
     if (/bot|crawl|spider|slurp|curl|wget|headless/i.test(navigator.userAgent)) { return; }
     try {
-        navigator.sendBeacon('/_v', new URLSearchParams({ p: location.pathname }));
+        navigator.sendBeacon('{{ url('/_v') }}', new URLSearchParams({ p: location.pathname }));
     } catch (e) { /* analytics must never break the page */ }
 })();
 </script>
