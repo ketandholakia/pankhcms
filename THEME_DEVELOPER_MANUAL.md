@@ -6,10 +6,10 @@ This manual explains how themes work in PankhCMS and provides guidelines for bui
 
 ## 1. Quick Start (5-Minute Checklist)
 
-To quickly ship a new frontend block in the active theme (e.g., `greenbs`):
+To quickly ship a new frontend block in the active theme (e.g., `pankhcmsstarter`):
 
-1. **Verify Active Theme**: Ensure `ACTIVE_THEME=greenbs` in your `.env` file.
-2. **Create Block Template**: Add a new block template at `htdocs/themes/greenbs/views/blocks/{type}.blade.php`.
+1. **Verify Active Theme**: Ensure the `active_theme` setting (Admin > Themes) or `ACTIVE_THEME=pankhcmsstarter` in your `.env` file.
+2. **Create Block Template**: Add a new block template at `themes/pankhcmsstarter/views/blocks/{type}.blade.php`.
 3. **Register Block in Admin**: Open `views/admin/pages/create.blade.php` and `views/admin/pages/edit.blade.php`. Add a block button with `addBlock('{type}')`.
 4. **Test**: Save a page containing that block in the admin panel and verify its rendering on the frontend.
 5. **Clear Cache**: If changes aren't visible, clear the compiled Blade cache:
@@ -21,22 +21,37 @@ To quickly ship a new frontend block in the active theme (e.g., `greenbs`):
 
 ## 2. Theme Directory Structure
 
-The structure of a typical theme (e.g., `greenbs`):
+The structure of a typical theme (e.g., `pankhcmsstarter`):
 
-- **`theme.json`**: Defines basic metadata (name, description, author, version).
-- **`views/layouts/main.blade.php`**: The global layout shell (head, shared sections like header/footer).
-- **`views/page.blade.php`**: The page renderer. It iterates through the page builder's `content_json` and includes dynamic blocks.
-- **`views/blocks/*.blade.php`**: Individual component templates (e.g., text, image, faq).
-- **`assets/`**: Theme-specific CSS, JS, and images.
+- **`theme.json`**: Metadata (name, slug, version, author, `options` — see §6 Theme Options) and `supports` flags.
+- **`views/layouts/main.blade.php`**: The global layout shell (head, header/footer partials, view beacon).
+- **`views/site/*.blade.php`**: Public page templates — `page`, `post` (uses the `$page` contract), `blog` (paginated post cards), `archive` (category/tag), `search`, `contact`, `404` (themed not-found), `feed` (RSS XML).
+- **`views/blocks/*.blade.php`**: Global block templates rendered by `blocks_html()` into layout locations (header_top, footer, sidebar, ...). Receives `$data`.
+- **`views/page-blocks/*.blade.php`**: Page-builder block templates rendered by `render_page_blocks()` from a page's `content_json`. Receives `$block` (array). Shipped: `text`, `image`, `cta`, `faq`, `columns`, `video_embed`, `testimonials`, `product_gallery`, `hero`.
+- **`assets/css/style.css`**: Self-hosted stylesheet (framework subset + custom chrome, ~15KB). No CDN calls.
+- **`assets/js/app.js`**: Self-hosted JS — burger menu, keyboard/touch dropdowns, scroll-snap slider (prev/next/dots/pause/autoplay + `prefers-reduced-motion`), dark-mode toggle (localStorage).
+- **`assets/`**: Theme CSS/JS/images (published into `public/themes/<slug>/` by `Theme::publishAssets()`).
+
+### Data shapes: `blocks/` vs `page-blocks/`
+
+**Global blocks (`views/blocks/`, rendered via `blocks_html($location)`)** receive a `$data` array with TWO possible shapes — handle both:
+
+1. **String content** (legacy): `$data = ['text' => string (sanitized), 'title' => string, 'show_title' => bool, 'block' => $block]`.
+2. **Array content** (JSON): `$data = ['title' => ..., 'text'/'html' => string (sanitized), ...custom keys..., 'show_title' => bool]`. The admin controller stores JSON strings; `blocks_html()` unwraps (possibly double-encoded) JSON and sanitizes `text`/`html` before your template runs.
+
+Rules: never read `$block->content` in templates; treat `text`/`html` as sanitized HTML (`{!! !!}`) and escape every other key (`{{ }}`).
+
+**Page-builder blocks (`views/page-blocks/`, rendered via `render_page_blocks($blocks)`)** receive `$block` as an ARRAY from `content_json`: `['type' => 'faq', 'lines' => "question | answer\n...", ...]`. Rules: escape everything with `{{ }}`; use `sanitize_html()` for rich-text fields the admin may type HTML into; `html`/`text` keys are pre-sanitized on save by `HtmlSanitizer::sanitizeBlocksJson()`; `video_embed.url` is validated server-side against the YouTube/Vimeo allowlist (`PageController::validateBlocks()`).
 
 ---
 
 ## 3. Dynamic Rendering Flow
 
-1. **Global Shell**: `layouts/main.blade.php` loads the basic HTML structure and `@yield('content')`.
-2. **Page Parsing**: `views/page.blade.php` loops through the JSON block entries stored in `content_json`.
-3. **Block Inclusion**: For each block, it reads the `type` and dynamically includes the corresponding template via `@includeIf('blocks.' . $type)`.
-   *Example: If a block has `{"type":"text"}`, it attempts to load `views/blocks/text.blade.php`.*
+1. **Global Shell**: `layouts/main.blade.php` loads the HTML structure and `@yield('content')`; theme options are emitted as CSS variables in `<head>`.
+2. **Page resolution**: `SiteController::renderPage()` picks the first existing view from `templates.<layout>` -> `site.<type>` -> `templates.page` -> `site.page`. Posts render through `site.post` (the `$page` contract), the blog index through `site.blog`.
+3. **Page-builder blocks**: `render_page_blocks()` renders each `content_json` entry via `page-blocks.{type}`. Example: `{"type":"video_embed","url":"https://youtu.be/..."}` loads `page-blocks/video_embed.blade.php`.
+4. **Global blocks**: `blocks_html($location)` renders `blocks.{type}` for every block placed in that location.
+5. **Errors**: unknown pages/terms render the theme's `site.404` (search box + recent pages) with a real 404 status.
 
 ---
 
@@ -59,7 +74,7 @@ Follow these rules for naming new blocks to ensure compatibility and predictabil
 Here is a step-by-step example of creating an `faq` block.
 
 ### Step A: Frontend Template
-Create `htdocs/themes/greenbs/views/blocks/faq.blade.php`:
+Create `themes/pankhcmsstarter/views/blocks/faq.blade.php`:
 
 ```blade
 @php
@@ -103,31 +118,42 @@ In both `views/admin/pages/create.blade.php` and `views/admin/pages/edit.blade.p
 2. **Add Default Data in `addBlock(type)`**:
    ```javascript
    if (type === 'faq') {
-     block.title = 'Frequently Asked Questions';
-     block.items = [{ q: 'Question 1', a: 'Answer 1' }];
+     block.lines = ''; // one "question | answer" per line, parsed in the view
    }
    ```
 
 3. **Add Editor UI in `render()`**:
    ```javascript
    if (b.type === 'faq') {
-     innerHTML += `<label class="block font-medium text-sm">Title:</label>
-       <input type="text" class="w-full border p-2 rounded mb-2" value="${b.title || ''}" oninput="updateBlock(${i}, 'title', this.value)">`;
-
-     (b.items || []).forEach((item, idx) => {
-       innerHTML += `<div class="border rounded p-2 mb-2">
-         <input type="text" class="w-full border p-2 rounded mb-1" value="${item.q || ''}" oninput="updateFaqItem(${i}, ${idx}, 'q', this.value)" placeholder="Question">
-         <textarea class="w-full border p-2 rounded" oninput="updateFaqItem(${i}, ${idx}, 'a', this.value)" placeholder="Answer">${item.a || ''}</textarea>
-       </div>`;
-     });
+     innerHTML += `<p class="text-sm text-gray-600">One entry per line: <strong>question | answer</strong>.</p>
+       <textarea class="w-full border p-2 rounded font-mono text-sm" rows="5" oninput="updateBlock(${i}, 'lines', this.value)">${b.lines || ''}</textarea>`;
    }
    ```
 
-*(Ensure you add an `updateFaqItem` helper function to sync the nested arrays in Javascript).*
+4. **Add Server-side Validation** (for data the sanitizer cannot judge, e.g. URLs):
+   `PageController::validateBlocks()` runs after `sanitizeBlocksJson()` — `video_embed` there enforces the YouTube/Vimeo host allowlist.
 
 ---
 
-## 6. Best Practices & Checklist
+## 6. Theme Options
+
+Declare options in `theme.json`:
+
+```json
+"options": {
+  "primary_color": { "label": "Primary color", "type": "color", "default": "#0f6dff", "css": "--theme-primary" },
+  "container_width": { "label": "Container width (px)", "type": "number", "default": "1200", "css": "--theme-container", "unit": "px" },
+  "footer_text": { "label": "Footer text", "type": "text", "default": "" }
+}
+```
+
+- `type`: `color` (validated as 6-digit hex), `number` (numeric pixels), `text`.
+- `css`: emitted as a CSS custom property in `<head>` (`:root { --theme-primary: ... }`).
+- Values are stored per-theme in the settings table (`theme_options_{slug}`); saving clears the settings cache and the page cache.
+- Read options in templates: `Theme::option('footer_text')` / `Theme::options()`.
+- Admin: Admin > Themes > "Edit theme options".
+
+## 6b. Best Practices & Checklist
 
 ### ✅ Do
 - Use null-safe fallbacks for all block keys (e.g., `$block['title'] ?? ''`).

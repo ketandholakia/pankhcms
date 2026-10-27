@@ -129,6 +129,50 @@ version label is proposed and may change before the actual tag.
   (`CONTACT_STORE_FULL_IP=true` to keep full addresses); invalid plugin
   manifests are skipped with a log line.
 
+## Starter theme overhaul & content features
+
+- **Self-hosted starter theme.** All CDN dependencies removed (Bulma,
+  bulma-carousel, Google Fonts, lucide, Tailwind in the fallback
+  layout). A ~15KB custom stylesheet plus a small vanilla JS bundle now
+  provide the layout, navbar (keyboard/touch dropdowns), scroll-snap
+  hero slider with autoplay/pause/dots, forms, cards, dark mode
+  (system + manual toggle persisted to localStorage) and image
+  dimensions/lazy-loading.
+- **Blog & post rendering fixed.** `site/post` used an undefined
+  `$post`; the blog index is a real route (`/blog`, 10 per page,
+  visible-only, newest first) with post cards and pagination.
+- **Global blocks fixed for both data shapes.** All theme block
+  templates render the sanitized `$data` contract (string and JSON
+  shapes) instead of raw `$block->content`; render failures are logged;
+  fresh-install schema drift in `global_blocks` (missing `type`/`status`
+  columns) fixed.
+- **Themed search/contact/404.** The starter theme now ships
+  search/contact templates (Bulma markup) and a themed 404 with a
+  search box and recent pages; the core fallback layout dropped its
+  Tailwind CDN and hard-coded title.
+- **Subdirectory deployments.** `url()` prefixes the APP_URL base path
+  across theme links, `Theme::asset()` and the `/_v` view beacon;
+  `public/index.php` strips the base path before matching.
+- **Taxonomy archives & RSS.** `/category/@slug` and `/tag/@slug`
+  archives (visible-only, paginated), `/feed.xml` RSS 2.0 for the
+  latest 20 posts with auto-discovery link, archive URLs in the
+  sitemap, og:type=article and JSON-LD (WebSite/Organization/Article)
+  for posts.
+- **Redirects manager.** Admin CRUD for 301/302 redirects applied
+  before the framework boots (and before the page cache), stored in the
+  previously unused `redirects` table.
+- **New page-builder blocks.** image, CTA, FAQ, columns, video_embed
+  (YouTube/Vimeo host allowlist enforced on save), testimonials —
+  registered in the admin builder, sanitized server-side.
+- **Theme options.** Declare options in `theme.json` (colors, container
+  width, font stack, logo, header CTA, footer text); edit them under
+  Admin > Themes; values emit as CSS variables. Colors validated as
+  hex.
+- **Fixes.** Media reference protection (in-use files cannot be
+  deleted), page status/type allowlists, SMTP default port 587, HSTS
+  made configurable, page-cache host allowlist, and the cache keys/
+  beacon working in subdirectories.
+
 ## Compatibility
 
 - **PHP 8.2+** (tested up to 8.4). Required extensions: `pdo_sqlite` or

@@ -9,6 +9,9 @@ PankhCMS is a lightweight, simple, and extensible PHP Content Management System 
 - **Eloquent ORM:** Easy and powerful database interactions.
 - **Extensible:** Robust plugin system with lifecycle management (install, boot, activate, uninstall) and hooks/events.
 - **Admin UI:** Clean and intuitive administrative interface with built-in page builders and media management.
+- **Self-hosted starter theme:** No CDN dependencies — bundled CSS/JS with dark mode, scroll-snap hero slider, keyboard-accessible menus, and editable theme options (colors, container width, fonts, logo, footer text).
+- **Content features:** Blog index (`/blog`) with pagination, post pages, category/tag archives (`/category/…`, `/tag/…`), RSS feed (`/feed.xml`), site search, JSON-LD structured data, themed 404, and an admin redirects manager (301/302).
+- **Page-builder blocks:** text, image, CTA, FAQ, columns, video embed (YouTube/Vimeo allowlist), testimonials, product gallery — all sanitized server-side.
 
 ## 📋 Requirements
 
