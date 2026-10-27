@@ -7,6 +7,8 @@
 @include('partials.seo', ['currentPage' => $currentPage])
 
 <meta name="color-scheme" content="light dark">
+<link rel="alternate" type="application/rss+xml" title="{{ setting('site_title', 'PankhCMS') }} RSS"
+      href="{{ url('/feed.xml') }}">
 @php
     // Theme options -> CSS variables (values validated as hex/number on
     // save in ThemeController::saveOptions).
