@@ -16,6 +16,12 @@
         Saved successfully.
     </div>
 
+    <div id="media-delete-error" class="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded mb-6 hidden">
+        <p class="font-semibold">This file is still in use and was not deleted.</p>
+        <p class="text-sm mt-1">Remove it from the following places first:</p>
+        <ul id="media-delete-error-detail" class="list-disc ml-5 text-sm mt-1"></ul>
+    </div>
+
     <div class="bg-white rounded-lg shadow p-6 mb-6">
         <form method="GET" action="/admin/media" class="flex flex-wrap items-end gap-4 mb-6">
             <div class="flex-1 min-w-[200px]">
@@ -64,7 +70,7 @@
                             <p class="text-xs text-gray-700 truncate" title="{{ $item->original_name }}">{{ $item->original_name ?? $item->filename }}</p>
                             <p class="text-xs text-gray-400">{{ $item->mime_type }}</p>
                         </div>
-                        <form method="POST" action="/admin/media/{{ $item->id }}/delete" onsubmit="return confirm('Delete this file?')">
+                        <form method="POST" action="/admin/media/{{ $item->id }}/delete" class="media-delete-form">
                             {!! csrf_field() !!}
                             <button type="submit" class="w-full text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
                         </form>
@@ -76,6 +82,42 @@
 </div>
 
 <script>
+// In-use files answer 409 with the referencing pages/blocks/settings.
+// Intercept the delete forms so that response becomes a readable banner
+// instead of a raw JSON page; successful deletes just reload the grid.
+document.querySelectorAll('form.media-delete-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!confirm('Delete this file?')) {
+            return;
+        }
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: new FormData(form)
+        }).then(function (res) {
+            return res.json().then(function (body) {
+                return { ok: res.ok, status: res.status, body: body };
+            });
+        }).then(function (result) {
+            if (result.ok) {
+                window.location.reload();
+                return;
+            }
+            const banner = document.getElementById('media-delete-error');
+            const detail = document.getElementById('media-delete-error-detail');
+            detail.textContent = (result.body.references || []).join(', ') || '';
+            banner.classList.remove('hidden');
+            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }).catch(function () {
+            alert('Delete failed. Please try again.');
+        });
+    });
+});
+
 document.getElementById('media-upload-form').addEventListener('submit', function (e) {
     e.preventDefault();
     const input = document.getElementById('media-file-input');
