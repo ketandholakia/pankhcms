@@ -173,6 +173,28 @@ version label is proposed and may change before the actual tag.
   made configurable, page-cache host allowlist, and the cache keys/
   beacon working in subdirectories.
 
+## Post-merge hardening (migration 0012, redirects, RSS)
+
+- **Additive migration 0012 (`0012_align_global_blocks.php`).**
+  Existing installations that ran the original 0001 have a
+  `global_blocks` table without the `type` and `status` columns the
+  application writes and reads; 0012 adds both (defaults `text` /
+  `true`) with hasColumn guards. **Run `php scripts/migrate.php` after
+  deploying this release** — existing global block records are
+  preserved untouched. Fresh installs (post-fix 0001) skip it as a
+  no-op.
+- **Redirects hardened.** Control characters in from/target rejected
+  (CRLF header injection), targets restricted to same-site paths or
+  absolute URLs on this site's hosts (protocol-relative/foreign/
+  javascript:/data: rejected), self-redirects and multi-step cycles
+  rejected (bounded chain walk), internal routes (/admin, /install,
+  /api, /_v, /themes, /storage, /assets, /uploads) can no longer be
+  shadowed — segment-exact, so /administrator etc. stay legal.
+  Pre-existing redirect destinations are NOT modified; new validation
+  applies at save time.
+- **RSS CDATA fix.** Post content containing `]]>` no longer breaks
+  the feed's XML (split CDATA sequence); feeds re-validated as XML.
+
 ## Compatibility
 
 - **PHP 8.2+** (tested up to 8.4). Required extensions: `pdo_sqlite` or

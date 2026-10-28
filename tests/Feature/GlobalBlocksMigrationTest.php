@@ -19,7 +19,8 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 class GlobalBlocksMigrationTest extends TestCase
 {
     private string $dbFile;
-    private array $dbConfigBackup = [];
+    private ?\PDO $originalPdo = null;
+    private ?\PDO $originalReadPdo = null;
 
     protected function setUp(): void
     {
@@ -27,26 +28,26 @@ class GlobalBlocksMigrationTest extends TestCase
         $this->dbFile = sys_get_temp_dir() . '/gb_mig_' . uniqid() . '.sqlite';
         file_put_contents($this->dbFile, '');
 
-        // The migration file operates on the global Capsule default; point
-        // it at this test's disposable database.
-        $this->dbConfigBackup = [
-            'connection' => $_ENV['DB_CONNECTION'] ?? null,
-            'database' => $_ENV['DB_DATABASE'] ?? null,
-        ];
-        $_ENV['DB_CONNECTION'] = 'sqlite';
-        $_ENV['DB_DATABASE'] = $this->dbFile;
-        putenv('DB_CONNECTION=sqlite');
+        // The migration file operates on the global Capsule default;
+        // swap its PDO to this test's disposable database and RESTORE
+        // the original afterwards — otherwise every later test in the
+        // process would run against the deleted temp file.
+        $connection = Capsule::connection();
+        $this->originalPdo = $connection->getPdo();
+        $this->originalReadPdo = $connection->getReadPdo();
 
-        Capsule::connection()->setPdo(new \PDO('sqlite:' . $this->dbFile));
-        Capsule::connection()->setReadPdo(new \PDO('sqlite:' . $this->dbFile));
+        $connection->setPdo(new \PDO('sqlite:' . $this->dbFile));
+        $connection->setReadPdo(new \PDO('sqlite:' . $this->dbFile));
     }
 
     protected function tearDown(): void
     {
-        if (isset($this->dbConfigBackup['database'])) {
-            $_ENV['DB_DATABASE'] = $this->dbConfigBackup['database'];
-            $_ENV['DB_CONNECTION'] = $this->dbConfigBackup['connection'];
-            putenv('DB_CONNECTION=' . $this->dbConfigBackup['connection']);
+        $connection = Capsule::connection();
+        if ($this->originalPdo !== null) {
+            $connection->setPdo($this->originalPdo);
+        }
+        if ($this->originalReadPdo !== null) {
+            $connection->setReadPdo($this->originalReadPdo);
         }
         if (is_file($this->dbFile)) {
             @unlink($this->dbFile);
