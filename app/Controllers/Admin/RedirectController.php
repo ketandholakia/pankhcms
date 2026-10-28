@@ -7,6 +7,14 @@ use Flight;
 
 class RedirectController
 {
+    /**
+     * Maximum redirect-chain hops resolved or validated. Fail-closed:
+     * chains longer than this are rejected on save and refused at
+     * runtime, so legacy cyclic data can never loop forever.
+     */
+    public const MAX_CHAIN_HOPS = 10;
+
+
     /** Paths the redirect system must never shadow (segment-exact). */
     private const RESERVED_PREFIXES = ['/admin', '/install', '/api', '/_v', '/themes', '/storage', '/assets', '/uploads'];
 
@@ -59,18 +67,27 @@ class RedirectController
             return 'The target must be a same-site path or an https:// URL on this site.';
         }
 
-        // Multi-step cycles: follow the existing chain from $to; landing
-        // back on $from means this pair closes a loop.
+        // Multi-step cycles and unresolved chains: follow the existing
+        // chain from $to. FAIL CLOSED — a chain that revisits any node
+        // (cycle) or is still redirecting after MAX_CHAIN_HOPS (limit)
+        // rejects the new pair instead of allowing an unresolvable loop.
         $cursor = $to;
-        for ($hops = 0; $hops < 10; $hops++) {
-            if ($cursor === $from) {
-                return 'This redirect creates a loop with an existing redirect.';
-            }
+        $visited = [$from => true, $to => true];
+        $chainEdges = 0;
+        for ($hops = 0; $hops < self::MAX_CHAIN_HOPS; $hops++) {
             $next = self::lookupExistingTarget($cursor, $ignoreId);
             if ($next === null) {
-                break;
+                break; // chain terminates on a non-redirect: acyclic
             }
+            $chainEdges++;
+            if (isset($visited[$next])) {
+                return 'This redirect creates a loop with an existing redirect.';
+            }
+            $visited[$next] = true;
             $cursor = $next;
+        }
+        if ($chainEdges >= self::MAX_CHAIN_HOPS) {
+            return 'The redirect chain starting at this target exceeds the maximum length of ' . self::MAX_CHAIN_HOPS . ' hops.';
         }
 
         return [$from, $to];
@@ -230,11 +247,15 @@ class RedirectController
     }
 
     /**
-     * Runtime redirect lookup: applies the FIRST matching redirect for
-     * the current request path. Called early (public/index.php, before
-     * the framework boots) and after every page-cache lookup miss.
+     * Runtime redirect lookup: resolves the FULL chain for the current
+     * request path (up to MAX_CHAIN_HOPS) and returns the FINAL target,
+     * with the entry redirect's status code. Called early
+     * (public/index.php, before the framework boots). Fail-closed: a
+     * legacy cyclic or over-long chain in the database returns null
+     * instead of a Location header, so stored data can never cause an
+     * infinite redirect loop. Missing/broken table is a guarded no-op.
      *
-     * @return array{0: string, 1: int}|null [target, statusCode]
+     * @return array{0: string, 1: int}|null [finalTarget, statusCode]
      */
     public static function matchFor(string $path): ?array
     {
@@ -249,20 +270,43 @@ class RedirectController
                 return null;
             }
 
-            $row = Redirect::query()
-                ->whereIn('old_url', [$path, rtrim($path, '/') ?: '/'])
-                ->first();
+            $cursor = $path;
+            $visited = [];
+            $type = null;
+            $hops = 0;
 
-            if (!$row) {
-                return null;
+            $row = Redirect::query()->where('old_url', $cursor)->first();
+            if (!$row || trim((string) $row->new_url) === '') {
+                return null; // no redirect (or legacy malformed row)
             }
 
-            $target = trim((string) $row->new_url);
-            if ($target === '') {
-                return null;
+            while (true) {
+                if (isset($visited[$cursor])) {
+                    error_log('Redirect chain cycle detected at ' . $cursor . ' — refusing.');
+                    return null;
+                }
+                $visited[$cursor] = true;
+
+                $target = trim((string) $row->new_url);
+                if ($type === null) {
+                    $type = ((int) $row->type) === 302 ? 302 : 301;
+                }
+
+                $hops++;
+                if ($hops > self::MAX_CHAIN_HOPS) {
+                    error_log('Redirect chain exceeds ' . self::MAX_CHAIN_HOPS . ' hops from ' . $path . ' — refusing.');
+                    return null;
+                }
+
+                $nextRow = Redirect::query()->where('old_url', $target)->first();
+                if (!$nextRow) {
+                    break; // chain terminates on a real (non-redirect) URL
+                }
+                $cursor = $target;
+                $row = $nextRow;
             }
 
-            return [$target, ((int) $row->type) === 302 ? 302 : 301];
+            return [$target, $type];
         } catch (\Throwable $e) {
             error_log('Redirect lookup failed: ' . $e->getMessage());
             return null;

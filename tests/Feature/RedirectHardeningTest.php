@@ -182,12 +182,20 @@ class RedirectHardeningTest extends TestCase
         $this->assertIsArray($result, 'updating a row must ignore that row in cycle detection');
     }
 
-    private function makeRedirect(string $from, string $to, int $type): int
+    private function makeRedirect(string $from, string $to, int $type = 301): int
     {
         DB::table('redirects')->insert(['old_url' => $from, 'new_url' => $to, 'type' => $type]);
         $id = (int) DB::getPdo()->lastInsertId();
         $this->redirectIds[] = $id;
         return $id;
+    }
+
+    /** Build a linear chain /chain-0 -> /chain-1 -> ... -> /chain-$rows (rows redirects). */
+    private function makeChain(int $rows): void
+    {
+        for ($i = 0; $i < $rows; $i++) {
+            $this->makeRedirect('/chain-' . $i, '/chain-' . ($i + 1));
+        }
     }
 
     /* ------------------------------------------------ reserved segments */
@@ -247,5 +255,125 @@ class RedirectHardeningTest extends TestCase
             'the encoded from-path must not shadow the decoded path'
         );
         DB::table('redirects')->where('old_url', '/a%2Fb')->delete();
+    }
+
+    /* ------------------------------------ fail-closed chain traversal (P5) */
+
+    public function test_runtime_single_hop_redirects_to_target_with_status()
+    {
+        $this->makeRedirect('/one-hop', '/destination', 301);
+        $match = RedirectController::matchFor('/one-hop');
+        $this->assertSame(['/destination', 301], $match);
+    }
+
+    public function test_runtime_two_hop_acyclic_chain_resolves_to_final_target()
+    {
+        $this->makeRedirect('/hop-a', '/hop-b');
+        $this->makeRedirect('/hop-b', '/final-page');
+
+        $match = RedirectController::matchFor('/hop-a');
+        $this->assertSame(['/final-page', 301], $match, 'runtime must resolve the FULL chain, not the first hop');
+    }
+
+    public function test_runtime_legacy_self_reference_is_refused()
+    {
+        $this->makeRedirect('/legacy-self', '/legacy-self', 301);
+        $this->assertNull(RedirectController::matchFor('/legacy-self'), 'a legacy self-redirect must be refused, not looped');
+    }
+
+    public function test_runtime_legacy_two_node_cycle_is_refused()
+    {
+        $this->makeRedirect('/cyc-a', '/cyc-b');
+        $this->makeRedirect('/cyc-b', '/cyc-a');
+        $this->assertNull(RedirectController::matchFor('/cyc-a'), 'legacy two-node cycle must be refused');
+        $this->assertNull(RedirectController::matchFor('/cyc-b'));
+    }
+
+    public function test_runtime_legacy_three_node_cycle_is_refused()
+    {
+        $this->makeRedirect('/c3-a', '/c3-b');
+        $this->makeRedirect('/c3-b', '/c3-c');
+        $this->makeRedirect('/c3-c', '/c3-a');
+        $this->assertNull(RedirectController::matchFor('/c3-b'), 'legacy three-node cycle must be refused');
+    }
+
+    public function test_runtime_cycle_beyond_the_traversal_limit_is_refused()
+    {
+        // 12-node ring: longer than the 10-hop traversal bound.
+        for ($i = 0; $i < 12; $i++) {
+            $this->makeRedirect('/ring-' . $i, '/ring-' . (($i + 1) % 12));
+        }
+        $this->assertNull(RedirectController::matchFor('/ring-0'), 'cycles beyond the hop bound must fail closed');
+    }
+
+    public function test_runtime_acyclic_chain_at_the_traversal_limit_resolves()
+    {
+        // Exactly 10 redirects: /c-0 -> /c-1 -> ... -> /c-10 (terminal URL).
+        $this->makeChain(10);
+
+        $match = RedirectController::matchFor('/chain-0');
+        $this->assertNotNull($match, 'a chain at the hop limit must still resolve');
+        $this->assertSame('/chain-10', $match[0]);
+    }
+
+    public function test_runtime_acyclic_chain_beyond_the_limit_fails_closed()
+    {
+        // 12 redirects: resolving /chain2-0 would need 12 hops > 10.
+        for ($i = 0; $i < 12; $i++) {
+            $this->makeRedirect('/chain2-' . $i, '/chain2-' . ($i + 1));
+        }
+
+        $this->assertNull(
+            RedirectController::matchFor('/chain2-0'),
+            'a chain beyond the hop bound must fail closed rather than half-redirect'
+        );
+    }
+
+    public function test_validation_rejects_pairs_extending_a_chain_beyond_the_limit()
+    {
+        // 10 existing redirects ending at /chain-end: adding /new -> /chain-end
+        // would make an 11-hop chain — rejected at save time.
+        $this->makeChain(10);
+        $this->makeRedirect('/chain-end', '/final-dest');
+
+        $this->assertError(
+            $this->validate('/new-start', '/chain-0'),
+            'exceeds the maximum length',
+            'a pair that extends a chain beyond the limit must be rejected'
+        );
+    }
+
+    public function test_validation_allows_pairs_within_the_limit()
+    {
+        $this->makeChain(8);
+        $result = $this->validate('/new-start', '/chain-0');
+        $this->assertIsArray($result, 'a pair keeping the chain within the limit must be allowed');
+    }
+
+    public function test_validation_rejects_update_that_introduces_a_cycle()
+    {
+        $a = $this->makeRedirect('/up-a', '/terminal');
+        $b = $this->makeRedirect('/up-b', '/up-a');
+
+        // Retarget /up-a to /up-b: /up-a -> /up-b -> /up-a = cycle.
+        // (ignoreId excludes row A itself from the walk.)
+        $result = $this->validate('/up-a', '/up-b', $a);
+        $this->assertError($result, 'creates a loop', 'an update that introduces a cycle must be rejected');
+    }
+
+    public function test_runtime_legacy_empty_target_is_refused()
+    {
+        $this->makeRedirect('/legacy-empty', '');
+        $this->assertNull(RedirectController::matchFor('/legacy-empty'), 'legacy empty-target rows must be refused');
+    }
+
+    public function test_runtime_preserves_301_and_302_entry_status()
+    {
+        $id301 = $this->makeRedirect('/perm', '/perm-final');
+        $match301 = RedirectController::matchFor('/perm');
+        $this->assertSame(301, $match301[1]);
+        DB::table('redirects')->where('id', $id301)->update(['type' => 302]);
+        $match302 = RedirectController::matchFor('/perm');
+        $this->assertSame(302, $match302[1], '302 entry status must be preserved through the chain');
     }
 }
