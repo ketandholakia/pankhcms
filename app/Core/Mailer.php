@@ -22,6 +22,19 @@ use PHPMailer\PHPMailer\PHPMailer;
  */
 class Mailer
 {
+    /** Standard mail-submission port, used when MAIL_PORT is unset or invalid. */
+    public const DEFAULT_SMTP_PORT = 587;
+
+    /**
+     * The SMTP port to use: an explicit positive MAIL_PORT when set,
+     * otherwise 587 (mail submission).
+     */
+    public static function resolvePort(): int
+    {
+        $port = (int) env('MAIL_PORT', self::DEFAULT_SMTP_PORT);
+        return $port > 0 ? $port : self::DEFAULT_SMTP_PORT;
+    }
+
     public static function send(string $to, string $subject, string $body, array $options = []): bool
     {
         $to = self::sanitizeHeader($to);
@@ -56,7 +69,7 @@ class Mailer
             $mail = new PHPMailer(true);
             $mail->isSMTP();
             $mail->Host = trim((string) env('MAIL_HOST', ''));
-            $mail->Port = (int) (env('MAIL_PORT', 586) ?: 586);
+            $mail->Port = self::resolvePort();
             $mail->Timeout = max(1, $timeout);
 
             $username = trim((string) env('MAIL_USERNAME', ''));

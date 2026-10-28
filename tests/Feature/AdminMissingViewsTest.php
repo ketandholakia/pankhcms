@@ -70,6 +70,40 @@ class AdminMissingViewsTest extends TestCase
         $this->assertStringNotContainsString('<img>.png"', $html);
     }
 
+    /**
+     * T8 acceptance: a 409 from the delete endpoint must surface as a
+     * readable admin banner naming the referencing content — not a raw
+     * JSON page. The grid wires every delete form through the fetch
+     * interceptor and provides the banner elements.
+     */
+    public function test_media_index_wires_the_in_use_delete_banner()
+    {
+        $media = Media::create([
+            'filename' => 'banner-test.png',
+            'original_name' => 'banner-test.png',
+            'mime_type' => 'image/png',
+            'size' => 5,
+            'url' => '/uploads/media/banner-test.png',
+        ]);
+
+        try {
+            $html = $this->render('admin.media.index', [
+                'media' => collect([$media]),
+                'search' => '',
+                'type' => '',
+                'date' => '',
+            ]);
+        } finally {
+            $media->delete();
+        }
+
+        $this->assertStringContainsString('class="media-delete-form"', $html, 'delete forms must carry the interceptor hook');
+        $this->assertStringContainsString('id="media-delete-error"', $html, 'the in-use error banner must exist');
+        $this->assertStringContainsString('id="media-delete-error-detail"', $html, 'the banner must have a container for the reference list');
+        $this->assertStringContainsString('result.body.references', $html, 'the interceptor must surface the references list from the 409 body');
+        $this->assertStringContainsString('still in use', $html, 'the banner must explain the refusal in plain language');
+    }
+
     public function test_media_index_renders_empty_state()
     {
         $html = $this->render('admin.media.index', [
@@ -130,11 +164,22 @@ class AdminMissingViewsTest extends TestCase
 
         // This probe shells out to git; minimal PHP images (e.g. the
         // php:8.2-cli container) have no git binary — skip rather than
-        // misreport there. Windows dev and the CI ubuntu runner have it.
+        // misreport there. Also skip when git exists but cannot resolve
+        // THIS checkout as a repository (git-worktree checkouts carry a
+        // .git FILE whose gitdir may point at an unreachable path, e.g.
+        // a Windows absolute path when the worktree is mounted into a
+        // Linux container). Windows dev and the CI ubuntu runner have a
+        // normal repository, where the guard really runs.
         $gitProbe = 0;
         @exec('git --version 2>/dev/null', $gitOut, $gitProbe);
         if ($gitProbe !== 0) {
             $this->markTestSkipped('git binary not available for the check-ignore probe');
+        }
+
+        $repoProbe = 0;
+        @exec('git -C ' . escapeshellarg($repoRoot) . ' rev-parse --git-dir 2>/dev/null', $repoOut, $repoProbe);
+        if ($repoProbe !== 0) {
+            $this->markTestSkipped('git cannot resolve this checkout as a repository (detached worktree in a foreign environment)');
         }
 
         // check-ignore -q accepts exactly one pathname; probe each source

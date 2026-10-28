@@ -125,5 +125,23 @@ class MailerTest extends TestCase
             $this->assertStringContainsString('Mailer::send(', $src, "$rel must send through the Mailer helper");
             $this->assertStringNotContainsString('@mail(', $src, "$rel must not call mail() directly");
         }
+    }
+    public function test_smtp_port_defaults_to_587_and_honors_explicit_setting()
+    {
+        // T1: the fallback port must be the standard mail-submission
+        // port 587 (the old default 586 is not a standard port).
+        $this->assertSame(587, Mailer::DEFAULT_SMTP_PORT);
+
+        putenv('MAIL_PORT');
+        $this->assertSame(587, Mailer::resolvePort(), 'unset MAIL_PORT must default to 587');
+
+        putenv('MAIL_PORT=2525');
+        $this->assertSame(2525, Mailer::resolvePort(), 'an explicit MAIL_PORT must override the default');
+
+        putenv('MAIL_PORT=0');
+        $this->assertSame(587, Mailer::resolvePort(), 'a non-positive port must fall back to 587');
+
+        putenv('MAIL_PORT=not-a-port');
+        $this->assertSame(587, Mailer::resolvePort(), 'a garbage port must fall back to 587');
     }
 }
