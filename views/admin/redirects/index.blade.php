@@ -11,8 +11,7 @@
     @endif
     @if(isset($_GET['error']))
         <div class="bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded">
-            @if($_GET['error'] === 'missing') Both the from-path and the target URL are required.
-            @elseif($_GET['error'] === 'notfound') Redirect not found.
+            @if($_GET['error'] === 'notfound') Redirect not found.
             @else {{ urldecode($_GET['error']) }}
             @endif
         </div>
