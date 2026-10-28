@@ -181,6 +181,37 @@ class ThemePhase4Test extends TestCase
         $this->assertStringContainsString('<link>' . url('/' . $new->slug) . '</link>', $xml);
     }
 
+    public function test_feed_stays_valid_xml_when_content_contains_cda_terminator()
+    {
+        // A literal ']]>' inside post content must not terminate the
+        // CDATA section early and produce malformed XML.
+        $page = $this->makePage([
+            'title' => 'CDATA Post',
+            'content' => '<p>before ]]><script>alert(1)</script> after ]]></p>',
+        ]);
+
+        ob_start();
+        try {
+            \App\Controllers\Site\SiteController::feed();
+        } finally {
+            $xml = (string) ob_get_clean();
+        }
+
+        $this->assertStringNotContainsString(']]&gt;&lt;!', $xml);
+        // The split sequence keeps the payload inert while remaining valid.
+        $this->assertStringContainsString(']]]]><![CDATA[>', $xml);
+
+        $doc = @simplexml_load_string($xml);
+        $this->assertNotFalse($doc, 'the feed must parse as valid XML');
+        $this->assertSame('rss', $doc->getName());
+        $titles = [];
+        foreach ($doc->channel->item as $item) {
+            $titles[] = (string) $item->title;
+        }
+        $this->assertContains('CDATA Post', $titles, 'the post must survive as a feed item');
+        $this->assertStringContainsString('before ', (string) $doc->channel->item[0]->description);
+    }
+
     /* ------------------------------------------------- JSON-LD / og:type */
 
     public function test_seo_partial_emits_article_og_type_and_json_ld_for_posts()

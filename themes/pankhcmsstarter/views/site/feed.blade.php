@@ -15,7 +15,17 @@
                 @if($post->published_at)
                     <pubDate>{{ $post->published_at->toRfc2822String() }}</pubDate>
                 @endif
-                <description><![CDATA[{!! \Illuminate\Support\Str::limit(trim(strip_tags((string) $post->content)), 500) !!}]]></description>
+                @php
+                    // A literal ']]>' inside content would terminate the
+                    // CDATA section early and produce malformed XML; split
+                    // it across two sections so the sequence never appears.
+                    $feedDescription = \Illuminate\Support\Str::limit(
+                        trim(strip_tags((string) $post->content)),
+                        500
+                    );
+                    $feedDescription = str_replace(']]>', ']]]]><![CDATA[>', $feedDescription);
+                @endphp
+                <description><![CDATA[{!! $feedDescription !!}]]></description>
             </item>
         @endforeach
     </channel>
