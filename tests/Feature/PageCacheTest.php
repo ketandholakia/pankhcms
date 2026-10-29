@@ -7,6 +7,8 @@ use App\Middleware\PageCache;
 
 class PageCacheTest extends TestCase
 {
+    /** @var string|null original \$_ENV['APP_URL'] */
+    private $appUrlEnvBackup = null;
     private string $cacheDir;
 
     protected function setUp(): void
@@ -23,6 +25,9 @@ class PageCacheTest extends TestCase
         $_SERVER['REQUEST_URI'] = '/some-page';
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         putenv('APP_URL=');
+        // env() reads $_ENV first — snapshot so tearDown can restore the
+        // original state instead of leaking '' into later tests.
+        $this->appUrlEnvBackup = $_ENV['APP_URL'] ?? null;
         $_ENV['APP_URL'] = '';
         unset($_SESSION['user_id'], $_SESSION['password_hash']);
     }
@@ -31,6 +36,11 @@ class PageCacheTest extends TestCase
     {
         PageCache::clear();
         putenv('APP_URL');
+        if ($this->appUrlEnvBackup === null) {
+            unset($_ENV['APP_URL']);
+        } else {
+            $_ENV['APP_URL'] = $this->appUrlEnvBackup;
+        }
         unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
         putenv('PHPUNIT_TEST');
         parent::tearDown();

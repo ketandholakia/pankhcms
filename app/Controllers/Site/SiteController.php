@@ -51,10 +51,128 @@ class SiteController
     {
         $page = self::getPageQuery()->where('slug', $slug)->first();
         if (!$page) {
-            \Flight::halt(404);
+            self::abort404();
             return;
         }
         self::renderPage($page);
+    }
+
+    /**
+     * Themed 404: renders the theme's 404 view (with search box and
+     * recent pages) and a real 404 status. Falls back to Flight's
+     * default when the theme ships no 404 view.
+     */
+    public static function abort404(): void
+    {
+        \Flight::response()->status(404);
+
+        $blade = \Flight::get('blade');
+        if ($blade && $blade->exists('site.404')) {
+            echo $blade->render('site.404', [
+                'recent' => Page::visible()->orderBy('updated_at', 'desc')->limit(5)->get(['title', 'slug']),
+            ]);
+            return;
+        }
+
+        \Flight::halt(404);
+    }
+
+    /**
+     * Shared archive renderer for /category/@slug and /tag/@slug:
+     * publicly visible pages attached to the term, 10 per page.
+     */
+    private static function archive(string $taxonomy, string $slug)
+    {
+        $model = $taxonomy === 'category' ? \App\Models\Category::class : \App\Models\Tag::class;
+        $term = $model::where('slug', $slug)->first();
+        if (!$term) {
+            self::abort404();
+            return;
+        }
+
+        $relation = $taxonomy === 'category' ? 'categories' : 'tags';
+
+        $perPage = 10;
+        $pageNum = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+
+        $query = Page::visible()->whereHas($relation, function ($q) use ($term, $taxonomy) {
+            $q->where($taxonomy === 'category' ? 'categories.id' : 'tags.id', $term->id);
+        });
+        $total = (int) $query->count();
+
+        $pages = $query->orderByRaw('COALESCE(published_at, created_at) DESC')
+            ->skip(($pageNum - 1) * $perPage)
+            ->take($perPage)
+            ->get();
+
+        $paginator = [
+            'current' => $pageNum,
+            'last' => max(1, (int) ceil($total / $perPage)),
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+
+        echo \Flight::get('blade')->render('site.archive', [
+            'taxonomy' => $taxonomy,
+            'term' => $term,
+            'pages' => $pages,
+            'paginator' => $paginator,
+            'site_name' => \setting('site_name', 'PankhCMS'),
+        ]);
+    }
+
+    public static function category(string $slug)
+    {
+        self::archive('category', $slug);
+    }
+
+    public static function tag(string $slug)
+    {
+        self::archive('tag', $slug);
+    }
+
+    /** RSS 2.0 feed: the latest 20 published posts. */
+    public static function feed()
+    {
+        $posts = Page::visible()
+            ->where('type', 'post')
+            ->orderByRaw('COALESCE(published_at, created_at) DESC')
+            ->limit(20)
+            ->get(['id', 'title', 'slug', 'content', 'content_json', 'published_at', 'created_at', 'updated_at']);
+
+        header('Content-Type: application/rss+xml; charset=utf-8');
+        echo \Flight::get('blade')->render('site.feed', ['posts' => $posts]);
+    }
+
+    /**
+     * Public blog index: newest-first list of published posts, 10 per
+     * page (?page=N), same hand-rolled paginator shape as the admin.
+     */
+    public static function blog()
+    {
+        $perPage = 10;
+        $pageNum = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
+
+        $query = Page::visible()->where('type', 'post');
+        $total = (int) $query->count();
+
+        $posts = $query->orderByRaw('COALESCE(published_at, created_at) DESC')
+            ->skip(($pageNum - 1) * $perPage)
+            ->take($perPage)
+            ->get();
+
+        $paginator = [
+            'current' => $pageNum,
+            'last' => max(1, (int) ceil($total / $perPage)),
+            'total' => $total,
+            'perPage' => $perPage,
+        ];
+
+        echo \Flight::get('blade')->render('site.blog', [
+            'posts' => $posts,
+            'paginator' => $paginator,
+            'site_name' => \setting('site_name', 'PankhCMS'),
+        ]);
     }
 
     private static function renderPage(Page $page)

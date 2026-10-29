@@ -10,6 +10,7 @@
           <div class="bg-white rounded-xl shadow-sm border p-6">
 
             <h2 class="text-lg font-semibold mb-4">Theme Settings</h2>
+          <a href="/admin/themes/options" class="text-sm text-blue-600 hover:underline">Edit theme options</a>
 
             @if(isset($_GET['status']) && $_GET['status'] === 'updated')
                 <div class="mb-4 rounded border border-green-300 bg-green-50 text-green-800 px-4 py-2">

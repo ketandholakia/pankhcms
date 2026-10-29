@@ -220,7 +220,10 @@ class ViewBeaconTest extends TestCase
             dirname(__DIR__, 2) . '/views/layouts/site.blade.php',
         ] as $layout) {
             $src = file_get_contents($layout);
-            $this->assertStringContainsString("sendBeacon('/_v'", $src, "$layout must inject the view beacon");
+            // The beacon target goes through url('/_v') so subdirectory
+            // deployments keep working (Phase 1).
+            $this->assertStringContainsString('sendBeacon(', $src, "$layout must inject the view beacon");
+            $this->assertStringContainsString("url('/_v')", $src, "$layout must build the beacon URL through url()");
         }
 
         $index = file_get_contents(dirname(__DIR__, 2) . '/public/index.php');

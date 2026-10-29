@@ -106,7 +106,34 @@ Flight::route('GET /sitemap.xml', function () {
         $categories = [];
     }
 
-    echo \Flight::get('blade')->render('sitemap', compact('pages', 'posts', 'products', 'categories'));
+    // Archive URLs: only terms with at least one visible page.
+    $categoryArchiveUrls = [];
+    $tagArchiveUrls = [];
+    try {
+        foreach (\App\Models\Category::all() as $category) {
+            $hasVisible = \App\Models\Page::visible()
+                ->whereHas('categories', fn ($q) => $q->where('categories.id', $category->id))
+                ->exists();
+            if ($hasVisible) {
+                $categoryArchiveUrls[] = url('/category/' . $category->slug);
+            }
+        }
+        foreach (\App\Models\Tag::all() as $tag) {
+            $hasVisible = \App\Models\Page::visible()
+                ->whereHas('tags', fn ($q) => $q->where('tags.id', $tag->id))
+                ->exists();
+            if ($hasVisible) {
+                $tagArchiveUrls[] = url('/tag/' . $tag->slug);
+            }
+        }
+    } catch (\Throwable $e) {
+        $categoryArchiveUrls = [];
+        $tagArchiveUrls = [];
+    }
+
+    echo \Flight::get('blade')->render('sitemap', compact(
+        'pages', 'posts', 'products', 'categories', 'categoryArchiveUrls', 'tagArchiveUrls'
+    ));
 });
 
 Flight::route('GET /robots.txt', function () {
@@ -122,6 +149,15 @@ Flight::route('GET /robots.txt', function () {
 
 // Homepage
 Flight::route('GET /', [\App\Controllers\Site\SiteController::class, 'home']);
+
+// Blog index: registered BEFORE the /@slug catch-all so a page slug
+// can never shadow it (and 'blog' is a reserved page slug).
+Flight::route('GET /blog', [\App\Controllers\Site\SiteController::class, 'blog']);
+
+// Taxonomy archives + RSS feed (same pre-catch-all reasoning).
+Flight::route('GET /category/@slug', [\App\Controllers\Site\SiteController::class, 'category']);
+Flight::route('GET /tag/@slug', [\App\Controllers\Site\SiteController::class, 'tag']);
+Flight::route('GET /feed.xml', [\App\Controllers\Site\SiteController::class, 'feed']);
 
 
 // Public pages by slug — SAFE VERSION

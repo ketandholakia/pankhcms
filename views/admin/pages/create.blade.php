@@ -91,6 +91,24 @@
                         <button type="button" onclick="addBlock('hero')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center">
                             + Hero Block
                         </button>
+                      <button type="button" onclick="addBlock('image')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + Image
+                      </button>
+                      <button type="button" onclick="addBlock('cta')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + CTA
+                      </button>
+                      <button type="button" onclick="addBlock('faq')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + FAQ
+                      </button>
+                      <button type="button" onclick="addBlock('columns')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + Columns
+                      </button>
+                      <button type="button" onclick="addBlock('video_embed')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + Video
+                      </button>
+                      <button type="button" onclick="addBlock('testimonials')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
+                        + Testimonials
+                      </button>
                       <button type="button" onclick="addBlock('product_gallery')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded inline-flex items-center ml-2">
                         + Product Gallery
                       </button>
@@ -498,6 +516,12 @@ function addBlock(type) {
 
   if (type === 'text') block.html = '';
   if (type === 'hero') block.title = '';
+  if (type === 'image') { block.src = ''; block.alt = ''; block.caption = ''; }
+  if (type === 'cta') { block.heading = ''; block.text = ''; block.button_text = ''; block.button_link = ''; }
+  if (type === 'faq') block.lines = '';
+  if (type === 'columns') block.raw = '';
+  if (type === 'video_embed') { block.url = ''; block.caption = ''; }
+  if (type === 'testimonials') block.lines = '';
 
   blocks.push(block);
   render();
@@ -525,6 +549,49 @@ function render() {
     if (b.type === 'hero') {
       innerHTML += `<label class="block font-medium text-sm">Title:</label>
         <input type="text" class="w-full border p-2 rounded" value="${b.title || ''}" oninput="updateBlock(${i}, 'title', this.value)">`;
+    }
+
+    if (b.type === 'image') {
+      innerHTML += `<label class="block font-medium text-sm">Image URL:</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.src || ''}" oninput="updateBlock(${i}, 'src', this.value)">
+        <label class="block font-medium text-sm mt-2">Alt text:</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.alt || ''}" oninput="updateBlock(${i}, 'alt', this.value)">
+        <label class="block font-medium text-sm mt-2">Caption (optional):</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.caption || ''}" oninput="updateBlock(${i}, 'caption', this.value)">`;
+    }
+
+    if (b.type === 'cta') {
+      innerHTML += `<label class="block font-medium text-sm">Heading:</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.heading || ''}" oninput="updateBlock(${i}, 'heading', this.value)">
+        <label class="block font-medium text-sm mt-2">Text:</label>
+        <textarea class="w-full border p-2 rounded" rows="3" oninput="updateBlock(${i}, 'text', this.value)">${b.text || ''}</textarea>
+        <label class="block font-medium text-sm mt-2">Button label:</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.button_text || ''}" oninput="updateBlock(${i}, 'button_text', this.value)">
+        <label class="block font-medium text-sm mt-2">Button link:</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.button_link || ''}" oninput="updateBlock(${i}, 'button_link', this.value)">`;
+    }
+
+    if (b.type === 'faq') {
+      innerHTML += `<p class="text-sm text-gray-600">One entry per line: <strong>question | answer</strong>. The answer supports simple sanitized HTML.</p>
+        <textarea class="w-full border p-2 rounded font-mono text-sm" rows="5" oninput="updateBlock(${i}, 'lines', this.value)">${b.lines || ''}</textarea>`;
+    }
+
+    if (b.type === 'columns') {
+      innerHTML += `<p class="text-sm text-gray-600">Column HTML, separated by a line containing only <strong>---</strong>. HTML is sanitized on render.</p>
+        <textarea class="w-full border p-2 rounded font-mono text-sm" rows="6" oninput="updateBlock(${i}, 'raw', this.value)">${b.raw || ''}</textarea>`;
+    }
+
+    if (b.type === 'video_embed') {
+      innerHTML += `<p class="text-sm text-gray-600">YouTube or Vimeo URL only (allowlisted server-side).</p>
+        <label class="block font-medium text-sm">Video URL:</label>
+        <input type="url" class="w-full border p-2 rounded" value="${b.url || ''}" oninput="updateBlock(${i}, 'url', this.value)">
+        <label class="block font-medium text-sm mt-2">Caption (optional):</label>
+        <input type="text" class="w-full border p-2 rounded" value="${b.caption || ''}" oninput="updateBlock(${i}, 'caption', this.value)">`;
+    }
+
+    if (b.type === 'testimonials') {
+      innerHTML += `<p class="text-sm text-gray-600">One entry per line: <strong>quote | author | role</strong>.</p>
+        <textarea class="w-full border p-2 rounded font-mono text-sm" rows="5" oninput="updateBlock(${i}, 'lines', this.value)">${b.lines || ''}</textarea>`;
     }
 
     if (b.type === 'product_gallery') {

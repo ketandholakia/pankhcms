@@ -67,6 +67,22 @@ if (!function_exists('blocks_html')) {
             }
 
             $content = $block->content ?? [];
+
+            // The admin controller stores JSON strings through the model's
+            // 'array' cast, which double-encodes them — unwrap every JSON
+            // layer so array-shaped content actually reaches the array
+            // branch. Plain HTML strings stay strings.
+            for ($unwrap = 0; $unwrap < 2 && is_string($content); $unwrap++) {
+                $trimmed = ltrim($content);
+                if ($trimmed === '' || ($trimmed[0] !== '{' && $trimmed[0] !== '[')) {
+                    break;
+                }
+                $decoded = json_decode($content, true);
+                if (is_array($decoded)) {
+                    $content = $decoded;
+                }
+            }
+
             if (!is_array($content)) {
                 // Many installs store raw HTML in `content` as a string.
                 // It is rendered through the placeholder whitelist and the
@@ -77,7 +93,11 @@ if (!function_exists('blocks_html')) {
                     'show_title' => $block->show_title ?? true,
                     'block' => $block
                 ];
-                $html .= render_block($type, ['data' => $renderData]);
+                try {
+                    $html .= render_block($type, ['data' => $renderData]);
+                } catch (\Throwable $e) {
+                    error_log('Block render failed [' . $type . ']: ' . $e->getMessage());
+                }
             } else {
                 // Ensure show_title flag is present for array-based content too
                 if (!isset($content['data'])) {
@@ -92,7 +112,11 @@ if (!function_exists('blocks_html')) {
                         $content['data'][$field] = sanitize_html($content['data'][$field]);
                     }
                 }
-                $html .= render_block($type, $content);
+                try {
+                    $html .= render_block($type, $content);
+                } catch (\Throwable $e) {
+                    error_log('Block render failed [' . $type . ']: ' . $e->getMessage());
+                }
             }
         }
         return $html;

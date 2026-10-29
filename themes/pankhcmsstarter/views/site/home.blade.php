@@ -1,5 +1,7 @@
 @extends('layouts.main')
 
+@section('no_container', '1')
+
 @section('content')
 @php
     $heroIntroText = setting('hero_intro_text', 'Transforming ideas into powerful digital solutions with cutting-edge technology.');
@@ -24,7 +26,7 @@
                     <div class="columns is-vcentered">
                         <div class="column is-6">
                             <h1 class="title is-1">
-                                {{ setting('site_name') }}
+                                {{ setting('site_title', setting('site_name', 'PankhCMS')) }}
                             </h1>
 
                             <h2 class="subtitle is-4">
@@ -45,7 +47,8 @@
                         </div>
 
                         <div class="column is-6 has-text-centered">
-                            <img src="{{ $heroImage }}" alt="{{ setting('site_name') }}">
+                            <img src="{{ $heroImage }}" alt="{{ setting('site_title', setting('site_name', 'PankhCMS')) }}"
+                                 loading="eager" decoding="async" width="960" height="640">
                         </div>
                     </div>
                 </div>
@@ -77,7 +80,8 @@
                             </div>
 
                             <div class="column is-6 has-text-centered">
-                                <img src="{{ $slide->image_path }}" alt="{{ $slideTitle }}">
+                                <img src="{{ $slide->image_path }}" alt="{{ $slideTitle }}"
+                                     loading="lazy" decoding="async" width="960" height="640">
                             </div>
                         </div>
                     </div>
@@ -89,10 +93,14 @@
 
 </section>
 
-{!! blocks_html('homepage_middle') !!}
+<div class="section">
+    <div class="container">
+        {!! blocks_html('homepage_middle') !!}
 
-{!! render_page_blocks($blocks ?? []) !!}
+        {!! render_page_blocks($blocks ?? []) !!}
 
-{!! blocks_html('homepage_bottom') !!}
+        {!! blocks_html('homepage_bottom') !!}
+    </div>
+</div>
 
 @endsection

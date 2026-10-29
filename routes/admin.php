@@ -12,6 +12,7 @@ use App\Controllers\Admin\MenuItemController;
 use App\Controllers\Admin\MessageController;
 use App\Controllers\Admin\PageController;
 use App\Controllers\Admin\PluginController;
+use App\Controllers\Admin\RedirectController;
 use App\Controllers\Admin\RoleController;
 use App\Controllers\Admin\SeoController;
 use App\Controllers\Admin\SettingsController;
@@ -134,6 +135,14 @@ Flight::group('/admin', function () {
     // Themes
     Flight::route('GET /themes', [ThemeController::class, 'index'])->addMiddleware([new RequirePermission('manage_themes')]);
     Flight::route('POST /themes', [ThemeController::class, 'update'])->addMiddleware([new RequirePermission('manage_themes')]);
+    Flight::route('GET /themes/options', [ThemeController::class, 'showOptions'])->addMiddleware([new RequirePermission('manage_themes')]);
+    Flight::route('POST /themes/options', [ThemeController::class, 'saveOptions'])->addMiddleware([new RequirePermission('manage_themes')]);
+
+    // Redirects (manage_settings: redirects are a site-level concern)
+    Flight::route('GET /redirects', [RedirectController::class, 'index'])->addMiddleware([new RequirePermission('manage_settings')]);
+    Flight::route('POST /redirects/store', [RedirectController::class, 'store'])->addMiddleware([new RequirePermission('manage_settings')]);
+    Flight::route('POST /redirects/update/@id', [RedirectController::class, 'update'])->addMiddleware([new RequirePermission('manage_settings')]);
+    Flight::route('POST /redirects/delete/@id', [RedirectController::class, 'destroy'])->addMiddleware([new RequirePermission('manage_settings')]);
 
     // Menus
     Flight::route('GET /menus', [MenuController::class, 'index'])->addMiddleware([new RequirePermission('manage_menus')]);

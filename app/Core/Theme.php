@@ -59,7 +59,108 @@ class Theme
     public static function asset(string $file, ?string $theme = null): string
     {
         $theme = $theme ?: self::active();
-        return '/themes/' . $theme . '/assets/' . ltrim($file, '/');
+        return url('/themes/' . $theme . '/assets/' . ltrim($file, '/'));
+    }
+
+    /**
+     * The theme's theme.json contents (statically cached per theme), or
+     * an empty array when the file is missing or invalid.
+     *
+     * @return array<string, mixed>
+     */
+    public static function meta(?string $slug = null): array
+    {
+        static $cache = [];
+        $slug = $slug ?: self::active();
+
+        if (!array_key_exists($slug, $cache)) {
+            $path = self::path($slug, 'theme.json');
+            $meta = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
+            $cache[$slug] = is_array($meta) ? $meta : [];
+        }
+
+        return $cache[$slug];
+    }
+
+    /**
+     * Theme options: the defaults declared in theme.json's "options"
+     * section merged with the operator's saved overrides (stored as JSON
+     * in the settings table under theme_options_{slug}). Returns
+     * key => ['value', 'type', 'label', 'css', 'unit'].
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function options(?string $slug = null): array
+    {
+        $slug = $slug ?: self::active();
+        $declared = (array) (self::meta($slug)['options'] ?? []);
+
+        $stored = [];
+        try {
+            $raw = \setting('theme_options_' . $slug, '{}');
+            $decoded = json_decode((string) $raw, true);
+            if (is_array($decoded)) {
+                $stored = $decoded;
+            }
+        } catch (\Throwable $e) {
+            // settings unavailable: defaults only
+        }
+
+        $out = [];
+        foreach ($declared as $key => $option) {
+            if (!is_array($option)) {
+                continue;
+            }
+            $out[(string) $key] = [
+                'value' => (string) ($stored[$key] ?? ($option['default'] ?? '')),
+                'type' => (string) ($option['type'] ?? 'text'),
+                'label' => (string) ($option['label'] ?? $key),
+                'css' => (string) ($option['css'] ?? ''),
+                'unit' => (string) ($option['unit'] ?? ''),
+            ];
+        }
+
+        return $out;
+    }
+
+    /** A single theme option value, or \$default when unset/empty. */
+    public static function option(string $key, ?string $default = null, ?string $slug = null): ?string
+    {
+        $options = self::options($slug);
+        if (!isset($options[$key])) {
+            return $default;
+        }
+        $value = trim((string) $options[$key]['value']);
+
+        return $value !== '' ? $value : $default;
+    }
+
+    /**
+     * Validate option values; returns key => error message for invalid
+     * entries. Colors must be 3- or 6-digit hex, numbers must be numeric.
+     *
+     * @return array<string, string>
+     */
+    public static function validateOptions(array $values, ?string $slug = null): array
+    {
+        $errors = [];
+        foreach (self::options($slug) as $key => $option) {
+            if (!array_key_exists($key, $values)) {
+                continue;
+            }
+            $value = trim((string) $values[$key]);
+            if ($value === '') {
+                continue; // empty reverts to the default
+            }
+            if ($option['type'] === 'color' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                $errors[$key] = 'must be a 6-digit hex color (e.g. #0f6dff).';
+            }
+            if ($option['type'] === 'number' && !preg_match('/^[0-9]{2,5}$/', $value)) {
+                $errors[$key] = 'must be a number (pixels).';
+            }
+        }
+
+        return $errors;
     }
 
     /**

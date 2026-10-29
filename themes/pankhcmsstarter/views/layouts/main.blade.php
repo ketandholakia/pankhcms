@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ setting('site_language', 'en') }}">
 <head>
     @include('partials.head')
 </head>
@@ -47,7 +47,7 @@
 (function () {
     if (/bot|crawl|spider|slurp|curl|wget|headless/i.test(navigator.userAgent)) { return; }
     try {
-        navigator.sendBeacon('/_v', new URLSearchParams({ p: location.pathname }));
+        navigator.sendBeacon('{{ url('/_v') }}', new URLSearchParams({ p: location.pathname }));
     } catch (e) { /* analytics must never break the page */ }
 })();
 </script>

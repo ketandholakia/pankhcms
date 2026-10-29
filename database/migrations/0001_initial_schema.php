@@ -213,6 +213,9 @@ if (!$schema->hasTable('logs')) {
 }
 
 if (!$schema->hasTable('slider_images')) {
+    // `active` gates homepage slider visibility (SiteController::home
+    // queries where active = 1; SliderController writes it) — the
+    // original definition omitted it, making the homepage 500.
     $schema->create('slider_images', function ($t) {
         $t->increments('id');
         $t->string('title')->nullable();
@@ -220,6 +223,7 @@ if (!$schema->hasTable('slider_images')) {
         $t->string('image_path');
         $t->integer('sort_order')->default(0);
         $t->string('link')->nullable();
+        $t->boolean('active')->default(true);
         $t->timestamps();
     });
 }
@@ -237,11 +241,17 @@ if (!$schema->hasTable('contact_messages')) {
 }
 
 if (!$schema->hasTable('global_blocks')) {
+    // `type` selects the rendered template and `status` gates visibility
+    // (GlobalBlockController writes both; blocks_html()/blocks() read
+    // them) — the original definition omitted them, so creating a global
+    // block 500'd on fresh installs and blocks() could never match.
     $schema->create('global_blocks', function($t) {
         $t->increments('id');
         $t->string('name');
         $t->string('slug')->unique();
         $t->string('title')->nullable();
+        $t->string('type')->default('text');
+        $t->boolean('status')->default(true);
         $t->boolean('show_title')->default(true);
         $t->text('content')->nullable();
         $t->timestamps();

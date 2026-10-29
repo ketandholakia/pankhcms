@@ -20,6 +20,32 @@ require $root . '/vendor/autoload.php';
 // page cache before the application bootstraps. Maintenance mode stays
 // authoritative: the cache is emptied whenever maintenance is toggled
 // (SettingsController and BackupManager both call PageCache::clear()).
+// The request path relative to the APP_URL base path — shared by the
+// redirect lookup and the view beacon below.
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$basePath = rtrim((string) (parse_url((string) env('APP_URL', ''), PHP_URL_PATH) ?? ''), '/');
+if ($basePath !== '' && $basePath !== '/' && str_starts_with($requestPath, $basePath)) {
+    $requestPath = substr($requestPath, strlen($basePath));
+    if ($requestPath === '' || $requestPath === false) {
+        $requestPath = '/';
+    }
+}
+
+// Admin-configured redirects: applied before anything else so stale
+// paths answer with the configured 301/302 without booting the CMS.
+// The database must be bootstrapped first (DB-only — no plugins, no
+// Blade); matchFor is guarded (missing table = no-op).
+require_once $root . '/app/database.php';
+try {
+    $redirect = \App\Controllers\Admin\RedirectController::matchFor($requestPath);
+    if ($redirect !== null) {
+        header('Location: ' . $redirect[0], true, $redirect[1]);
+        exit;
+    }
+} catch (\Throwable $e) {
+    // A broken redirects table must never take the site down.
+}
+
 \App\Middleware\PageCache::serveEarlyIfPossible();
 
 // Lightweight view beacon (POST /_v): records a page view DB-only,
@@ -27,7 +53,7 @@ require $root . '/vendor/autoload.php';
 // handler follows the PHPUNIT_TEST no-exit convention; in production
 // it exits right after answering.
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST'
-    && rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/') === '/_v') {
+    && rtrim($requestPath, '/') === '/_v') {
     \App\Core\VisitTracker::handleBeacon();
     exit;
 }

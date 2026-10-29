@@ -689,6 +689,25 @@ if (!function_exists('env_escape')) {
     }
 }
 
+if (!function_exists('url')) {
+    /**
+     * Build an application URL, prefixing the base path when APP_URL
+     * points at a subdirectory (e.g. https://host/cms/public). External
+     * absolute URLs are returned untouched.
+     */
+    function url(string $path = ''): string
+    {
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+
+        $base = rtrim((string) (parse_url((string) env('APP_URL', ''), PHP_URL_PATH) ?? ''), '/');
+        $path = '/' . ltrim($path, '/');
+
+        return ($base === '' || $base === '/') ? $path : $base . $path;
+    }
+}
+
 if (!function_exists('settings_all')) {
     function settings_all(): array
     {
@@ -778,6 +797,7 @@ if (!function_exists('render_block')) {
         try {
             return (string) \Flight::get('blade')->render($view, $vars);
         } catch (\Throwable $e) {
+            error_log('Block render failed [' . $type . ']: ' . $e->getMessage());
             return '';
         }
     }

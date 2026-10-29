@@ -25,9 +25,12 @@
       ];
   }
 
-  // Category/tag archive URLs are intentionally NOT emitted: there are
-  // no /category/@slug or /tag/@slug public routes, so those URLs would
-  // return 404 to crawlers.
+  // Category/tag archives: only terms that actually have visible pages.
+  foreach (['category' => $categoryArchiveUrls, 'tag' => $tagArchiveUrls] as $archiveType => $archiveUrls) {
+      foreach ($archiveUrls as $archiveUrl) {
+          $urls[] = ['loc' => $archiveUrl, 'lastmod' => null];
+      }
+  }
 @endphp
 @foreach($urls as $entry)
   @if(!empty($entry['loc']))

@@ -21,6 +21,13 @@ class EnvEscapeTest extends TestCase
         $content = 'DB_PASSWORD=' . env_escape($raw) . "\n";
         file_put_contents($envFile, $content);
 
+        // Dotenv's unsafe-immutable loader skips variables that already
+        // exist in the environment. When the suite is run with DB_PASSWORD
+        // exported (MariaDB-backed runs), the real password would shadow
+        // the fixture — clear every carrier first.
+        putenv('DB_PASSWORD');
+        unset($_ENV['DB_PASSWORD'], $_SERVER['DB_PASSWORD']);
+
         $dotenv = Dotenv::createUnsafeImmutable(dirname($envFile));
         $dotenv->load();
 

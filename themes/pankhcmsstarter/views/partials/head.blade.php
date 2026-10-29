@@ -6,10 +6,20 @@
 
 @include('partials.seo', ['currentPage' => $currentPage])
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma-carousel@4.0.4/dist/css/bulma-carousel.min.css">
+<meta name="color-scheme" content="light dark">
+<link rel="alternate" type="application/rss+xml" title="{{ setting('site_title', 'PankhCMS') }} RSS"
+      href="{{ url('/feed.xml') }}">
+@php
+    // Theme options -> CSS variables (values validated as hex/number on
+    // save in ThemeController::saveOptions).
+    $themeOptionVars = [];
+    foreach (\App\Core\Theme::options() as $optionKey => $themeOption) {
+        if ($themeOption['css'] !== '' && trim((string) $themeOption['value']) !== '') {
+            $themeOptionVars[] = $themeOption['css'] . ': ' . $themeOption['value'] . $themeOption['unit'] . ';';
+        }
+    }
+@endphp
+@if(count($themeOptionVars))
+<style>:root { {{ implode(' ', $themeOptionVars) }} }</style>
+@endif
 <link rel="stylesheet" href="{{ theme_asset('css/style.css') }}">
