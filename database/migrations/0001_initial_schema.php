@@ -213,6 +213,9 @@ if (!$schema->hasTable('logs')) {
 }
 
 if (!$schema->hasTable('slider_images')) {
+    // `active` gates homepage slider visibility (SiteController::home
+    // queries where active = 1; SliderController writes it) — the
+    // original definition omitted it, making the homepage 500.
     $schema->create('slider_images', function ($t) {
         $t->increments('id');
         $t->string('title')->nullable();
@@ -220,6 +223,7 @@ if (!$schema->hasTable('slider_images')) {
         $t->string('image_path');
         $t->integer('sort_order')->default(0);
         $t->string('link')->nullable();
+        $t->boolean('active')->default(true);
         $t->timestamps();
     });
 }

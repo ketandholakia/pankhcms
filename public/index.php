@@ -33,7 +33,9 @@ if ($basePath !== '' && $basePath !== '/' && str_starts_with($requestPath, $base
 
 // Admin-configured redirects: applied before anything else so stale
 // paths answer with the configured 301/302 without booting the CMS.
-// Match is DB-backed but guarded (missing table = no-op).
+// The database must be bootstrapped first (DB-only — no plugins, no
+// Blade); matchFor is guarded (missing table = no-op).
+require_once $root . '/app/database.php';
 try {
     $redirect = \App\Controllers\Admin\RedirectController::matchFor($requestPath);
     if ($redirect !== null) {
