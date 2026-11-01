@@ -253,10 +253,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Blog categories
             $cats = [
-                ['id' => 1, 'name' => 'Web Development',  'slug' => 'web-development',  'type' => 'post'],
-                ['id' => 2, 'name' => 'Mobile Apps',       'slug' => 'mobile-apps',       'type' => 'post'],
-                ['id' => 3, 'name' => 'Cloud Computing',   'slug' => 'cloud-computing',   'type' => 'post'],
-                ['id' => 4, 'name' => 'Digital Marketing', 'slug' => 'digital-marketing', 'type' => 'post'],
+                ['id' => 1, 'name' => 'Web Development',  'slug' => 'web-development'],
+                ['id' => 2, 'name' => 'Mobile Apps',       'slug' => 'mobile-apps'],
+                ['id' => 3, 'name' => 'Cloud Computing',   'slug' => 'cloud-computing'],
+                ['id' => 4, 'name' => 'Digital Marketing', 'slug' => 'digital-marketing'],
             ];
             foreach ($cats as $cat) {
                 Capsule::table('categories')->insertOrIgnore($cat);
